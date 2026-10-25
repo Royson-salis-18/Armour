@@ -59,17 +59,21 @@ import kotlin.math.sin
 
 private fun svgPath(d: String): Path = PathParser().parsePathString(d).toPath()
 
-/** The ARMOR mark: a location pin holding a wheel rim, with the letter A inside as its spokes. */
+/** The ARMOR mark: a wheel inside a location pin, with two of its spokes lit up as the letter A. */
 @Composable
-fun ArmorLogo(height: Dp, color: Color = ArmorColors.Orange, mark: Color = ArmorColors.Bg) {
+fun ArmorLogo(height: Dp, color: Color = ArmorColors.Orange, face: Color = ArmorColors.Bg, highlight: Color = Color.White) {
     val pin = remember { svgPath(Art.LOGO_PIN) }
+    val spokes = remember { svgPath(Art.LOGO_SPOKES) }
     val a = remember { svgPath(Art.LOGO_A) }
     Canvas(Modifier.size(height * 24f / 28f, height)) {
         val s = size.height / 28f
+        val c = Offset(Art.LOGO_CX, Art.LOGO_CY)
         scale(s, s, Offset.Zero) {
             drawPath(pin, color)
-            drawCircle(mark, Art.LOGO_RIM_R, Offset(Art.LOGO_RIM_CX, Art.LOGO_RIM_CY), style = Stroke(1.6f))
-            drawPath(a, mark, style = Stroke(1.9f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawCircle(face, Art.LOGO_FACE_R, c)
+            drawCircle(color, Art.LOGO_TYRE_R - 0.3f, c, style = Stroke(1.9f))
+            drawPath(spokes, Color(0xFF6A6C72), style = Stroke(0.6f, cap = StrokeCap.Round))
+            drawPath(a, highlight, style = Stroke(1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }

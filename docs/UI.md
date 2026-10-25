@@ -7,7 +7,7 @@
 
 ## Design direction
 
-A bespoke ARMOR identity rather than a stock dark theme: a **logo** that merges a location pin, a wheel rim and the letter A (its legs are the spokes), shown large over a dotted
+A bespoke ARMOR identity rather than a stock dark theme: a **logo** of a wheel set in a location pin, with two of its spokes and a rim chord lit white to spell the letter A, shown large over a dotted
 "sound-wave" orb, **Barlow Condensed** capitals for headlines and numerals (instrument-cluster feel) with
 **Inter** for reading text, **glass cards** with a lit top edge, a warm **glow** falling from the top of every screen
 (orange normally, red in emergencies), a **tachometer dial** for speed, a **convoy strip** showing who is ahead and
