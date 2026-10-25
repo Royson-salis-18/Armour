@@ -48,19 +48,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Cards are a barely-there vertical gradient, which reads as depth without any glow. */
-val CARD_FILL = Brush.verticalGradient(listOf(Color(0xFF1A1B1E), Color(0xFF141517)))
+val CARD_FILL = Brush.verticalGradient(listOf(Color(0xFF1E1F23), Color(0xFF121315)))
 
-/** Type scale. Sentence case, tabular figures for numbers, no decorative tracking. */
-object Type {
-    val Display = TextStyle(fontSize = 60.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.5).sp, fontFeatureSettings = "tnum")
-    val Speed = TextStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp, fontFeatureSettings = "tnum")
-    val Headline = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp)
-    val Title = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.2).sp)
-    val Body = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal)
-    val BodyStrong = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-    val Label = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium)
-    val Caption = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal)
-}
+/** Hairline border that catches light along the top edge and fades to nothing at the bottom, like glass. */
+val CARD_EDGE = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.04f)))
 
 @Composable
 fun Txt(text: String, style: TextStyle = Type.Body, color: Color = ArmorColors.OnBg, modifier: Modifier = Modifier, align: TextAlign? = null, maxLines: Int = Int.MAX_VALUE) {
@@ -112,9 +103,9 @@ fun Pill(
 
 @Composable
 fun Card2(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(28.dp)
     Column(
-        modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, ArmorColors.Line, shape).padding(16.dp),
+        modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) { content() }
 }
@@ -229,11 +220,19 @@ fun HoldToSosButton(
 fun CountdownRing(fraction: Float, color: Color, modifier: Modifier = Modifier, size: Dp = 224.dp, content: @Composable () -> Unit) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = 10.dp.toPx()
-            val inset = Offset(stroke / 2, stroke / 2)
-            val arc = Size(this.size.width - stroke, this.size.height - stroke)
-            drawArc(Color.White.copy(alpha = 0.08f), 0f, 360f, false, inset, arc, style = Stroke(stroke))
-            drawArc(color, -90f, 360f * fraction.coerceIn(0f, 1f), false, inset, arc, style = Stroke(stroke, cap = StrokeCap.Round))
+            val c = center
+            val r = this.size.minDimension / 2f
+            drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.22f), Color.Transparent), c, r * 1.15f), r * 1.15f, c)
+            // One dot per 3 degrees; the lit ones are the time remaining.
+            val total = 120
+            val lit = (total * fraction.coerceIn(0f, 1f)).toInt()
+            for (i in 0 until total) {
+                val a = (-90.0 + i * 360.0 / total) * Math.PI / 180.0
+                val on = i < lit
+                val rr = r * 0.94f
+                drawCircle(if (on) color else Color.White.copy(alpha = 0.10f), if (on) 3.2.dp.toPx() else 2.dp.toPx(), c + Offset(Math.cos(a).toFloat(), Math.sin(a).toFloat()) * rr)
+            }
+            drawCircle(color.copy(alpha = 0.10f), r * 0.80f, c, style = Stroke(1.dp.toPx()))
         }
         content()
     }
@@ -258,8 +257,8 @@ fun ListRow(title: String, detail: String? = null, icon: androidx.compose.ui.gra
 /** Container for [ListRow]s with hairline separators. */
 @Composable
 fun ListCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
-    Column(modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, ArmorColors.Line, shape)) { content() }
+    val shape = RoundedCornerShape(28.dp)
+    Column(modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape)) { content() }
 }
 
 @Composable

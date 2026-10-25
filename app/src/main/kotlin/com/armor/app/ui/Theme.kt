@@ -1,6 +1,7 @@
 package com.armor.app.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -66,7 +67,16 @@ private val scheme = darkColorScheme(
     outline = ArmorColors.Line,
 )
 
+private val typography = Typography().run {
+    copy(
+        bodyLarge = bodyLarge.copy(fontFamily = InterFamily), bodyMedium = bodyMedium.copy(fontFamily = InterFamily),
+        bodySmall = bodySmall.copy(fontFamily = InterFamily), labelLarge = labelLarge.copy(fontFamily = InterFamily),
+        labelMedium = labelMedium.copy(fontFamily = InterFamily), labelSmall = labelSmall.copy(fontFamily = InterFamily),
+        titleMedium = titleMedium.copy(fontFamily = InterFamily), titleSmall = titleSmall.copy(fontFamily = InterFamily),
+    )
+}
+
 @Composable
 fun ArmorTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(colorScheme = scheme, typography = typography, content = content)
 }

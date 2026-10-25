@@ -1,6 +1,6 @@
 # ARMOR design system
 
-Source of truth: `app/src/main/kotlin/com/armor/app/ui/Theme.kt` (tokens) and `Components.kt` (components).
+Source of truth: `ui/Theme.kt` (colour tokens), `ui/Type.kt` (bundled Barlow Condensed + Inter, both SIL OFL, licences in `docs/licenses/`), `ui/Components.kt` (components) and `ui/Brand.kt` + `ui/ArtPaths.kt` (logo, rider hero, dot orb, speed dial, convoy strip, slide-to-start, floating nav, glow).
 
 ## Principles
 

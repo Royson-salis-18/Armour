@@ -150,16 +150,20 @@ private fun Takeover(
     buttons: @Composable () -> Unit,
 ) {
     Column(
-        Modifier.fillMaxSize().background(ArmorColors.Bg).safeDrawingPadding().padding(horizontal = 24.dp, vertical = 20.dp),
+        Modifier.fillMaxSize().background(ArmorColors.Bg).warmGlow(accent, 0.34f).safeDrawingPadding().padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            Gap(24.dp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ArmorLogo(18.dp, accent)
+                Txt("SAFETY ALERT", Type.Eyebrow, accent)
+            }
+            Gap(22.dp)
             Box(Modifier.size(76.dp).background(if (solidIcon) accent else accent.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(icon, contentDescription = null, tint = if (solidIcon) Color.White else accent, modifier = Modifier.size(38.dp))
             }
             Gap(18.dp)
-            Txt(title, Type.Headline, align = TextAlign.Center)
+            Txt(title.uppercase(), Type.Hero.copy(fontSize = 40.sp, lineHeight = 42.sp), align = TextAlign.Center)
             Txt(subtitle, Type.Body.copy(fontSize = 16.sp), ArmorColors.Muted, Modifier.padding(top = 6.dp), TextAlign.Center)
             if (ring != null) {
                 Gap(22.dp)

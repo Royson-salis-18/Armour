@@ -7,11 +7,14 @@
 
 ## Design direction
 
-Premium, calm and legible, in the spirit of modern dark automotive and riding apps: near-black charcoal surfaces, soft
-rounded cards, big confident type, a single orange accent, a dark map with a glowing orange route, and an orange arc
-gauge. **Only four colours: orange, red, black and grey** (plus white for text). Orange means *brand and attention*,
-red means *danger*, everything fine is white or grey. No glows, no sci-fi chrome, no emoji (all icons are monochrome
-lines that take the app's colours).
+A bespoke ARMOR identity rather than a stock dark theme: a shield-and-chevron **logo**, a drawn **rider-on-bike hero**
+over a dotted "sound-wave" orb, **Barlow Condensed** capitals for headlines and numerals (instrument-cluster feel) with
+**Inter** for reading text, **glass cards** with a lit top edge, a warm **glow** falling from the top of every screen
+(orange normally, red in emergencies), a **tachometer dial** for speed, a **convoy strip** showing who is ahead and
+behind, and a floating pill tab bar. **Only orange, red, black and grey** (plus white for text): orange means *brand and
+attention*, red means *danger*. Art is drawn as vector paths in code, with no stock imagery or emoji.
+
+> The images below are HTML **previews** of the Compose screens (same tokens, fonts and path data), not device captures.
 
 A rider's phone is on a handlebar, so: large touch targets, very few controls per screen, and one obvious primary action.
 
@@ -21,11 +24,11 @@ A rider's phone is on a handlebar, so: large touch targets, very few controls pe
 |---|---|---|
 | ![start](screens/01_pre_ride.png) | ![ride](screens/02_ride_with_group.png) | ![separated](screens/03_ride_separated.png) |
 
-- **Start:** a two-tone headline ("Ride together. **Stay protected.**"), a checklist card (location, SOS by text, emergency contacts, group), an orange **Start ride** pill with an arrow, and a quieter **Try a demo ride**.
+- **Start:** wordmark, the rider hero over the dot orb, a two-tone headline ("Ride together. **Come home together.**"), three readiness chips (location, SOS text, contacts) and a **slide-to-ride** control (a stray tap or pocket can't start a ride). **Try a demo ride** sits below.
 - **Map (full-bleed):** north-up and centred on you; works offline. Soft range rings over a faint street-grid texture, **your route as a glowing orange line**, you as the orange marker with a heading cone, other riders as grey avatars with a white ring, and the group's area as a soft white blob. A rider who has fallen away gets a red **!** badge. Chips float over the map for GPS and connection status, and **End**.
 - **Bottom sheet:**
-  - **Status:** "With the group · 5 riders within 230 m", or "Separated", "Riding solo", "<name> is on the way", with an **orange arc speed gauge** (full at 120 km/h).
-  - **Riders:** avatar, name, distance and direction (or the status they've set).
+  - **Status:** "With the group · 5 riders within 230 m", or "Separated", "Riding solo", "<name> is on the way", with a **tachometer dial** (ticks every 5 km/h, red from 100).
+  - **Convoy strip:** every rider placed along the direction of travel (ahead on the right). A rider who has dropped off gets a red ring and a dashed red link back to the group, labelled with the gap.
   - **Quick status:** round line-icon buttons — Fuel, Break, Repair, Wait, Photo. Selected turns orange. Each pauses the "are you okay?" check for 15 minutes.
   - **Hold for SOS:** red pill; hold ~1.5 s while it charges.
 

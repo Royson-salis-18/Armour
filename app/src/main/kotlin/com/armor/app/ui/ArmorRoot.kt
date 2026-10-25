@@ -18,9 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,28 +52,12 @@ fun ArmorRoot() {
     val critical = snapshot?.takeIf { it.needsAttention }
     ScreenBehaviour(showOverLockScreen = critical != null, keepOn = running && settings.keepScreenOn)
 
-    Box(Modifier.fillMaxSize().background(ArmorColors.Bg)) {
+    Box(Modifier.fillMaxSize().background(ArmorColors.Bg).warmGlow(strength = 0.16f)) {
         Scaffold(
-            containerColor = ArmorColors.Bg,
+            containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                NavigationBar(containerColor = ArmorColors.S1, tonalElevation = 0.dp) {
-                    Tab.entries.forEachIndexed { i, t ->
-                        NavigationBarItem(
-                            selected = tab == i,
-                            onClick = { tab = i },
-                            icon = { Icon(t.icon, contentDescription = t.label) },
-                            label = { Text(t.label, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = ArmorColors.Orange,
-                                selectedTextColor = ArmorColors.OnBg,
-                                indicatorColor = Color.Transparent,
-                                unselectedIconColor = ArmorColors.Dim,
-                                unselectedTextColor = ArmorColors.Dim,
-                            ),
-                        )
-                    }
-                }
+                FloatingNav(Tab.entries.map { it.label }, Tab.entries.map { it.icon }, tab) { tab = it }
             },
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {

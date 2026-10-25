@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -42,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -105,31 +107,43 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         }
     }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp)) {
-        Txt("RIDER SAFETY", Type.Label.copy(letterSpacing = 1.5.sp), ArmorColors.Orange)
-        Gap(8.dp)
-        Txt("Ride together.", Type.Headline.copy(fontSize = 38.sp, lineHeight = 42.sp))
-        Txt("Stay protected.", Type.Headline.copy(fontSize = 38.sp, lineHeight = 42.sp), ArmorColors.Orange)
-        Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 28.dp))
+    val locOk = granted(Manifest.permission.ACCESS_FINE_LOCATION)
+    val smsOk = granted(Manifest.permission.SEND_SMS)
+    Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Wordmark()
+        Box(Modifier.fillMaxWidth().height(230.dp), contentAlignment = Alignment.Center) {
+            DotOrb(Modifier.size(230.dp).alpha(0.9f))
+            BikeHero(Modifier.fillMaxWidth().height(190.dp))
+        }
+        Txt("RIDE TOGETHER.", Type.Hero)
+        Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)
+        Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 20.dp))
 
-        val locOk = granted(Manifest.permission.ACCESS_FINE_LOCATION)
-        val smsOk = granted(Manifest.permission.SEND_SMS)
-        ListCard {
-            ListRow("Location", icon = Icons.Filled.LocationOn, trailing = if (locOk) "Granted" else "Needed", trailingColor = if (locOk) ArmorColors.Green else ArmorColors.Amber)
-            Divider1()
-            ListRow("SOS by text message", icon = Icons.Filled.Email, trailing = if (smsOk) "Granted" else "Needed", trailingColor = if (smsOk) ArmorColors.Green else ArmorColors.Amber)
-            Divider1()
-            ListRow("Emergency contacts", icon = Icons.Filled.Person, trailing = if (contactCount > 0) "$contactCount saved" else "Add one in Settings", trailingColor = if (contactCount > 0) ArmorColors.Green else ArmorColors.Amber)
-            Divider1()
-            ListRow("Group", icon = Icons.Filled.AccountCircle, trailing = if (settings.syncConfigured) settings.groupCode else "Optional", trailingColor = if (settings.syncConfigured) ArmorColors.Green else ArmorColors.Muted)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ReadyChip("Location", locOk, Modifier.weight(1f))
+            ReadyChip("SOS text", smsOk, Modifier.weight(1f))
+            ReadyChip(if (contactCount > 0) "$contactCount contacts" else "Contacts", contactCount > 0, Modifier.weight(1f))
         }
         if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red, Modifier.padding(top = 12.dp))
+        if (settings.syncConfigured) Txt("Group ${settings.groupCode}", Type.Label, ArmorColors.Muted, Modifier.padding(top = 12.dp))
 
-        Gap(24.dp)
-        PrimaryButton(if (starting) "Starting…" else "Start ride", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00), arrow = true) { if (!starting) launcher.launch(needed) }
+        Gap(22.dp)
+        SlideToStart(if (starting) "STARTING\u2026" else "SLIDE TO RIDE") { if (!starting) launcher.launch(needed) }
         Gap(12.dp)
         SecondaryButton("Try a demo ride") { if (!starting) RideService.start(context, demo = true) }
         Txt("The demo needs no GPS and sends no real messages", Type.Caption, ArmorColors.Dim, Modifier.fillMaxWidth().padding(top = 12.dp), TextAlign.Center)
+    }
+}
+
+/** A compact readiness indicator: a lit orange tick when the requirement is met, an amber ring when it isn't. */
+@Composable
+private fun ReadyChip(label: String, ok: Boolean, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(12.dp)).background(ArmorColors.S1).border(1.dp, ArmorColors.Line, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        StatusDot(if (ok) ArmorColors.Green else ArmorColors.Amber, 8.dp)
+        Txt(label, Type.Label.copy(fontSize = 12.sp), if (ok) ArmorColors.OnBg else ArmorColors.Muted, maxLines = 1)
     }
 }
 
@@ -153,7 +167,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 RiderMap(s, Modifier.fillMaxSize(), trail.toList())
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        MapChip(if (demo) "ARMOR · Demo" else "ARMOR")
+                        MapChip(if (demo) "ARMOR · DEMO" else "ARMOR")
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                             MapChip(if (s.gpsLost) "GPS lost" else "GPS", if (s.gpsLost) ArmorColors.Red else ArmorColors.Green)
                             MapChip(if (s.online) "Online" else "Offline", if (s.online) ArmorColors.Green else ArmorColors.Dim)
@@ -175,8 +189,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 Gap(14.dp)
                 val others = s.riders.filter { !it.isSelf }
                 if (others.isNotEmpty()) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) { items(others, key = { it.id }) { RiderItem(it) } }
-                    Gap(16.dp)
+                    ConvoyStrip(s)
+                    Gap(8.dp)
                 }
                 if (s.safety is SafetyState.Acknowledged) {
                     PrimaryButton("I'm okay", color = ArmorColors.Green, contentColor = Color.Black) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
@@ -229,56 +243,11 @@ private fun StatusRow(s: RideSnapshot, look: LinkLook) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusDot(look.color, 10.dp)
-                Txt(look.title, Type.Title, maxLines = 1)
+                Txt(look.title.uppercase(), Type.Title, maxLines = 1)
             }
             Txt(look.sub, Type.Body.copy(fontSize = 14.sp), ArmorColors.Muted, Modifier.padding(top = 2.dp), maxLines = 2)
         }
-        SpeedGauge(kmh)
-    }
-}
-
-/** Orange arc gauge, 270° sweep, filling with speed (full at 120 km/h). */
-@Composable
-private fun SpeedGauge(kmh: Double) {
-    Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
-        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-            val stroke = 8.dp.toPx()
-            val inset = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2)
-            val arc = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
-            val round = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-            drawArc(Color.White.copy(alpha = 0.08f), 135f, 270f, false, inset, arc, style = round)
-            val fill = (kmh / 120.0).toFloat().coerceIn(0f, 1f)
-            if (fill > 0.02f) drawArc(ArmorColors.Orange, 135f, 270f * fill, false, inset, arc, style = round)
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Txt(kmh.roundToInt().toString(), Type.Speed.copy(fontSize = 26.sp))
-            Txt("km/h", Type.Caption, ArmorColors.Dim)
-        }
-    }
-}
-
-@Composable
-private fun RiderItem(r: RiderView) {
-    val color = if (r.isStale) ArmorColors.Dim else ArmorColors.riderColor(r.id)
-    Column(Modifier.width(64.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box {
-            Avatar(r.name.firstOrNull()?.uppercase() ?: "?", color)
-            if (r.isOutlier && !r.isStale) {
-                Box(Modifier.align(Alignment.TopEnd).size(16.dp).background(ArmorColors.S1, CircleShape).padding(2.dp).background(ArmorColors.Red, CircleShape), contentAlignment = Alignment.Center) {
-                    Text("!", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
-                }
-            }
-        }
-        Txt(r.name, Type.Label.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 6.dp), maxLines = 1)
-        Txt(
-            when {
-                r.isStale -> "Last seen"
-                r.status != null -> r.status!!.shortLabel()
-                r.distanceFromSelfM != null -> fmtDistance(r.distanceFromSelfM!!) + (r.bearingFromSelfDeg?.let { " ${compass(it)}" } ?: "")
-                else -> ""
-            },
-            Type.Caption, if (r.status != null && !r.isStale) ArmorColors.Amber else ArmorColors.Muted, maxLines = 1,
-        )
+        SpeedDial(kmh)
     }
 }
 
