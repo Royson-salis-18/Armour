@@ -1,0 +1,20 @@
+# Gradle / build output
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IDEA
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing & secrets
+*.jks
+*.keystore
+google-services.json
+
+# OS
+.DS_Store
