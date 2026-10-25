@@ -1,6 +1,15 @@
 package com.armor.app.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,15 +56,20 @@ fun EventsScreen() {
         if (events.isEmpty()) Text("Nothing yet. Events appear here during a ride.", color = ArmorColors.Muted)
         LazyColumn(Modifier.fillMaxWidth()) {
             items(events, key = { it.id }) { e ->
-                Column(Modifier.padding(vertical = 8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(fmtClock(e.timeMs), color = ArmorColors.Muted, fontSize = 12.sp)
-                        Text(e.type.replace('_', ' '), color = colorFor(e.type), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        if (!e.synced) Text("● local", color = ArmorColors.Stale, fontSize = 11.sp)
+                Row(Modifier.height(IntrinsicSize.Min).padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.padding(top = 4.dp).size(12.dp).clip(CircleShape).background(colorFor(e.type)))
+                        Box(Modifier.width(2.dp).weight(1f).background(ArmorColors.Line))
                     }
-                    Text(e.detail, color = ArmorColors.OnBg, fontSize = 14.sp)
+                    Column(Modifier.padding(bottom = 14.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(e.type.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }, color = colorFor(e.type), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(fmtClock(e.timeMs), color = ArmorColors.Muted, fontSize = 11.sp)
+                            if (!e.synced) Text("local", color = ArmorColors.Stale, fontSize = 11.sp)
+                        }
+                        Text(e.detail, color = ArmorColors.OnBg, fontSize = 13.sp)
+                    }
                 }
-                HorizontalDivider(color = ArmorColors.Grid)
             }
         }
     }

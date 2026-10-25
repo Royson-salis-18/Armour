@@ -27,6 +27,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import com.armor.app.ArmorApp
@@ -49,9 +51,9 @@ fun ArmorRoot() {
     val critical = snapshot?.takeIf { it.needsAttention }
     ScreenBehaviour(showOverLockScreen = critical != null, keepOn = running && settings.keepScreenOn)
 
-    Box(Modifier.fillMaxSize().background(ArmorColors.Bg)) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ArmorColors.BgGlow, ArmorColors.Bg), endY = 1400f))) {
         Scaffold(
-            containerColor = ArmorColors.Bg,
+            containerColor = Color.Transparent,
             bottomBar = {
                 NavigationBar(containerColor = ArmorColors.Surface) {
                     Tab.entries.forEachIndexed { i, t ->

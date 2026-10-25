@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armor.app.ArmorApp
@@ -42,6 +43,14 @@ fun GroupScreen(settings: Settings) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Group", color = ArmorColors.OnBg, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         if (running) Text("Changes apply from your next ride.", color = ArmorColors.Amber, fontSize = 12.sp)
+
+        if (settings.groupCode.isNotBlank()) {
+            Card2 {
+                Text("YOUR GROUP CODE", color = ArmorColors.Muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text(settings.groupCode, color = ArmorColors.Orange, fontSize = 40.sp, fontWeight = FontWeight.Black, letterSpacing = 8.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text("Share it with the riders you're joining", color = ArmorColors.Muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+        }
 
         Card2 {
             SectionTitle("You")

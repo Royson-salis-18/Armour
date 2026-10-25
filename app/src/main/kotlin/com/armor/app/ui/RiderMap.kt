@@ -3,7 +3,9 @@ package com.armor.app.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -15,6 +17,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -65,11 +68,12 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier) {
         var r = step
         while (r <= extent * 1.25) {
             val radius = (r * scale).toFloat()
-            drawCircle(ArmorColors.Grid, radius, c, style = Stroke(1.dp.toPx()))
+            drawCircle(ArmorColors.Grid, radius, c, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 10f))))
             drawText(measurer, fmtDistance(r), Offset(c.x + 4.dp.toPx(), c.y - radius - 12.dp.toPx()), faint)
             r += step
         }
-        drawText(measurer, "N", Offset(size.width - 20.dp.toPx(), 8.dp.toPx()), label)
+        drawCircle(Color.Black.copy(alpha = 0.4f), 14.dp.toPx(), Offset(size.width - 26.dp.toPx(), 26.dp.toPx()))
+        drawText(measurer, "N", Offset(size.width - 26.dp.toPx() - 4.dp.toPx(), 18.dp.toPx()), label.copy(color = ArmorColors.Orange))
 
         // Group boundaries: a thick round-joined stroke around the hull inflates it into a soft blob.
         snapshot.clusters.forEachIndexed { i, cluster ->
@@ -125,11 +129,25 @@ private fun DrawScope.drawRider(rider: RiderView, at: Offset, measurer: TextMeas
         }
     }
 
+    val initial = (if (rider.isSelf) "Y" else rider.name.firstOrNull()?.uppercase() ?: "?")
+    val initialStyle = TextStyle(color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+    val im = measurer.measure(initial, initialStyle)
+    drawText(measurer, initial, Offset(at.x - im.size.width / 2f, at.y - im.size.height / 2f), initialStyle)
+
     val text = buildString {
         append(if (rider.isSelf) "You" else rider.name)
         rider.distanceFromSelfM?.let { if (rider.isOutlier || rider.isStale) append(" · ${fmtDistance(it)}") }
         if (rider.isStale) append(" (last seen)")
     }
     val m = measurer.measure(text, label)
-    drawText(measurer, text, Offset(at.x - m.size.width / 2f, at.y + radius + 4.dp.toPx()), label)
+    val padX = 7.dp.toPx()
+    val padY = 2.dp.toPx()
+    val top = at.y + radius + 5.dp.toPx()
+    drawRoundRect(
+        Color.Black.copy(alpha = 0.55f),
+        topLeft = Offset(at.x - m.size.width / 2f - padX, top),
+        size = Size(m.size.width + padX * 2, m.size.height + padY * 2),
+        cornerRadius = CornerRadius(50f, 50f),
+    )
+    drawText(measurer, text, Offset(at.x - m.size.width / 2f, top + padY), label)
 }

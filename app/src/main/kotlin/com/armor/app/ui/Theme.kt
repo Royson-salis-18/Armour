@@ -7,11 +7,13 @@ import androidx.compose.ui.graphics.Color
 
 /** Dark with orange highlights, as in the design brief; red and amber are reserved for safety states. */
 object ArmorColors {
-    val Bg = Color(0xFF0E0E10)
-    val Surface = Color(0xFF1A1A1E)
-    val SurfaceHigh = Color(0xFF26262C)
-    val MapBg = Color(0xFF121216)
-    val Grid = Color(0xFF2E2E36)
+    val Bg = Color(0xFF0B0B0D)
+    val BgGlow = Color(0xFF1B130D)
+    val Line = Color(0xFF2A2A31)
+    val Surface = Color(0xFF16161A)
+    val SurfaceHigh = Color(0xFF202026)
+    val MapBg = Color(0xFF0F0F13)
+    val Grid = Color(0xFF2D2D36)
     val Orange = Color(0xFFFF7A1A)
     val OrangeDim = Color(0xFF8A4310)
     val Red = Color(0xFFFF3B30)

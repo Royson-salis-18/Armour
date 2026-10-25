@@ -3,6 +3,7 @@ package com.armor.app.ui
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.armor.core.model.QuickStatus
 import kotlin.math.roundToInt
 
 fun fmtDistance(meters: Double): String =
@@ -20,3 +21,20 @@ fun fmtClock(ms: Long): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault(
 private val POINTS = arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
 fun compass(bearingDeg: Double): String = POINTS[(((bearingDeg + 22.5) % 360) / 45).toInt().coerceIn(0, 7)]
+
+
+fun QuickStatus.shortLabel(): String = when (this) {
+    QuickStatus.FUEL -> "Fuel"
+    QuickStatus.BREAK -> "Break"
+    QuickStatus.MECHANICAL -> "Repair"
+    QuickStatus.TRAFFIC -> "Wait"
+    QuickStatus.PHOTO -> "Photo"
+}
+
+fun QuickStatus.icon(): String = when (this) {
+    QuickStatus.FUEL -> "\u26FD"
+    QuickStatus.BREAK -> "\u2615"
+    QuickStatus.MECHANICAL -> "\uD83D\uDD27"
+    QuickStatus.TRAFFIC -> "\uD83D\uDEA6"
+    QuickStatus.PHOTO -> "\uD83D\uDCF7"
+}
