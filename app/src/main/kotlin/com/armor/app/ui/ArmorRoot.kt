@@ -7,15 +7,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,7 +34,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -37,8 +43,8 @@ import com.armor.app.service.ArmorRuntime
 private enum class Tab(val label: String, val icon: ImageVector) {
     RIDE("Ride", Icons.Filled.Home),
     GROUP("Group", Icons.Filled.Person),
-    EVENTS("Events", Icons.AutoMirrored.Filled.List),
-    SETTINGS("Settings", Icons.Filled.Settings),
+    EVENTS("Log", Icons.AutoMirrored.Filled.List),
+    SETTINGS("System", Icons.Filled.Settings),
 }
 
 @Composable
@@ -51,25 +57,23 @@ fun ArmorRoot() {
     val critical = snapshot?.takeIf { it.needsAttention }
     ScreenBehaviour(showOverLockScreen = critical != null, keepOn = running && settings.keepScreenOn)
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ArmorColors.BgGlow, ArmorColors.Bg), endY = 1400f))) {
+    Box(Modifier.fillMaxSize().hudBackground()) {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar(containerColor = ArmorColors.Surface) {
-                    Tab.entries.forEachIndexed { i, t ->
-                        NavigationBarItem(
-                            selected = tab == i,
-                            onClick = { tab = i },
-                            icon = { Icon(t.icon, contentDescription = t.label) },
-                            label = { Text(t.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = ArmorColors.Orange,
-                                selectedTextColor = ArmorColors.Orange,
-                                indicatorColor = ArmorColors.SurfaceHigh,
-                                unselectedIconColor = ArmorColors.Muted,
-                                unselectedTextColor = ArmorColors.Muted,
-                            ),
-                        )
+                HudPanel(Modifier.navigationBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(), cut = 16.dp, padding = 6.dp) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        Tab.entries.forEachIndexed { i, t ->
+                            val on = tab == i
+                            val c = if (on) ArmorColors.Cyan else ArmorColors.Stale
+                            Column(
+                                Modifier.weight(1f).clickableNoRipple { tab = i }.padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(t.icon, contentDescription = t.label, tint = c, modifier = Modifier.size(22.dp))
+                                Text(t.label.uppercase(), color = c, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                     }
                 }
             },

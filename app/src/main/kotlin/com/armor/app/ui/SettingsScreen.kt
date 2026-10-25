@@ -46,7 +46,7 @@ fun SettingsScreen(settings: Settings) {
     var phone by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Settings", color = ArmorColors.OnBg, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        GlowText("SYSTEM", ArmorColors.OnBg, 22, glow = 16f, mono = false, spacing = 4, weight = FontWeight.Black)
 
         Card2 {
             SectionTitle("Emergency contacts")
