@@ -1,5 +1,6 @@
 package com.armor.app.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,12 +12,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,78 +31,167 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** A tappable cut-corner label; also used as a status indicator when [onClick] is null. */
+/** Cards are a barely-there vertical gradient, which reads as depth without any glow. */
+val CARD_FILL = Brush.verticalGradient(listOf(Color(0xFF1A1B1E), Color(0xFF141517)))
+
+/** Type scale. Sentence case, tabular figures for numbers, no decorative tracking. */
+object Type {
+    val Display = TextStyle(fontSize = 60.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.5).sp, fontFeatureSettings = "tnum")
+    val Speed = TextStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp, fontFeatureSettings = "tnum")
+    val Headline = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp)
+    val Title = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.2).sp)
+    val Body = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal)
+    val BodyStrong = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    val Label = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    val Caption = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal)
+}
+
+@Composable
+fun Txt(text: String, style: TextStyle = Type.Body, color: Color = ArmorColors.OnBg, modifier: Modifier = Modifier, align: TextAlign? = null, maxLines: Int = Int.MAX_VALUE) {
+    Text(text, modifier, color = color, style = style, textAlign = align, maxLines = maxLines)
+}
+
+/** A rider's circular avatar. [ring] draws the white outline used on the map. */
+@Composable
+fun Avatar(label: String, color: Color, size: Dp = 44.dp, textColor: Color = Color.White, fontSize: Int = 17) {
+    Box(Modifier.size(size).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+        Text(label, color = textColor, fontWeight = FontWeight.Bold, fontSize = fontSize.sp)
+    }
+}
+
+@Composable
+fun StatusDot(color: Color, size: Dp = 8.dp) = Box(Modifier.size(size).background(color, CircleShape))
+
+/** Small rounded status chip floating over the map. */
+@Composable
+fun MapChip(text: String, dot: Color? = null, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(50)).background(ArmorColors.S1.copy(alpha = 0.86f)).border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        if (dot != null) StatusDot(dot)
+        Txt(text, Type.Label, maxLines = 1)
+    }
+}
+
+/** A selectable rounded label (segmented controls, demo actions). */
 @Composable
 fun Pill(
     text: String,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
-    color: Color = ArmorColors.SurfaceHigh,
+    color: Color = ArmorColors.S2,
     contentColor: Color = ArmorColors.OnBg,
     onClick: (() -> Unit)? = null,
 ) {
-    val shape = CutShape(8.dp)
-    val bg = if (selected) Brush.verticalGradient(listOf(ArmorColors.Cyan, Color(0xFF1AA6C9))) else Brush.verticalGradient(listOf(color, color))
-    val fg = if (selected) Color(0xFF022027) else contentColor
+    val shape = RoundedCornerShape(10.dp)
     Box(
-        modifier
-            .clip(shape)
-            .background(bg)
-            .border(1.dp, if (selected) ArmorColors.Cyan else ArmorColors.Line, shape)
+        modifier.clip(shape).background(if (selected) ArmorColors.S3 else color)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, color = if (selected) ArmorColors.OnBg else contentColor.copy(alpha = if (selected) 1f else 0.85f), style = Type.Label, maxLines = 1) }
+}
+
+@Composable
+fun Card2(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, ArmorColors.Line, shape).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) { content() }
+}
+
+/** Group heading above a card, in the style of an inset grouped list. */
+@Composable
+fun SectionTitle(text: String) {
+    Txt(text, Type.Label, ArmorColors.Muted, Modifier.padding(start = 4.dp, top = 8.dp))
+}
+
+@Composable
+fun ScreenTitle(text: String, sub: String? = null) {
+    Column(Modifier.padding(bottom = 4.dp)) {
+        Txt(text, Type.Headline)
+        if (sub != null) Txt(sub, Type.Body, ArmorColors.Muted, Modifier.padding(top = 2.dp))
+    }
+}
+
+@Composable
+fun LabeledRow(label: String, value: String, valueColor: Color = ArmorColors.OnBg) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = ArmorColors.Muted, style = MaterialTheme.typography.bodyMedium)
+        Text(value, color = valueColor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun Divider1(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().height(1.dp).background(ArmorColors.Line))
+
+/** Filled call-to-action. */
+@Composable
+fun PrimaryButton(text: String, modifier: Modifier = Modifier, color: Color = Color.White, contentColor: Color = ArmorColors.Bg, arrow: Boolean = false, onClick: () -> Unit) {
+    Box(
+        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(color).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, letterSpacing = 0.5.sp)
+        Text(text, color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        if (arrow) Box(Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).size(40.dp).background(contentColor, CircleShape), contentAlignment = Alignment.Center) {
+            Text("\u2192", color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
-/** Small outlined status chip: an optional glowing dot and a short text. */
+/** Quieter alternative to [PrimaryButton]. */
 @Composable
-fun StatusChip(text: String, dot: Color? = null, modifier: Modifier = Modifier) {
-    Row(
-        modifier.clip(CutShape(6.dp)).background(ArmorColors.Panel).border(1.dp, ArmorColors.Line, CutShape(6.dp)).padding(horizontal = 10.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (dot != null) Box(Modifier.size(7.dp).shadow(6.dp, CircleShape, ambientColor = dot, spotColor = dot).background(dot, CircleShape))
-        MonoText(text, size = 10, spacing = 1.0)
-    }
+fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(ArmorColors.S2).border(1.dp, ArmorColors.Line, RoundedCornerShape(28.dp)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, color = ArmorColors.OnBg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
 }
 
-/** Press-and-hold SOS. A bump, a glove or a pocket must never trigger it, so it charges while held. */
+/** Kept for call sites that pass a colour pair. */
+@Composable
+fun BigButton(text: String, color: Color, contentColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) =
+    PrimaryButton(text, modifier, color, contentColor, onClick = onClick)
+
+/**
+ * Press-and-hold SOS. A bump, a glove or a pocket must never trigger it, so it charges while held and fires only when
+ * full. [outlined] is the quieter form used on alert screens where the main action is "I'm okay".
+ */
 @Composable
 fun HoldToSosButton(
     modifier: Modifier = Modifier,
     holdMs: Long = 1_500,
-    label: String = "HOLD FOR SOS",
-    sub: String? = "PRESS AND HOLD 1.5 SECONDS",
-    quiet: Boolean = false,
+    label: String = "Hold for SOS",
+    sub: String? = "Press and hold for 1.5 seconds",
+    outlined: Boolean = false,
     onTrigger: () -> Unit,
 ) {
     var progress by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
-    val shape = CutShape(16.dp)
-    val fill = if (quiet) Brush.linearGradient(listOf(Color(0xFF5A0F1E), Color(0xFF2A0610)))
-    else Brush.linearGradient(listOf(Color(0xFFFF3B4E), Color(0xFF9C0F26)))
+    val shape = RoundedCornerShape(29.dp)
+    val base = if (outlined) Modifier.border(1.5.dp, ArmorColors.Red, shape) else Modifier.background(ArmorColors.Red)
+    val fg = if (outlined) ArmorColors.Red else Color.White
     Box(
-        modifier
-            .fillMaxWidth()
-            .height(62.dp)
-            .shadow(14.dp, shape, ambientColor = ArmorColors.Red, spotColor = ArmorColors.Red)
-            .clip(shape)
-            .background(fill)
+        modifier.fillMaxWidth().height(58.dp).clip(shape).then(base)
             .pointerInput(holdMs) {
                 detectTapGestures(
                     onPress = {
@@ -117,53 +209,57 @@ fun HoldToSosButton(
                     },
                 )
             },
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.Center,
     ) {
-        Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(Modifier.size(38.dp).border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape), contentAlignment = Alignment.Center) {
-                Text("🛡", fontSize = 17.sp)
+        Box(Modifier.align(Alignment.CenterStart).fillMaxHeight().fillMaxWidth(progress).background(if (outlined) ArmorColors.Red.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.22f)))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(34.dp).border(2.dp, fg.copy(alpha = 0.9f), CircleShape), contentAlignment = Alignment.Center) {
+                Text("SOS", color = fg, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
             }
             Column {
-                Text(label, color = Color.White, fontSize = if (sub == null) 14.sp else 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp)
-                if (sub != null) Text(sub, color = Color.White.copy(alpha = 0.85f), fontSize = 9.5.sp, letterSpacing = 1.sp)
+                Text(label, color = fg, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                if (sub != null) Text(sub, color = fg.copy(alpha = 0.85f), fontSize = 12.sp)
             }
         }
-        // The charge bar along the bottom edge fills as the button is held.
-        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth(progress).height(4.dp).background(Color.White))
     }
 }
 
+/** Countdown ring: the arc shrinks as [fraction] (remaining/total) goes from 1 to 0; [content] sits in the middle. */
 @Composable
-fun BigButton(text: String, color: Color, contentColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    HudButton(text, Brush.linearGradient(listOf(color, color.copy(alpha = 0.78f))), contentColor, glow = color, modifier = modifier, onClick = onClick)
-}
-
-@Composable
-fun Card2(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    HudPanel(modifier.fillMaxWidth(), padding = 16.dp) {
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+fun CountdownRing(fraction: Float, color: Color, modifier: Modifier = Modifier, size: Dp = 224.dp, content: @Composable () -> Unit) {
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 10.dp.toPx()
+            val inset = Offset(stroke / 2, stroke / 2)
+            val arc = Size(this.size.width - stroke, this.size.height - stroke)
+            drawArc(Color.White.copy(alpha = 0.08f), 0f, 360f, false, inset, arc, style = Stroke(stroke))
+            drawArc(color, -90f, 360f * fraction.coerceIn(0f, 1f), false, inset, arc, style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+        content()
     }
 }
 
+/** One row of a grouped list: leading icon box, title with optional detail, optional trailing text. */
 @Composable
-fun SectionTitle(text: String) {
-    HudLabel(text, modifier = Modifier.padding(top = 2.dp, bottom = 2.dp))
-}
-
-@Composable
-fun LabeledRow(label: String, value: String, valueColor: Color = ArmorColors.OnBg) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = ArmorColors.Muted, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = valueColor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+fun ListRow(title: String, detail: String? = null, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, trailing: String? = null, trailingColor: Color = ArmorColors.Muted, onClick: (() -> Unit)? = null) {
+    Row(
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        if (icon != null) Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(ArmorColors.S3), contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(icon, contentDescription = null, tint = ArmorColors.OnBg, modifier = Modifier.size(19.dp)) }
+        Column(Modifier.weight(1f)) {
+            Txt(title, Type.BodyStrong)
+            if (detail != null) Txt(detail, Type.Label, ArmorColors.Muted)
+        }
+        if (trailing != null) Txt(trailing, Type.Label, trailingColor)
     }
 }
 
-/** A round badge with a letter or symbol. */
+/** Container for [ListRow]s with hairline separators. */
 @Composable
-fun Avatar(label: String, color: Color, size: Dp = 34.dp, textColor: Color = Color.Black, fontSize: Int = 14) {
-    Box(Modifier.size(size).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-        Text(label, color = textColor, fontWeight = FontWeight.ExtraBold, fontSize = fontSize.sp)
-    }
+fun ListCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, ArmorColors.Line, shape)) { content() }
 }
 
 @Composable
@@ -172,10 +268,13 @@ fun Gap(h: Dp) = Spacer(Modifier.height(h))
 @Composable
 fun HGap(w: Dp) = Spacer(Modifier.width(w))
 
-/** Click handler without the ripple, for plain text actions on a coloured background. */
+/** Click handler without the ripple, for plain text actions. */
 @Composable
 fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = this.clickable(
     interactionSource = remember { MutableInteractionSource() },
     indication = null,
     onClick = onClick,
 )
+
+@Composable
+fun FullScreenBg(content: @Composable () -> Unit) = Box(Modifier.fillMaxSize().background(ArmorColors.Bg)) { content() }

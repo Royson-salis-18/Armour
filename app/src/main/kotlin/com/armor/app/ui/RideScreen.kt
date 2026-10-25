@@ -10,34 +10,39 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +54,6 @@ import com.armor.app.data.Settings
 import com.armor.app.service.ArmorRuntime
 import com.armor.app.service.RideService
 import com.armor.app.sim.DemoAction
-import com.armor.core.comms.VoiceRoute
 import com.armor.core.engine.RideSnapshot
 import com.armor.core.engine.RiderView
 import com.armor.core.geo.Geo
@@ -68,11 +72,6 @@ fun RideScreen(settings: Settings) {
     val warning by ArmorRuntime.warning.collectAsState()
     val s = snapshot
     if (!running || s == null) PreRideHost(settings, starting = running) else ActiveRide(s, demo, warning)
-}
-
-@Composable
-private fun Logo(size: Int) {
-    HexBadge("A", ArmorColors.Cyan, size = size.dp, textColor = Color(0xFF021018))
 }
 
 @Composable
@@ -106,55 +105,37 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Logo(92)
-        GlowText("ARMOR", ArmorColors.OnBg, 34, glow = 28f, mono = false, spacing = 9, weight = FontWeight.Black)
-        MonoText("RIDER SAFETY SYSTEM", ArmorColors.Cyan, 10, spacing = 3.0)
-        Gap(6.dp)
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp)) {
+        Txt("RIDER SAFETY", Type.Label.copy(letterSpacing = 1.5.sp), ArmorColors.Orange)
+        Gap(8.dp)
+        Txt("Ride together.", Type.Headline.copy(fontSize = 38.sp, lineHeight = 42.sp))
+        Txt("Stay protected.", Type.Headline.copy(fontSize = 38.sp, lineHeight = 42.sp), ArmorColors.Orange)
+        Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 28.dp))
 
-        HudPanel(Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth()) {
-                HudLabel("System check")
-                Gap(6.dp)
-                Check("Location lock", granted(Manifest.permission.ACCESS_FINE_LOCATION), "GRANTED")
-                Check("SOS messaging", granted(Manifest.permission.SEND_SMS), "GRANTED")
-                Check("Emergency contacts", contactCount > 0, if (contactCount == 0) "ADD ONE" else "$contactCount SAVED")
-                Check("Group link", settings.syncConfigured, if (settings.syncConfigured) settings.groupCode else "OPTIONAL")
-            }
+        val locOk = granted(Manifest.permission.ACCESS_FINE_LOCATION)
+        val smsOk = granted(Manifest.permission.SEND_SMS)
+        ListCard {
+            ListRow("Location", icon = Icons.Filled.LocationOn, trailing = if (locOk) "Granted" else "Needed", trailingColor = if (locOk) ArmorColors.Green else ArmorColors.Amber)
+            Divider1()
+            ListRow("SOS by text message", icon = Icons.Filled.Email, trailing = if (smsOk) "Granted" else "Needed", trailingColor = if (smsOk) ArmorColors.Green else ArmorColors.Amber)
+            Divider1()
+            ListRow("Emergency contacts", icon = Icons.Filled.Person, trailing = if (contactCount > 0) "$contactCount saved" else "Add one in Settings", trailingColor = if (contactCount > 0) ArmorColors.Green else ArmorColors.Amber)
+            Divider1()
+            ListRow("Group", icon = Icons.Filled.AccountCircle, trailing = if (settings.syncConfigured) settings.groupCode else "Optional", trailingColor = if (settings.syncConfigured) ArmorColors.Green else ArmorColors.Muted)
         }
-        if (denied) Text("Location permission is needed to track your ride. Allow it in system settings and try again.", color = ArmorColors.Red, fontSize = 12.sp)
+        if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red, Modifier.padding(top = 12.dp))
 
-        HudButton(
-            if (starting) "STARTING…" else "INITIATE RIDE",
-            Brush.linearGradient(listOf(Color(0xFFFF9A40), Color(0xFFFF5A00))), Color(0xFF1A0800), glow = ArmorColors.Orange,
-        ) { if (!starting) launcher.launch(needed) }
-
-        HudPanel(Modifier.fillMaxWidth().clickable { if (!starting) RideService.start(context, demo = true) }, accent = ArmorColors.Violet) {
-            Text("TRY DEMO RIDE", Modifier.fillMaxWidth(), color = ArmorColors.OnBg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, textAlign = TextAlign.Center)
-        }
-        MonoText("NO GPS · NO REAL MESSAGES", size = 10, spacing = 1.0)
-    }
-}
-
-@Composable
-private fun Check(label: String, ok: Boolean, detail: String) {
-    val c = if (ok) ArmorColors.Green else ArmorColors.Amber
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(22.dp).border(1.5.dp, c, CutShape(7.dp)), contentAlignment = Alignment.Center) {
-            Text(if (ok) "✓" else "!", color = c, fontSize = 11.sp, fontWeight = FontWeight.Black)
-        }
-        Text(label, Modifier.weight(1f).padding(start = 10.dp), color = ArmorColors.OnBg, fontSize = 14.sp)
-        MonoText(detail, if (ok) ArmorColors.Muted else ArmorColors.Amber, 10)
+        Gap(24.dp)
+        PrimaryButton(if (starting) "Starting…" else "Start ride", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00), arrow = true) { if (!starting) launcher.launch(needed) }
+        Gap(12.dp)
+        SecondaryButton("Try a demo ride") { if (!starting) RideService.start(context, demo = true) }
+        Txt("The demo needs no GPS and sends no real messages", Type.Caption, ArmorColors.Dim, Modifier.fillMaxWidth().padding(top = 12.dp), TextAlign.Center)
     }
 }
 
 @Composable
 internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
-    // Your recent route, for the glowing trail on the map.
+    // Your recent route, drawn on the map as a navigation-style line.
     val trail = remember { mutableStateListOf<LatLon>() }
     val here = s.self?.position
     LaunchedEffect(here) {
@@ -165,58 +146,51 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
     }
     val look = linkLook(s)
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Header(s, demo)
-        warning?.let { Text(it, color = ArmorColors.Amber, fontSize = 12.sp) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val maxSheet = maxHeight * 0.66f
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                RiderMap(s, Modifier.fillMaxSize(), trail.toList())
+                Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        MapChip(if (demo) "ARMOR · Demo" else "ARMOR")
+                        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                            MapChip(if (s.gpsLost) "GPS lost" else "GPS", if (s.gpsLost) ArmorColors.Red else ArmorColors.Green)
+                            MapChip(if (s.online) "Online" else "Offline", if (s.online) ArmorColors.Green else ArmorColors.Dim)
+                            MapChip("End", modifier = Modifier.clickable { ArmorRuntime.send(ArmorRuntime.Command.Stop) })
+                        }
+                    }
+                    warning?.let { Txt(it, Type.Label, ArmorColors.Amber, Modifier.padding(top = 8.dp)) }
+                }
+            }
 
-        HudPanel(Modifier.weight(1f).fillMaxWidth(), accent = look.color, cut = 16.dp, padding = 0.dp) {
-            RiderMap(s, Modifier.fillMaxSize(), trail.toList())
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = maxSheet)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(ArmorColors.S1)
+                    .verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 16.dp),
+            ) {
+                Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).clip(CircleShape).background(ArmorColors.S3))
+                Gap(14.dp)
+                StatusRow(s, look)
+                Gap(14.dp)
+                val others = s.riders.filter { !it.isSelf }
+                if (others.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) { items(others, key = { it.id }) { RiderItem(it) } }
+                    Gap(16.dp)
+                }
+                if (s.safety is SafetyState.Acknowledged) {
+                    PrimaryButton("I'm okay", color = ArmorColors.Green, contentColor = Color.Black) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
+                    Gap(14.dp)
+                }
+                QuickStatusRow(s.quickStatus)
+                Gap(16.dp)
+                HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
+                if (demo) {
+                    Gap(14.dp)
+                    DemoControls()
+                }
+            }
         }
-
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            VelocityPanel(s, Modifier.weight(1f).fillMaxHeight())
-            LinkPanel(s, look, Modifier.weight(1f).fillMaxHeight())
-        }
-
-        val others = s.riders.filter { !it.isSelf }
-        if (others.isNotEmpty()) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(others, key = { it.id }) { RiderCard(it) } }
-        }
-
-        if (s.safety is SafetyState.Acknowledged) {
-            HudButton("I'M OK", Brush.linearGradient(listOf(ArmorColors.Green, Color(0xFF14B870))), Color.Black, ArmorColors.Green, vertical = 16.dp) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
-        }
-        QuickStatusRow(s.quickStatus)
-        HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
-        if (demo) DemoControls()
-        Gap(2.dp)
-    }
-}
-
-@Composable
-private fun Header(s: RideSnapshot, demo: Boolean) {
-    val gps = when {
-        s.gpsLost -> 0
-        (s.self?.accuracyM ?: 99.0) <= 5 -> 4
-        (s.self?.accuracyM ?: 99.0) <= 10 -> 3
-        (s.self?.accuracyM ?: 99.0) <= 25 -> 2
-        else -> 1
-    }
-    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Logo(34)
-        Column(Modifier.weight(1f).padding(start = 10.dp)) {
-            GlowText("ARMOR", ArmorColors.OnBg, 17, glow = 14f, mono = false, spacing = 4, weight = FontWeight.Black)
-            MonoText(if (demo) "// DEMO MODE" else "// SYSTEM ONLINE", ArmorColors.Cyan, 8, spacing = 2.0)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
-            SignalBars(gps, if (s.gpsLost) ArmorColors.Red else ArmorColors.Green, "GPS")
-            SignalBars(if (s.online) 4 else 0, ArmorColors.Cyan, "NET")
-            SignalBars(
-                when (s.voice) { VoiceRoute.MOBILE_NETWORK -> 4; VoiceRoute.HELMET_INTERCOM -> 3; VoiceRoute.UNAVAILABLE -> 0 },
-                ArmorColors.Violet, "VOICE",
-            )
-        }
-        Text("END", Modifier.clickable { ArmorRuntime.send(ArmorRuntime.Command.Stop) }.padding(start = 12.dp, top = 6.dp, bottom = 6.dp), color = ArmorColors.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
     }
 }
 
@@ -225,107 +199,104 @@ private data class LinkLook(val title: String, val sub: String, val color: Color
 private fun linkLook(s: RideSnapshot): LinkLook {
     val others = s.riders.filter { !it.isSelf && !it.isStale }
     return when (val state = s.safety) {
-        is SafetyState.Acknowledged -> LinkLook("ASSISTED", "${state.byName} is on the way", ArmorColors.Amber)
+        is SafetyState.Acknowledged -> LinkLook("${state.byName} is on the way", "Help is coming. Stay where you are.", ArmorColors.Amber)
         is SafetyState.Normal -> when (s.assessment) {
-            OutlierAssessment.IN_CLUSTER -> LinkLook("STABLE", "${others.size + 1} riders in formation", ArmorColors.Green)
+            OutlierAssessment.IN_CLUSTER -> LinkLook(
+                "With the group",
+                "${others.size + 1} riders within ${fmtDistance(others.maxOfOrNull { it.distanceFromSelfM ?: 0.0 } ?: 0.0)}",
+                ArmorColors.Green,
+            )
             OutlierAssessment.OUTLIER -> LinkLook(
-                "LOST",
-                if (s.stationaryForMs >= 10_000) "Stopped ${fmtMmSs(s.stationaryForMs)}" else "${fmtDistance(others.minOfOrNull { it.distanceFromSelfM ?: 0.0 } ?: 0.0)} from nearest",
+                "Separated",
+                (if (s.stationaryForMs >= 10_000) "Stopped ${fmtMmSs(s.stationaryForMs)} · " else "") +
+                    "${fmtDistance(others.minOfOrNull { it.distanceFromSelfM ?: 0.0 } ?: 0.0)} from the group",
                 ArmorColors.Red,
             )
             OutlierAssessment.UNKNOWN -> LinkLook(
-                if (s.riders.size > 1) "NO LINK" else "SOLO",
+                if (s.riders.size > 1) "Group out of reach" else "Riding solo",
                 if (s.stationaryForMs >= 10_000) "Stopped ${fmtMmSs(s.stationaryForMs)}" else "No other riders in range",
-                ArmorColors.Muted,
+                ArmorColors.Dim,
             )
         }
-        else -> LinkLook("CHECKING", "Follow the prompt", ArmorColors.Amber)
+        else -> LinkLook("Safety check in progress", "Follow the prompt on screen", ArmorColors.Amber)
     }
 }
 
 @Composable
-private fun VelocityPanel(s: RideSnapshot, modifier: Modifier) {
+private fun StatusRow(s: RideSnapshot, look: LinkLook) {
     val kmh = max(0.0, s.self?.speedMps ?: 0.0) * 3.6
-    HudPanel(modifier) {
-        Column(Modifier.fillMaxWidth()) {
-            HudLabel("Velocity")
-            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
-                GlowText(kmh.roundToInt().toString(), ArmorColors.OnBg, 40, glow = 26f)
-                MonoText(" KM/H", size = 11, modifier = Modifier.padding(bottom = 6.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusDot(look.color, 10.dp)
+                Txt(look.title, Type.Title, maxLines = 1)
             }
-            Gap(4.dp)
-            SegmentBar((kmh / 10).roundToInt().coerceIn(0, 12), 12, ArmorColors.Cyan)
-            Gap(4.dp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoText("GPS", size = 10)
-                MonoText(if (s.gpsLost) "LOST" else "±${(s.self?.accuracyM ?: 0.0).roundToInt()} M", ArmorColors.OnBg, 10, weight = FontWeight.SemiBold)
-            }
+            Txt(look.sub, Type.Body.copy(fontSize = 14.sp), ArmorColors.Muted, Modifier.padding(top = 2.dp), maxLines = 2)
+        }
+        SpeedGauge(kmh)
+    }
+}
+
+/** Orange arc gauge, 270° sweep, filling with speed (full at 120 km/h). */
+@Composable
+private fun SpeedGauge(kmh: Double) {
+    Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val stroke = 8.dp.toPx()
+            val inset = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2)
+            val arc = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+            val round = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            drawArc(Color.White.copy(alpha = 0.08f), 135f, 270f, false, inset, arc, style = round)
+            val fill = (kmh / 120.0).toFloat().coerceIn(0f, 1f)
+            if (fill > 0.02f) drawArc(ArmorColors.Orange, 135f, 270f * fill, false, inset, arc, style = round)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Txt(kmh.roundToInt().toString(), Type.Speed.copy(fontSize = 26.sp))
+            Txt("km/h", Type.Caption, ArmorColors.Dim)
         }
     }
 }
 
 @Composable
-private fun LinkPanel(s: RideSnapshot, look: LinkLook, modifier: Modifier) {
-    val fresh = s.riders.filter { !it.isStale }
-    val spread = fresh.filter { !it.isSelf }.maxOfOrNull { it.distanceFromSelfM ?: 0.0 } ?: 0.0
-    HudPanel(modifier, accent = look.color) {
-        Column(Modifier.fillMaxWidth()) {
-            HudLabel("Link", look.color)
-            GlowText(look.title, look.color, 20, glow = 18f, mono = false, modifier = Modifier.padding(top = 6.dp))
-            Text(look.sub, color = ArmorColors.Muted, fontSize = 10.5.sp, maxLines = 2, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
-            SegmentBar(fresh.count { !it.isOutlier }, fresh.size.coerceIn(1, 10), look.color)
-            Gap(4.dp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoText("SPREAD", size = 10)
-                MonoText(fmtDistance(spread).uppercase(), ArmorColors.OnBg, 10, weight = FontWeight.SemiBold)
+private fun RiderItem(r: RiderView) {
+    val color = if (r.isStale) ArmorColors.Dim else ArmorColors.riderColor(r.id)
+    Column(Modifier.width(64.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box {
+            Avatar(r.name.firstOrNull()?.uppercase() ?: "?", color)
+            if (r.isOutlier && !r.isStale) {
+                Box(Modifier.align(Alignment.TopEnd).size(16.dp).background(ArmorColors.S1, CircleShape).padding(2.dp).background(ArmorColors.Red, CircleShape), contentAlignment = Alignment.Center) {
+                    Text("!", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun RiderCard(r: RiderView) {
-    val tint = when {
-        r.isStale -> ArmorColors.Stale
-        r.isOutlier -> ArmorColors.Red
-        else -> ArmorColors.Orange
-    }
-    val shape = CutShape(8.dp)
-    Column(
-        Modifier.width(84.dp).clip(shape).background(Brush.verticalGradient(listOf(ArmorColors.Panel, ArmorColors.PanelDeep))).border(1.dp, ArmorColors.Line, shape).padding(vertical = 8.dp, horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        HexBadge(r.name.firstOrNull()?.uppercase() ?: "?", tint, size = 32.dp)
-        Gap(5.dp)
-        Text(r.name, color = ArmorColors.OnBg, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        MonoText(
+        Txt(r.name, Type.Label.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 6.dp), maxLines = 1)
+        Txt(
             when {
-                r.isStale -> "LAST SEEN"
-                r.status != null -> r.status!!.shortLabel().uppercase()
-                r.distanceFromSelfM != null -> fmtDistance(r.distanceFromSelfM!!).uppercase().replace(" ", "") + (r.bearingFromSelfDeg?.let { " ${compass(it)}" } ?: "")
+                r.isStale -> "Last seen"
+                r.status != null -> r.status!!.shortLabel()
+                r.distanceFromSelfM != null -> fmtDistance(r.distanceFromSelfM!!) + (r.bearingFromSelfDeg?.let { " ${compass(it)}" } ?: "")
                 else -> ""
             },
-            if (r.status != null && !r.isStale) ArmorColors.Amber else ArmorColors.Muted, 9,
+            Type.Caption, if (r.status != null && !r.isStale) ArmorColors.Amber else ArmorColors.Muted, maxLines = 1,
         )
     }
 }
 
 @Composable
 private fun QuickStatusRow(current: QuickStatus?) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         QuickStatus.entries.forEach { st ->
             val on = st == current
-            val shape = CutShape(8.dp)
             Column(
-                Modifier.weight(1f).clip(shape)
-                    .background(if (on) Brush.verticalGradient(listOf(ArmorColors.Cyan, Color(0xFF1AA6C9))) else Brush.verticalGradient(listOf(ArmorColors.Panel, ArmorColors.PanelDeep)))
-                    .border(1.dp, if (on) ArmorColors.Cyan else ArmorColors.Line, shape)
-                    .clickable { ArmorRuntime.send(ArmorRuntime.Command.SetStatus(if (on) null else st)) }
-                    .padding(vertical = 7.dp),
+                Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { ArmorRuntime.send(ArmorRuntime.Command.SetStatus(if (on) null else st)) },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(st.icon(), fontSize = 19.sp)
-                Text(st.shortLabel().uppercase(), color = if (on) Color(0xFF022027) else ArmorColors.Muted, fontSize = 9.sp, letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold)
+                Box(
+                    Modifier.size(52.dp).clip(CircleShape).background(if (on) ArmorColors.Orange.copy(alpha = 0.2f) else ArmorColors.S2)
+                        .border(1.dp, if (on) ArmorColors.Orange else ArmorColors.Line, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { StatusIcon(st, if (on) ArmorColors.Orange else ArmorColors.Muted) }
+                Txt(st.shortLabel(), Type.Caption, if (on) ArmorColors.Orange else ArmorColors.Muted, Modifier.padding(top = 6.dp))
             }
         }
     }
@@ -333,16 +304,14 @@ private fun QuickStatusRow(current: QuickStatus?) {
 
 @Composable
 private fun DemoControls() {
-    HudPanel(Modifier.fillMaxWidth(), accent = ArmorColors.Violet, padding = 10.dp) {
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            HudLabel("Demo controls", ArmorColors.Violet)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { Pill("Stop my bike") { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.STOP_ME)) } }
-                item { Pill("Crash!") { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.CRASH_ME)) } }
-                item { Pill("Kabir stops") { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.STOP_PEER)) } }
-                item { Pill("Everyone rides") { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.RESUME_ALL)) } }
-                item { Pill("Peers acknowledge: on/off") { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.TOGGLE_PEER_ACK)) } }
-            }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(ArmorColors.S2).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Txt("Demo controls", Type.Label, ArmorColors.Muted)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { Pill("Stop my bike", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.STOP_ME)) } }
+            item { Pill("Crash", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.CRASH_ME)) } }
+            item { Pill("Kabir stops", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.STOP_PEER)) } }
+            item { Pill("Everyone rides", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.RESUME_ALL)) } }
+            item { Pill("Peers acknowledge", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.TOGGLE_PEER_ACK)) } }
         }
     }
 }

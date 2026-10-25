@@ -30,11 +30,3 @@ fun QuickStatus.shortLabel(): String = when (this) {
     QuickStatus.TRAFFIC -> "Wait"
     QuickStatus.PHOTO -> "Photo"
 }
-
-fun QuickStatus.icon(): String = when (this) {
-    QuickStatus.FUEL -> "\u26FD"
-    QuickStatus.BREAK -> "\u2615"
-    QuickStatus.MECHANICAL -> "\uD83D\uDD27"
-    QuickStatus.TRAFFIC -> "\uD83D\uDEA6"
-    QuickStatus.PHOTO -> "\uD83D\uDCF7"
-}

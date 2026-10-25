@@ -2,93 +2,100 @@ package com.armor.app.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
 import com.armor.app.service.ArmorRuntime
 import com.armor.core.engine.IncomingAlert
 import com.armor.core.engine.RideSnapshot
 import com.armor.core.model.AlertKind
 import com.armor.core.safety.SafetyState
-
-private fun light(c: Color) = Brush.linearGradient(listOf(c, c.copy(alpha = 0.78f)))
-private val WHITE_BTN = Brush.linearGradient(listOf(Color.White, Color(0xFFCFE9FF)))
-private val DARK_BTN = Brush.linearGradient(listOf(Color(0xFF0E1D31), Color(0xFF08121F)))
+import kotlin.math.roundToInt
 
 /**
- * Full-screen takeover for anything that needs the rider *now*. Controls are huge and few: the rider may be
- * wearing gloves, shaking, or hurt. Their own emergency always outranks someone else's.
+ * Full-screen takeover for anything that needs the rider *now*. It follows one pattern every time — an icon, a plain
+ * title, the key number, what happens next, then one obvious primary action — because the rider may be shaken,
+ * gloved or hurt and must never have to work out what to do.
  */
 @Composable
 fun CriticalScreen(snapshot: RideSnapshot, emergencyNumber: String) {
     val now = snapshot.nowMs
     val sosStatus by ArmorRuntime.sosStatus.collectAsState()
 
-    fun ring(sinceMs: Long, deadlineMs: Long) = (deadlineMs - now).toFloat() / (deadlineMs - sinceMs).coerceAtLeast(1)
+    fun fraction(sinceMs: Long, deadlineMs: Long) = (deadlineMs - now).toFloat() / (deadlineMs - sinceMs).coerceAtLeast(1)
 
     when (val state = snapshot.safety) {
         is SafetyState.Verifying -> Takeover(
-            accent = ArmorColors.Amber, tag = "SYSTEM NOTICE", title = "ARE YOU OK?",
-            subtitle = "STATIONARY · AWAY FROM GROUP",
-            ringFraction = ring(state.sinceMs, state.deadlineMs), ringTime = fmtMmSs(state.deadlineMs - now), ringCaption = "GROUP ALERT IN",
-            steps = listOf("Your group is alerted" to fmtMmSs(state.deadlineMs - now), "The group gets a minute to respond" to "THEN", "SOS is texted to your contacts" to "THEN"),
+            icon = Icons.Filled.Warning, accent = ArmorColors.Amber, title = "Are you okay?",
+            subtitle = "You've stopped away from your group.",
+            ring = Ring(fraction(state.sinceMs, state.deadlineMs), fmtMmSs(state.deadlineMs - now), "until your group is alerted"),
+            steps = listOf("Your group is alerted" to fmtMmSs(state.deadlineMs - now), "They get a minute to respond" to "then", "SOS is texted to your contacts" to "then"),
         ) {
-            HudButton("I'M OK", Brush.linearGradient(listOf(Color(0xFFFFD36A), Color(0xFFFF9D00))), Color(0xFF1A1000), ArmorColors.Amber) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
-            HoldToSosButton(sub = null) { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
+            PrimaryButton("I'm okay") { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
+            HoldToSosButton(sub = null, outlined = true) { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
         }
 
         is SafetyState.GroupAlerted -> Takeover(
-            accent = ArmorColors.Red, tag = "GROUP ALERTED", title = "NO RESPONSE",
-            subtitle = "YOUR GROUP HAS BEEN TOLD",
-            ringFraction = ring(state.sinceMs, state.deadlineMs), ringTime = fmtMmSs(state.deadlineMs - now), ringCaption = "SOS IN",
-            steps = listOf("Waiting for a rider to respond" to "NOW", "SOS texted to your contacts" to fmtMmSs(state.deadlineMs - now)),
+            icon = Icons.Filled.Notifications, accent = ArmorColors.Red, title = "Your group has been alerted",
+            subtitle = "No answer, so we told them.",
+            ring = Ring(fraction(state.sinceMs, state.deadlineMs), fmtMmSs(state.deadlineMs - now), "until SOS is sent"),
+            steps = listOf("Waiting for a rider to respond" to "now", "SOS is texted to your contacts" to fmtMmSs(state.deadlineMs - now)),
         ) {
-            HudButton("I'M OK", WHITE_BTN, Color(0xFF06101A), ArmorColors.Cyan) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
-            HoldToSosButton(quiet = true, sub = null) { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
+            PrimaryButton("I'm okay") { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
+            HoldToSosButton(sub = null, outlined = true) { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
         }
 
         is SafetyState.CrashCountdown -> Takeover(
-            accent = ArmorColors.Red, tag = "EMERGENCY PROTOCOL", title = "CRASH DETECTED",
-            subtitle = "IMPACT + ORIENTATION CHANGE",
-            ringFraction = ring(state.sinceMs, state.deadlineMs), ringTime = fmtMmSs(state.deadlineMs - now), ringCaption = "SOS IN",
-            steps = listOf("SOS texted with your location" to fmtMmSs(state.deadlineMs - now), "Your group is alerted" to "AT ONCE", "Alarm sounds at full volume" to "NOW"),
+            icon = Icons.Filled.Warning, accent = ArmorColors.Red, title = "Crash detected",
+            subtitle = "We'll send SOS with your location.",
+            ring = Ring(fraction(state.sinceMs, state.deadlineMs), fmtMmSs(state.deadlineMs - now), "until SOS is sent"),
+            steps = listOf("SOS is texted with your location" to fmtMmSs(state.deadlineMs - now), "Your group is alerted" to "at once", "An alarm sounds at full volume" to "now"),
         ) {
-            HudButton("I'M OK — CANCEL", WHITE_BTN, Color(0xFF06101A), ArmorColors.Cyan) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
-            HoldToSosButton(label = "HOLD TO SEND NOW", quiet = true, sub = null) { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
+            PrimaryButton("I'm okay — cancel") { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
+            HoldToSosButton(label = "Hold to send now", sub = null, outlined = true) { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
         }
 
         is SafetyState.Sos -> {
             val context = LocalContext.current
             Takeover(
-                accent = ArmorColors.Red, tag = "SOS ACTIVE", title = "SOS SENT",
-                subtitle = "LAST KNOWN LOCATION SHARED",
-                statusText = sosStatus ?: "Your group and emergency contacts have been alerted.",
+                icon = Icons.Filled.Check, accent = ArmorColors.Red, solidIcon = true, title = "SOS sent",
+                subtitle = "Your last known location was shared.",
+                detail = sosStatus ?: "Your group and emergency contacts have been alerted.",
             ) {
-                HudButton("CALL $emergencyNumber", WHITE_BTN, Color(0xFF300008), ArmorColors.Cyan) {
+                PrimaryButton("Call $emergencyNumber") {
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$emergencyNumber")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
-                HudButton("I'M OK — CANCEL SOS", DARK_BTN, Color(0xFF9FD8FF), ArmorColors.Violet, textSize = 16, vertical = 18.dp) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
+                SecondaryButton("I'm okay — cancel SOS") { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
             }
         }
 
@@ -110,75 +117,85 @@ private fun IncomingAlertScreen(incoming: IncomingAlert, emergencyNumber: String
     val distance = incoming.distanceM
     val bearing = incoming.bearingDeg
     Takeover(
-        accent = ArmorColors.Orange, tag = "ALLY IN DISTRESS", title = "${alert.riderName.uppercase()} NEEDS HELP",
-        subtitle = if (bearing != null) "BEARING ${bearing.roundToInt()}° · ${compass(bearing)}" else "LOCATION UNKNOWN",
-        bigReadout = distance?.let { fmtDistance(it).uppercase() },
-        statusText = "${alert.riderName} $what",
+        icon = Icons.Filled.LocationOn, accent = ArmorColors.Orange, title = "${alert.riderName} needs help",
+        subtitle = "${alert.riderName} $what",
+        keyFact = distance?.let { fmtDistance(it) },
+        keyCaption = if (bearing != null) "${compass(bearing)} of you · bearing ${bearing.roundToInt()}°" else "Location unknown",
     ) {
-        HudButton("I'M GOING", Brush.linearGradient(listOf(Color(0xFFFFB066), Color(0xFFFF6A00))), Color(0xFF1A0800), ArmorColors.Orange) { ArmorRuntime.send(ArmorRuntime.Command.Acknowledge(alert.id)) }
-        HudButton("CALL $emergencyNumber", DARK_BTN, Color(0xFF9FD8FF), ArmorColors.Violet, textSize = 16, vertical = 18.dp) {
+        PrimaryButton("I'm going", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00)) { ArmorRuntime.send(ArmorRuntime.Command.Acknowledge(alert.id)) }
+        SecondaryButton("Call $emergencyNumber") {
             context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$emergencyNumber")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
-        MonoText(
-            "DISMISS", ArmorColors.Muted, 11, spacing = 2.0, align = TextAlign.Center,
+        Txt(
+            "Dismiss", Type.BodyStrong, ArmorColors.Muted, align = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().clickableNoRipple { ArmorRuntime.send(ArmorRuntime.Command.Dismiss(alert.id)) }.padding(8.dp),
         )
     }
 }
 
+private data class Ring(val fraction: Float, val time: String, val caption: String)
+
 @Composable
 private fun Takeover(
+    icon: ImageVector,
     accent: Color,
-    tag: String,
     title: String,
     subtitle: String,
-    ringFraction: Float? = null,
-    ringTime: String = "",
-    ringCaption: String = "",
-    bigReadout: String? = null,
-    statusText: String? = null,
+    solidIcon: Boolean = false,
+    ring: Ring? = null,
+    keyFact: String? = null,
+    keyCaption: String? = null,
+    detail: String? = null,
     steps: List<Pair<String, String>> = emptyList(),
     buttons: @Composable () -> Unit,
 ) {
-    Box(
-        Modifier.fillMaxSize().hudBackground().drawBehind {
-            drawRect(Brush.radialGradient(listOf(accent.copy(alpha = 0.38f), Color.Transparent), center = Offset(size.width / 2f, size.height * 0.28f), radius = size.width * 0.9f))
-        },
+    Column(
+        Modifier.fillMaxSize().background(ArmorColors.Bg).safeDrawingPadding().padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 18.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SysTag(tag, accent)
-            HudPanel(Modifier.fillMaxWidth(), accent = accent, padding = 16.dp) {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    GlowText(title, Color.White, 26, glow = 30f, mono = false, spacing = 3, weight = FontWeight.Black, align = TextAlign.Center)
-                    MonoText(subtitle, ArmorColors.Muted, 10, align = TextAlign.Center, spacing = 2.0, modifier = Modifier.padding(top = 4.dp))
-                    if (ringFraction != null) {
-                        TickRing(ringFraction, accent, Modifier.padding(top = 6.dp), size = 200.dp) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                GlowText(ringTime, Color.White, 46, glow = 28f)
-                                MonoText(ringCaption, accent, 9, spacing = 2.5)
-                            }
-                        }
-                    }
-                    if (bigReadout != null) GlowText(bigReadout, accent, 38, modifier = Modifier.padding(vertical = 14.dp), glow = 26f)
-                    if (statusText != null) {
-                        Text(statusText, color = ArmorColors.OnBg, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp))
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+            Gap(24.dp)
+            Box(Modifier.size(76.dp).background(if (solidIcon) accent else accent.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = if (solidIcon) Color.White else accent, modifier = Modifier.size(38.dp))
+            }
+            Gap(18.dp)
+            Txt(title, Type.Headline, align = TextAlign.Center)
+            Txt(subtitle, Type.Body.copy(fontSize = 16.sp), ArmorColors.Muted, Modifier.padding(top = 6.dp), TextAlign.Center)
+            if (ring != null) {
+                Gap(22.dp)
+                CountdownRing(ring.fraction, accent) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Txt(ring.time, Type.Display)
+                        Txt(ring.caption, Type.Body, ArmorColors.Muted, Modifier.padding(top = 2.dp))
                     }
                 }
+            }
+            if (keyFact != null) {
+                Gap(26.dp)
+                Txt(keyFact, Type.Display.copy(fontSize = 54.sp), accent)
+                if (keyCaption != null) Txt(keyCaption, Type.Body, ArmorColors.Muted, Modifier.padding(top = 4.dp), TextAlign.Center)
+            }
+            if (detail != null) {
+                Gap(22.dp)
+                Card2 { Txt(detail, Type.Body, align = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
             }
             if (steps.isNotEmpty()) {
-                HudPanel(Modifier.fillMaxWidth(), accent = accent, padding = 14.dp) {
-                    Column(Modifier.fillMaxWidth()) {
-                        HudLabel("What happens next", accent)
-                        steps.forEachIndexed { i, (text, trailing) -> StepRow(i + 1, text, trailing, accent) }
+                Gap(22.dp)
+                ListCard {
+                    steps.forEachIndexed { i, (text, trailing) ->
+                        if (i > 0) Divider1()
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(24.dp).background(ArmorColors.S3, CircleShape), contentAlignment = Alignment.Center) {
+                                Text("${i + 1}", color = ArmorColors.OnBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Txt(text, Type.Body, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+                            Txt(trailing, Type.Label, ArmorColors.Muted)
+                        }
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
-            buttons()
+            Gap(12.dp)
         }
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { buttons() }
     }
 }

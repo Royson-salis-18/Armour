@@ -7,13 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,6 +18,9 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +42,7 @@ private enum class Tab(val label: String, val icon: ImageVector) {
     RIDE("Ride", Icons.Filled.Home),
     GROUP("Group", Icons.Filled.Person),
     EVENTS("Log", Icons.AutoMirrored.Filled.List),
-    SETTINGS("System", Icons.Filled.Settings),
+    SETTINGS("Settings", Icons.Filled.Settings),
 }
 
 @Composable
@@ -57,23 +55,26 @@ fun ArmorRoot() {
     val critical = snapshot?.takeIf { it.needsAttention }
     ScreenBehaviour(showOverLockScreen = critical != null, keepOn = running && settings.keepScreenOn)
 
-    Box(Modifier.fillMaxSize().hudBackground()) {
+    Box(Modifier.fillMaxSize().background(ArmorColors.Bg)) {
         Scaffold(
-            containerColor = Color.Transparent,
+            containerColor = ArmorColors.Bg,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                HudPanel(Modifier.navigationBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(), cut = 16.dp, padding = 6.dp) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        Tab.entries.forEachIndexed { i, t ->
-                            val on = tab == i
-                            val c = if (on) ArmorColors.Cyan else ArmorColors.Stale
-                            Column(
-                                Modifier.weight(1f).clickableNoRipple { tab = i }.padding(vertical = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Icon(t.icon, contentDescription = t.label, tint = c, modifier = Modifier.size(22.dp))
-                                Text(t.label.uppercase(), color = c, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
+                NavigationBar(containerColor = ArmorColors.S1, tonalElevation = 0.dp) {
+                    Tab.entries.forEachIndexed { i, t ->
+                        NavigationBarItem(
+                            selected = tab == i,
+                            onClick = { tab = i },
+                            icon = { Icon(t.icon, contentDescription = t.label) },
+                            label = { Text(t.label, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = ArmorColors.Orange,
+                                selectedTextColor = ArmorColors.OnBg,
+                                indicatorColor = Color.Transparent,
+                                unselectedIconColor = ArmorColors.Dim,
+                                unselectedTextColor = ArmorColors.Dim,
+                            ),
+                        )
                     }
                 }
             },
@@ -81,9 +82,9 @@ fun ArmorRoot() {
             Box(Modifier.padding(padding).fillMaxSize()) {
                 when (Tab.entries[tab]) {
                     Tab.RIDE -> RideScreen(settings)
-                    Tab.GROUP -> GroupScreen(settings)
-                    Tab.EVENTS -> EventsScreen()
-                    Tab.SETTINGS -> SettingsScreen(settings)
+                    Tab.GROUP -> Box(Modifier.statusBarsPadding()) { GroupScreen(settings) }
+                    Tab.EVENTS -> Box(Modifier.statusBarsPadding()) { EventsScreen() }
+                    Tab.SETTINGS -> Box(Modifier.statusBarsPadding()) { SettingsScreen(settings) }
                 }
             }
         }

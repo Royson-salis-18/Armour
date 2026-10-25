@@ -41,13 +41,13 @@ fun GroupScreen(settings: Settings) {
     val snapshot by ArmorRuntime.snapshot.collectAsState()
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        GlowText("GROUP", ArmorColors.OnBg, 22, glow = 16f, mono = false, spacing = 4, weight = FontWeight.Black)
+        ScreenTitle("Group")
         if (running) Text("Changes apply from your next ride.", color = ArmorColors.Amber, fontSize = 12.sp)
 
         if (settings.groupCode.isNotBlank()) {
             Card2 {
-                MonoText("ACCESS CODE", ArmorColors.Violet, 10, modifier = Modifier.fillMaxWidth(), align = TextAlign.Center, spacing = 3.0)
-                GlowText(settings.groupCode, ArmorColors.Cyan, 38, modifier = Modifier.fillMaxWidth(), glow = 24f, align = TextAlign.Center, spacing = 8)
+                Txt("GROUP CODE", Type.Caption, ArmorColors.Dim, Modifier.fillMaxWidth(), TextAlign.Center)
+                Txt(settings.groupCode, Type.Display.copy(fontSize = 42.sp, letterSpacing = 10.sp), ArmorColors.Orange, Modifier.fillMaxWidth(), TextAlign.Center)
                 Text("Share it with the riders you're joining", color = ArmorColors.Muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
         }

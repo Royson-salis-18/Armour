@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.border
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
@@ -38,7 +37,7 @@ private fun colorFor(type: String): Color = when (type) {
     "SOS_SENT", "CRASH", "GROUP_ALERT" -> ArmorColors.Red
     "STATIONARY_CHECK", "CRASH_DISMISSED" -> ArmorColors.Amber
     "RIDER_OK", "RIDER_RESUMED", "CRASH_CANCELLED", "SOS_CANCELLED", "GROUP_REACHED_RIDER", "GROUP_ACK" -> ArmorColors.Green
-    else -> ArmorColors.Cyan
+    else -> ArmorColors.Dim
 }
 
 /** The audit trail: every decision the safety logic made, with the reason, stored on the phone. */
@@ -51,26 +50,24 @@ fun EventsScreen() {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            GlowText("SYSTEM LOG", ArmorColors.OnBg, 22, glow = 16f, mono = false, spacing = 4, weight = FontWeight.Black)
+            ScreenTitle("Log")
             TextButton(onClick = { scope.launch { dao.clear() } }) { Text("Clear", color = ArmorColors.Muted) }
         }
-        Text("Why ARMOR did what it did. Stored on this phone and synced when you're online.", color = ArmorColors.Muted, fontSize = 12.sp)
+        Txt("Why ARMOR did what it did. Stored on this phone and synced when you're online.", Type.Label, ArmorColors.Muted)
         if (events.isEmpty()) Text("Nothing yet. Events appear here during a ride.", color = ArmorColors.Muted)
         LazyColumn(Modifier.fillMaxWidth()) {
-            items(events, key = { it.id }) { e ->
-                val c = colorFor(e.type)
-                Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.padding(top = 10.dp).size(11.dp).border(1.5.dp, c, CutShape(3.dp)))
-                        Box(Modifier.padding(top = 4.dp).width(1.dp).weight(1f).background(Brush.verticalGradient(listOf(c, Color.Transparent))))
-                    }
-                    HudPanel(Modifier.weight(1f).padding(bottom = 8.dp), accent = c, cut = 10.dp, padding = 10.dp) {
-                        Column(Modifier.fillMaxWidth()) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                MonoText(e.type.replace('_', ' '), c, 10, spacing = 1.5, weight = FontWeight.Bold)
-                                MonoText(fmtClock(e.timeMs) + if (!e.synced) " · LOCAL" else "", ArmorColors.Muted, 9)
+            item {
+                ListCard {
+                    events.forEachIndexed { i, e ->
+                        if (i > 0) Divider1()
+                        val c = colorFor(e.type)
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.padding(top = 6.dp).size(8.dp).background(c, CircleShape))
+                            Column(Modifier.weight(1f)) {
+                                Txt(e.type.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }, Type.BodyStrong)
+                                Txt(e.detail, Type.Label.copy(fontWeight = FontWeight.Normal), ArmorColors.Muted, Modifier.padding(top = 2.dp))
                             }
-                            Text(e.detail, color = ArmorColors.OnBg, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
+                            Txt(fmtClock(e.timeMs), Type.Caption, ArmorColors.Dim)
                         }
                     }
                 }
