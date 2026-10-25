@@ -144,3 +144,10 @@ replayed second by second, and reasoned about without a phone.
 - **Group data is only as fresh as the network.** Offline, other riders' positions go stale after 60 s and the group alert cannot be delivered; your own SOS text still can.
 - **Clock skew** between phones affects staleness checks; phones that are NTP-synced are fine.
 - Demo-only: simulated riders follow a fixed script.
+
+## Google Maps
+
+The ride screen uses a Google map when a key is configured, and the built-in offline map otherwise (or when offline).
+Put your key in `local.properties` (git-ignored) as `MAPS_API_KEY=...`, or set the `MAPS_API_KEY` environment variable,
+and enable "Maps SDK for Android" for it in Google Cloud. The map code (`ui/GoogleRiderMap.kt`) has only been
+compile-checked against stand-ins for the maps libraries here; it has not been run with a real key or on a device.

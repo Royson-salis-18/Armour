@@ -9,6 +9,8 @@ room = "2.7.1"
 junit = "5.11.4"
 junitPlatform = "1.11.4"
 orgJson = "20240303"
+mapsCompose = "6.6.0"
+playServicesMaps = "19.2.0"
 
 [libraries]
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -21,6 +23,8 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }

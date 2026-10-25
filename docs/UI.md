@@ -7,8 +7,8 @@
 
 ## Design direction
 
-A bespoke ARMOR identity rather than a stock dark theme: a shield-and-chevron **logo**, a drawn **rider-on-bike hero**
-over a dotted "sound-wave" orb, **Barlow Condensed** capitals for headlines and numerals (instrument-cluster feel) with
+A bespoke ARMOR identity rather than a stock dark theme: a **logo** that merges a location pin, a wheel rim and the letter A (its legs are the spokes), shown large over a dotted
+"sound-wave" orb, **Barlow Condensed** capitals for headlines and numerals (instrument-cluster feel) with
 **Inter** for reading text, **glass cards** with a lit top edge, a warm **glow** falling from the top of every screen
 (orange normally, red in emergencies), a **tachometer dial** for speed, a **convoy strip** showing who is ahead and
 behind, and a floating pill tab bar. **Only orange, red, black and grey** (plus white for text): orange means *brand and
@@ -24,8 +24,8 @@ A rider's phone is on a handlebar, so: large touch targets, very few controls pe
 |---|---|---|
 | ![start](screens/01_pre_ride.png) | ![ride](screens/02_ride_with_group.png) | ![separated](screens/03_ride_separated.png) |
 
-- **Start:** wordmark, the rider hero over the dot orb, a two-tone headline ("Ride together. **Come home together.**"), three readiness chips (location, SOS text, contacts) and a **slide-to-ride** control (a stray tap or pocket can't start a ride). **Try a demo ride** sits below.
-- **Map (full-bleed):** north-up and centred on you; works offline. Soft range rings over a faint street-grid texture, **your route as a glowing orange line**, you as the orange marker with a heading cone, other riders as grey avatars with a white ring, and the group's area as a soft white blob. A rider who has fallen away gets a red **!** badge. Chips float over the map for GPS and connection status, and **End**.
+- **Start:** wordmark, the logo over the dot orb, a two-tone headline ("Ride together. **Come home together.**"), three readiness chips (location, SOS text, contacts) and a **slide-to-ride** control (a stray tap or pocket can't start a ride). **Try a demo ride** sits below.
+- **Map (full-bleed):** with a Google Maps API key and a connection this is a real **Google map** in ARMOR's dark style (see README, "Google Maps"), with your route in orange, you as an orange dot and riders as avatar pucks; with no key or no connection it falls back to the offline map below, so nothing safety-related depends on tiles. The offline map: north-up and centred on you; works offline. Soft range rings over a faint street-grid texture, **your route as a glowing orange line**, you as the orange marker with a heading cone, other riders as grey avatars with a white ring, and the group's area as a soft white blob. A rider who has fallen away gets a red **!** badge. Chips float over the map for GPS and connection status, and **End**.
 - **Bottom sheet:**
   - **Status:** "With the group · 5 riders within 230 m", or "Separated", "Riding solo", "<name> is on the way", with a **tachometer dial** (ticks every 5 km/h, red from 100).
   - **Convoy strip:** every rider placed along the direction of travel (ahead on the right). A rider who has dropped off gets a red ring and a dashed red link back to the group, labelled with the gap.

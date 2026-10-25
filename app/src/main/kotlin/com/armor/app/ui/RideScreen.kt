@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armor.app.ArmorApp
+import com.armor.app.BuildConfig
 import com.armor.app.data.Settings
 import com.armor.app.service.ArmorRuntime
 import com.armor.app.service.RideService
@@ -111,10 +112,7 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
     val smsOk = granted(Manifest.permission.SEND_SMS)
     Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Wordmark()
-        Box(Modifier.fillMaxWidth().height(230.dp), contentAlignment = Alignment.Center) {
-            DotOrb(Modifier.size(230.dp).alpha(0.9f))
-            BikeHero(Modifier.fillMaxWidth().height(190.dp))
-        }
+        LogoHero(Modifier.fillMaxWidth().height(250.dp))
         Txt("RIDE TOGETHER.", Type.Hero)
         Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)
         Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 20.dp))
@@ -164,7 +162,9 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
         val maxSheet = maxHeight * 0.66f
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                RiderMap(s, Modifier.fillMaxSize(), trail.toList())
+                // Real map tiles when there is a key and a connection; otherwise the offline map, so nothing safety-related waits on tiles.
+                if (BuildConfig.MAPS_API_KEY.isNotBlank() && s.online) GoogleRiderMap(s, trail.toList(), Modifier.fillMaxSize())
+                else RiderMap(s, Modifier.fillMaxSize(), trail.toList())
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         MapChip(if (demo) "ARMOR · DEMO" else "ARMOR")

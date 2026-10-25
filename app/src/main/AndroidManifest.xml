@@ -33,6 +33,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Armor"
         tools:targetApi="35">
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="${mapsApiKey}" />
 
         <activity
             android:name=".MainActivity"

@@ -59,16 +59,17 @@ import kotlin.math.sin
 
 private fun svgPath(d: String): Path = PathParser().parsePathString(d).toPath()
 
-/** The ARMOR mark: a shield with two forward chevrons. */
+/** The ARMOR mark: a location pin holding a wheel rim, with the letter A inside as its spokes. */
 @Composable
-fun ArmorLogo(height: Dp, color: Color = ArmorColors.Orange, chevron: Color = ArmorColors.Bg) {
-    val shield = remember { svgPath(Art.LOGO_SHIELD) }
-    val chevrons = remember { Art.LOGO_CHEVRONS.map(::svgPath) }
+fun ArmorLogo(height: Dp, color: Color = ArmorColors.Orange, mark: Color = ArmorColors.Bg) {
+    val pin = remember { svgPath(Art.LOGO_PIN) }
+    val a = remember { svgPath(Art.LOGO_A) }
     Canvas(Modifier.size(height * 24f / 28f, height)) {
         val s = size.height / 28f
         scale(s, s, Offset.Zero) {
-            drawPath(shield, color)
-            chevrons.forEach { drawPath(it, chevron, style = Stroke(2.2f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
+            drawPath(pin, color)
+            drawCircle(mark, Art.LOGO_RIM_R, Offset(Art.LOGO_RIM_CX, Art.LOGO_RIM_CY), style = Stroke(1.6f))
+            drawPath(a, mark, style = Stroke(1.9f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }
@@ -81,41 +82,12 @@ fun Wordmark(height: Dp = 22.dp) {
     }
 }
 
-/**
- * A rider on a motorcycle in rim-lit silhouette: the start screen's hero. Drawn in two passes — orange outlines
- * first, then dark fills over them — so only the outer silhouette picks up the orange edge light.
- */
+/** The start screen's hero: the mark, large, over a dotted orb with a pool of orange light beneath it. */
 @Composable
-fun BikeHero(modifier: Modifier = Modifier) {
-    val parts = remember { Art.BIKE_PARTS.map { it to svgPath(it.d) } }
-    Canvas(modifier) {
-        val s = min(size.width / 240f, size.height / 130f)
-        val ox = (size.width - 240f * s) / 2f
-        val oy = (size.height - 130f * s) / 2f
-
-        // Warm pool of light on the ground.
-        drawOval(
-            Brush.radialGradient(listOf(ArmorColors.Orange.copy(alpha = 0.28f), Color.Transparent), center = Offset(size.width / 2f, oy + 116f * s), radius = 120f * s),
-            topLeft = Offset(size.width / 2f - 130f * s, oy + 104f * s), size = Size(260f * s, 26f * s),
-        )
-        translate(ox, oy) {
-            scale(s, s, Offset.Zero) {
-                Art.BIKE_WHEELS.forEach { (x, y, r) ->
-                    drawCircle(Color(0xFF1B1C20), r, Offset(x, y), style = Stroke(9f))
-                    drawCircle(ArmorColors.Orange.copy(alpha = 0.55f), r - 4.5f, Offset(x, y), style = Stroke(1.2f))
-                    drawCircle(Color(0xFF2A2B30), 6f, Offset(x, y))
-                }
-                parts.forEach { (p, path) ->
-                    if (p.fill) drawPath(path, ArmorColors.Orange, style = Stroke(2.6f, join = StrokeJoin.Round))
-                    else drawPath(path, ArmorColors.Orange, style = Stroke(p.w + 2.6f, cap = StrokeCap.Round))
-                }
-                val fillBrush = Brush.verticalGradient(listOf(Color(0xFF2A2B30), Color(0xFF131417)), startY = 20f, endY = 110f)
-                parts.forEach { (p, path) ->
-                    if (p.fill) drawPath(path, fillBrush)
-                    else drawPath(path, Color(0xFF1B1C20), style = Stroke(p.w, cap = StrokeCap.Round))
-                }
-            }
-        }
+fun LogoHero(modifier: Modifier = Modifier) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        DotOrb(Modifier.fillMaxSize())
+        ArmorLogo(112.dp)
     }
 }
 
