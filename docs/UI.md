@@ -24,7 +24,7 @@ Four tabs along the bottom: **Ride · Group · Events · Settings**. Anything ur
 - **Banner:** green *With the group*, red *Separated from the group* (plus how long you've been stopped), grey *Riding solo*.
 - **Radar map** (works offline, north-up, centred on you): rings show distance; the dashed blob is the group's boundary; a red ring marks a rider who has fallen out of the group; greyed riders are "last seen".
 - **Rider chips:** each rider's distance and direction, and any status they've set.
-- **Quick status** (one tap; tap again to clear): Fuel stop, Break, Mechanical issue, Traffic / waiting, Need help. The first four pause the "are you OK?" check; *Need help* asks the group for help straight away.
+- **Quick status** (one tap; tap again to clear): Fuel stop, Break, Mechanical issue, Traffic / waiting, Photo stop. Each pauses the "are you OK?" check for 15 minutes.
 - **HOLD FOR SOS:** press and hold ~1.5 s so a bump or glove can't trigger it. Always on this screen.
 
 ## Alerts (full-screen)
