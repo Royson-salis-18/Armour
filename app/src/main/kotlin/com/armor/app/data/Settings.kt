@@ -1,0 +1,76 @@
+package com.armor.app.data
+
+import android.content.Context
+import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import java.util.UUID
+
+enum class Sensitivity(val label: String, val impactG: Double) {
+    LOW("Low", 5.0),
+    MEDIUM("Medium", 4.0),
+    HIGH("High", 3.0),
+}
+
+data class Settings(
+    val riderId: String,
+    val riderName: String,
+    val groupCode: String,
+    val emergencyNumber: String,
+    /** Realtime Database root, e.g. https://my-project-default-rtdb.firebaseio.com. Blank disables online sync. */
+    val firebaseUrl: String,
+    val keepScreenOn: Boolean,
+    val soloMonitoring: Boolean,
+    val sensitivity: Sensitivity,
+    val usesIntercom: Boolean,
+) {
+    val syncConfigured: Boolean get() = groupCode.isNotBlank() && firebaseUrl.isNotBlank()
+}
+
+/** Small SharedPreferences wrapper that also exposes the current values as a [StateFlow] for the UI. */
+class Prefs(context: Context) {
+    private val sp: SharedPreferences = context.getSharedPreferences("armor", Context.MODE_PRIVATE)
+    private val _settings = MutableStateFlow(read())
+    val settings: StateFlow<Settings> = _settings
+
+    val current: Settings get() = _settings.value
+
+    /** Whether a ride was in progress; lets the service resume itself if Android restarts it. */
+    var rideActive: Boolean
+        get() = sp.getBoolean("rideActive", false)
+        set(value) { sp.edit().putBoolean("rideActive", value).apply() }
+
+    fun update(change: (Settings) -> Settings) {
+        val next = change(_settings.value)
+        sp.edit()
+            .putString("riderName", next.riderName)
+            .putString("groupCode", next.groupCode)
+            .putString("emergencyNumber", next.emergencyNumber)
+            .putString("firebaseUrl", next.firebaseUrl)
+            .putBoolean("keepScreenOn", next.keepScreenOn)
+            .putBoolean("soloMonitoring", next.soloMonitoring)
+            .putString("sensitivity", next.sensitivity.name)
+            .putBoolean("usesIntercom", next.usesIntercom)
+            .apply()
+        _settings.value = next
+    }
+
+    private fun read(): Settings {
+        var id = sp.getString("riderId", null)
+        if (id == null) {
+            id = UUID.randomUUID().toString().take(8)
+            sp.edit().putString("riderId", id).apply()
+        }
+        return Settings(
+            riderId = id,
+            riderName = sp.getString("riderName", "") ?: "",
+            groupCode = sp.getString("groupCode", "") ?: "",
+            emergencyNumber = sp.getString("emergencyNumber", "112") ?: "112",
+            firebaseUrl = sp.getString("firebaseUrl", "") ?: "",
+            keepScreenOn = sp.getBoolean("keepScreenOn", true),
+            soloMonitoring = sp.getBoolean("soloMonitoring", true),
+            sensitivity = runCatching { Sensitivity.valueOf(sp.getString("sensitivity", null) ?: "MEDIUM") }.getOrDefault(Sensitivity.MEDIUM),
+            usesIntercom = sp.getBoolean("usesIntercom", false),
+        )
+    }
+}

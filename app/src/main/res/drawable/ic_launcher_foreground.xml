@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Shield, inside the 66dp adaptive-icon safe zone -->
+    <path
+        android:fillColor="#FFFF7A1A"
+        android:pathData="M54,27 L77,36 V54 C77,68 67,80 54,84 C41,80 31,68 31,54 V36 Z" />
+    <!-- Chevron: forward motion -->
+    <path
+        android:fillColor="#FF0E0E10"
+        android:pathData="M54,38 L66,56 H59 L54,48.5 L49,56 H42 Z" />
+    <path
+        android:fillColor="#FF0E0E10"
+        android:pathData="M54,52 L66,70 H59 L54,62.5 L49,70 H42 Z" />
+</vector>
