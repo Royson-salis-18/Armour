@@ -171,6 +171,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
         }
     }
     val look = linkLook(s)
+    var chatOpen by remember { mutableStateOf(false) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val maxSheet = maxHeight * 0.66f
@@ -185,6 +186,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                             MapChip(if (s.gpsLost) "GPS lost" else "GPS", if (s.gpsLost) ArmorColors.Red else ArmorColors.Green)
                             MapChip(if (s.online) "Online" else "Offline", if (s.online) ArmorColors.Green else ArmorColors.Dim)
+                            MapChip("Chat", modifier = Modifier.clickable { chatOpen = true })
                             MapChip("End", modifier = Modifier.clickable { ArmorRuntime.send(ArmorRuntime.Command.Stop) })
                         }
                     }
@@ -200,6 +202,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).clip(CircleShape).background(ArmorColors.S3))
                 Gap(14.dp)
                 StatusRow(s, look)
+                Gap(14.dp)
+                LeadCard(s)
                 Gap(14.dp)
                 StatsStrip(s)
                 Gap(14.dp)
@@ -223,9 +227,9 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 }
             }
         }
+        if (chatOpen) ChatScreen(s) { chatOpen = false }
     }
 }
-
 private data class LinkLook(val title: String, val sub: String, val color: Color)
 
 private fun linkLook(s: RideSnapshot): LinkLook {

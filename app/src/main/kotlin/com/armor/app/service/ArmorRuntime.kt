@@ -4,6 +4,7 @@ import com.armor.app.sim.DemoAction
 import com.armor.core.engine.RideSnapshot
 import com.armor.core.model.QuickStatus
 import com.armor.core.engine.RideSummary
+import com.armor.core.model.StopReason
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -15,6 +16,10 @@ object ArmorRuntime {
         data object RiderOk : Command
         data object ManualSos : Command
         data object RequestHelp : Command
+        data class CallTeamStop(val reason: StopReason) : Command
+        data object ResumeTeam : Command
+        data class ConfirmTeamStop(val alertId: String) : Command
+        data class SendMessage(val text: String) : Command
         data object CancelHelp : Command
         data class SetStatus(val status: QuickStatus?) : Command
         data class Acknowledge(val alertId: String) : Command

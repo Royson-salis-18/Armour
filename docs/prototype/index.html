@@ -1,0 +1,811 @@
+<title>ARMOR Live Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a phone-sized app stage centred on a dark desk, with a demo-control rail beside it (below it on phones).
+   Look: ARMOR's committed dark identity (black, graphite, orange, red). Single theme by design. */
+:root{
+  --bg:#0A0A0B; --s1:#151618; --s2:#1D1E21; --s3:#28292D; --line:#2B2C30;
+  --or:#FF6B1A; --or2:#FF8A3D; --red:#E5342F; --on:#F4F4F5; --mid:#A3A5AB; --dim:#6E7076; --ok:#EDEDEF;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif; --body:'Inter',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:#050506;color:var(--on);font:15px/1.35 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px;overflow-x:hidden}
+.desk{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;align-items:flex-start;max-width:980px;margin:0 auto}
+.stagewrap{position:relative;flex:none}
+.phone{position:absolute;left:0;top:0;width:393px;height:852px;transform-origin:0 0;background:var(--bg);border-radius:46px;overflow:hidden;border:1px solid #2a2b30;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 6px #101012;user-select:none;-webkit-user-select:none}
+.glow{position:absolute;inset:0;background:radial-gradient(ellipse 120% 40% at 50% -4%,rgba(255,107,26,.2),transparent 70%);pointer-events:none;transition:background .5s}
+.glow.red{background:radial-gradient(ellipse 120% 42% at 50% -4%,rgba(229,52,47,.38),transparent 70%)}
+.glow.amber{background:radial-gradient(ellipse 120% 42% at 50% -4%,rgba(255,107,26,.34),transparent 70%)}
+.sb{position:absolute;top:0;left:0;right:0;height:46px;padding:15px 28px 0;display:flex;justify-content:space-between;font-size:13px;font-weight:600;z-index:60;pointer-events:none}
+.screen{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .25s}
+.screen.on{opacity:1;pointer-events:auto}
+.cond{font-family:var(--display);text-transform:uppercase}
+.eyebrow{font:600 14px var(--display);letter-spacing:2px;text-transform:uppercase}
+.sub{color:var(--mid);font-size:14px}.cap{color:var(--dim);font-size:12px}
+.row{display:flex;align-items:center}
+.glass{background:linear-gradient(180deg,#1E1F23,#121315);border:1px solid rgba(255,255,255,.1);border-top-color:rgba(255,255,255,.17);border-radius:28px}
+/* start */
+.start{padding:62px 20px 0}
+.hero{position:relative;height:250px;margin:6px -20px 0;display:flex;align-items:center;justify-content:center}
+.hero canvas{position:absolute;inset:0;margin:auto;animation:breathe 3.2s ease-in-out infinite alternate}
+@keyframes breathe{from{transform:scale(.96)}to{transform:scale(1.04)}}
+.hero svg{position:relative}
+.h-hero{font:800 50px/46px var(--display);text-transform:uppercase}
+.chips{display:flex;gap:8px;margin-top:18px}
+.chip{flex:1;display:flex;align-items:center;gap:6px;padding:10px;border-radius:14px;font-size:12px;font-weight:500;background:linear-gradient(#1E1F23,#121315);border:1px solid rgba(255,255,255,.1)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.slide{position:relative;margin-top:20px;height:64px;border-radius:32px;background:linear-gradient(var(--or2),var(--or));color:#1A0B00;box-shadow:0 8px 30px rgba(255,107,26,.35);overflow:hidden;touch-action:none}
+.slide .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-left:36px;font:600 22px var(--display);letter-spacing:1px}
+.slide .arr{position:absolute;right:22px;top:0;bottom:0;display:flex;align-items:center;font:600 26px var(--display);opacity:.65}
+.thumb{position:absolute;left:6px;top:6px;width:52px;height:52px;border-radius:50%;background:#1A0B00;display:flex;align-items:center;justify-content:center;cursor:grab}
+.link{background:none;border:0;color:var(--mid);font:inherit;font-size:13px;margin:14px auto 0;display:block;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+/* ride */
+#map{position:absolute;left:0;top:0;width:393px;height:560px}
+.pillrow{position:absolute;top:52px;left:16px;right:16px;display:flex;justify-content:space-between;z-index:10}
+.pill{white-space:nowrap;background:rgba(23,26,31,.82);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:8px 13px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;cursor:default}
+.pill.btn{cursor:pointer}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:318px;background:var(--s1);border-radius:28px 28px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.45);padding:10px 20px 100px;overflow-y:auto;scrollbar-width:none}
+.sheet::-webkit-scrollbar{display:none}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--s3);margin:0 auto 12px}
+.ttl{font:600 27px/29px var(--display);text-transform:uppercase}
+.stats{display:flex;padding:10px 0;margin:10px 0}
+.stats div{flex:1;text-align:center}.stats b{display:block;font:600 24px var(--display);font-variant-numeric:tabular-nums}.stats span{font:600 11px var(--display);letter-spacing:1.5px;color:var(--dim)}
+.quick{display:flex;margin:8px 0 14px}
+.q{flex:1;text-align:center;font-size:12px;color:var(--mid);cursor:pointer}
+.q i{display:flex;width:52px;height:52px;border-radius:50%;background:var(--s2);border:1px solid var(--line);align-items:center;justify-content:center;margin:0 auto 6px;transition:.2s}
+.q.on{color:var(--or)}.q.on i{background:rgba(255,107,26,.2);border-color:var(--or);color:var(--or)}
+.helprow{height:52px;border-radius:28px;background:var(--s2);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 20px;cursor:pointer;margin-bottom:10px;font-weight:600;transition:.2s}
+.helprow.on{background:rgba(255,107,26,.14);border-color:var(--or);color:var(--or)}
+.helprow small{font:600 14px var(--display);letter-spacing:2px;color:var(--mid)}.helprow.on small{color:var(--or)}
+.sos{position:relative;height:58px;border-radius:29px;background:var(--red);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:17px;color:#fff;overflow:hidden;cursor:pointer;touch-action:none}
+.sos .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.28)}
+.sos .badge{width:34px;height:34px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;position:relative}
+.sos small{display:block;font-weight:500;font-size:12px;opacity:.85;position:relative;margin-top:-1px}
+.sos .t{position:relative;line-height:1.15}
+.nav{position:absolute;left:28px;right:28px;bottom:22px;height:64px;border-radius:32px;background:linear-gradient(#1f2024,#141517);border:1px solid rgba(255,255,255,.09);display:flex;justify-content:space-around;align-items:center;z-index:30}
+.nav button{width:52px;height:52px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;background:none;color:var(--mid);cursor:pointer;transition:.2s}
+.nav button.on{background:linear-gradient(var(--or2),var(--or));color:#1A0B00}
+/* pages */
+.page{position:absolute;inset:0;padding:60px 20px 96px;overflow-y:auto;scrollbar-width:none}
+.page::-webkit-scrollbar{display:none}
+.h1{font:800 40px/42px var(--display);text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.sec{font:600 14px var(--display);letter-spacing:2px;text-transform:uppercase;color:var(--mid);margin:18px 4px 8px;display:flex;align-items:center;gap:8px}
+.sec:before{content:'';width:14px;height:3px;border-radius:2px;background:var(--or)}
+.li{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}.li:last-child{border:0}
+.li .t{flex:1;min-width:0}.li b{font-weight:600;display:block}.li span.s{color:var(--mid);font-size:13px}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex:none}
+.big-code{font:800 44px var(--display);letter-spacing:10px;color:var(--or);text-align:center}
+.seg{display:flex;background:var(--s2);border-radius:12px;padding:3px}.seg button{flex:1;padding:10px 0;border:0;border-radius:10px;font:600 13px var(--body);background:none;color:var(--mid);cursor:pointer}.seg button.on{background:var(--s3);color:var(--on)}
+.sw{width:50px;height:30px;border-radius:15px;background:var(--s3);position:relative;cursor:pointer;flex:none;transition:.2s}.sw:after{content:'';position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s}.sw.on{background:var(--or)}.sw.on:after{left:23px}
+/* takeover */
+.take{position:absolute;inset:0;z-index:50;padding:66px 24px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .2s}
+.take.on{opacity:1;pointer-events:auto}
+.take .tglow{position:absolute;inset:0;pointer-events:none}
+.take>*{position:relative}
+.bigic{width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:14px 0 14px}
+.ring{position:relative;width:224px;height:224px;margin:8px auto -26px;transform:scale(.86);transform-origin:top center}
+.ring .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .num b{font:800 76px/1 var(--display);font-variant-numeric:tabular-nums}
+.steps{width:100%;text-align:left;margin-top:12px;overflow:hidden}.steps .li{padding:9px 16px}.n{width:24px;height:24px;border-radius:50%;background:var(--s3);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.btn{height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;width:100%;cursor:pointer;border:0;font-family:var(--body)}
+.btn.w{background:#fff;color:#0E1013}.btn.o{background:linear-gradient(var(--or2),var(--or));color:#1A0B00}.btn.g{background:var(--s2);border:1px solid var(--line);color:var(--on);font-size:16px}
+.btn.ghost{background:transparent;border:1.5px solid var(--red);color:var(--red)}
+.take .bot{margin-top:auto;width:100%;display:flex;flex-direction:column;gap:12px}
+.toast{position:absolute;left:20px;right:20px;top:92px;z-index:70;background:rgba(30,31,35,.96);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px 16px;font-size:14px;font-weight:500;opacity:0;transform:translateY(-8px);transition:.25s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
+
+.field{width:100%;height:54px;border-radius:16px;background:var(--s2);border:1px solid var(--line);color:var(--on);font:500 16px var(--body);padding:0 16px;outline:none}
+.field:focus{border-color:var(--or)}
+.lbl2{font:600 12px var(--display);letter-spacing:2px;color:var(--dim);margin:14px 4px 6px;text-transform:uppercase}
+.crown{display:inline-flex;align-items:center;gap:4px;font:700 11px var(--display);letter-spacing:1.5px;color:#1A0B00;background:var(--or);border-radius:999px;padding:2px 8px}
+.crown.rid{background:var(--s3);color:var(--mid)}
+.lbar{position:absolute;left:20px;right:20px;bottom:22px;z-index:20}
+.rdy{margin-left:auto;font:600 13px var(--display);letter-spacing:1.5px}
+.chatbox{background:var(--s1);border:1px solid var(--line);border-radius:22px;display:flex;flex-direction:column;overflow:hidden}
+.msgs{height:170px;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
+.msgs::-webkit-scrollbar{display:none}
+.m{max-width:82%;padding:8px 12px;border-radius:16px;font-size:14px;background:var(--s2);align-self:flex-start}
+.m b{display:block;font:600 11px var(--display);letter-spacing:1.5px;color:var(--mid);text-transform:uppercase;margin-bottom:1px}
+.m.me{align-self:flex-end;background:rgba(255,107,26,.2);border:1px solid rgba(255,107,26,.4)}
+.m.sys{align-self:center;background:none;color:var(--dim);font-size:12px;text-align:center;padding:2px}
+.cin{display:flex;gap:8px;padding:8px;border-top:1px solid var(--line);align-items:center}
+.cin input{flex:1;min-width:0;height:42px;border-radius:21px;background:var(--s2);border:1px solid var(--line);color:var(--on);font:500 14px var(--body);padding:0 14px;outline:none}
+.ib{width:42px;height:42px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--mid);cursor:pointer;flex:none}
+.ib.o{background:var(--or);color:#1A0B00}
+.qr{display:flex;gap:6px;overflow-x:auto;padding:8px 10px 0;scrollbar-width:none}.qr::-webkit-scrollbar{display:none}
+.qr button{white-space:nowrap;border:1px solid var(--line);background:var(--s2);color:var(--on);border-radius:999px;padding:7px 12px;font:500 13px var(--body);cursor:pointer}
+.ov{position:absolute;left:0;right:0;bottom:0;z-index:55;background:var(--s1);border-radius:28px 28px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.6);padding:12px 16px 24px;transform:translateY(104%);transition:transform .28s cubic-bezier(.2,.9,.3,1);max-height:78%;display:flex;flex-direction:column}
+.ov.on{transform:none}
+.rc{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.rc button{border:1px solid var(--line);background:var(--s2);color:var(--on);border-radius:16px;padding:12px 4px;font:600 13px var(--body);cursor:pointer}
+.rc button:hover{border-color:var(--or)}
+.act2{display:flex;gap:8px;margin:2px 0 10px}
+.act2 button{flex:1;border:1px solid var(--line);background:var(--s2);color:var(--on);border-radius:18px;padding:12px 8px;font:600 14px var(--body);cursor:pointer;line-height:1.2}
+.act2 button.or{background:linear-gradient(var(--or2),var(--or));color:#1A0B00;border:0}
+.act2 button small{display:block;font-weight:500;font-size:11px;opacity:.75;margin-top:2px}
+.tsrow{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px}
+.pulse{animation:pulse .7s infinite}
+.mic.live{background:var(--red);color:#fff;animation:pulse 1s infinite}
+.heard{font-size:14px;color:var(--mid);min-height:20px;margin:8px 4px}
+.copy{border:1px solid var(--line);background:var(--s2);color:var(--on);border-radius:12px;padding:8px 12px;font:600 13px var(--body);cursor:pointer}
+/* control rail */
+.rail{flex:1 1 300px;max-width:420px;min-width:260px}
+.rail h2{font:800 30px/1 var(--display);text-transform:uppercase;margin-bottom:6px}
+.rail p{color:var(--mid);font-size:14px;margin-bottom:14px;max-width:46ch}
+.rail .grp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.rail button{border:1px solid var(--line);background:var(--s1);color:var(--on);border-radius:14px;padding:12px 10px;font:600 14px var(--body);cursor:pointer;text-align:left;transition:.15s}
+.rail button:hover{border-color:var(--or)}
+.rail button.red{border-color:rgba(229,52,47,.5)}.rail button.red:hover{border-color:var(--red)}
+.rail button small{display:block;color:var(--dim);font-weight:400;font-size:12px;margin-top:2px}
+.note{font-size:12px;color:var(--dim);border-top:1px solid var(--line);padding-top:12px;max-width:46ch}
+.live{display:flex;gap:6px;align-items:center;font:600 13px var(--display);letter-spacing:2px;color:var(--or);margin-bottom:10px}
+.live:before{content:'';width:8px;height:8px;border-radius:50%;background:var(--or);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.hero canvas,.live:before{animation:none}.screen,.take,.toast{transition:none}}
+@media (max-width:520px){body{padding-block:0}.desk{gap:16px}.rail{flex-basis:100%;max-width:none;padding-bottom:24px}}
+</style>
+
+<div class="desk">
+  <div class="stagewrap" id="wrap">
+    <div class="phone" id="phone">
+      <div class="glow" id="glow"></div>
+      <div class="sb"><span id="clock">9:41</span><span>5G ▮</span></div>
+      <div class="toast" id="toast"></div>
+
+      <!-- WELCOME -->
+      <div class="screen on" id="s-welcome">
+        <div class="start">
+          <div class="row" style="gap:8px" id="wordmark"></div>
+          <div class="hero" style="height:210px"><canvas id="orb" width="500" height="500" style="width:250px;height:250px"></canvas><div id="herologo"></div></div>
+          <div class="h-hero">Ride together.<br><span style="color:var(--or)">Come home together.</span></div>
+          <div class="lbl2">Your name</div>
+          <input class="field" id="nameIn" value="Royson" maxlength="20" autocomplete="off">
+          <div class="btn o" id="bCreate" style="margin-top:18px">Create a ride</div>
+          <div class="lbl2" style="margin-top:16px">Or join with a code</div>
+          <div class="row" style="gap:8px"><input class="field" id="codeIn" placeholder="K7MQ2X" maxlength="6" style="letter-spacing:6px;font-weight:700;text-transform:uppercase"><div class="btn g" id="bJoin" style="width:110px;flex:none;height:54px">Join</div></div>
+        </div>
+      </div>
+
+      <!-- LOBBY -->
+      <div class="screen" id="s-lobby"><div class="page" style="padding-bottom:110px">
+        <div class="h1"><span class="lg"></span><span id="lbTitle">Sunday run</span></div>
+        <div class="glass" style="padding:16px 18px;margin-top:10px">
+          <div class="cap" style="letter-spacing:1px">RIDE CODE · SHARE IT</div>
+          <div class="big-code" id="lbCode" style="margin:2px 0 6px">K7MQ2X</div>
+          <div class="row" style="gap:8px;justify-content:center"><button class="copy" id="cpLink">Copy invite link</button><button class="copy" id="cpCode">Copy code</button></div>
+          <div class="cap" style="text-align:center;margin-top:8px" id="lbLink">armor.app/join/K7MQ2X (example link)</div>
+        </div>
+        <div class="sec">Riders <span id="lbCount" style="color:var(--dim)"></span></div>
+        <div class="glass" id="lbList"></div>
+        <div class="sec">Group chat</div>
+        <div class="chatbox"><div class="msgs" id="lobbyMsgs"></div><div class="cin"><input id="lobbyIn" placeholder="Message the group" maxlength="280" autocomplete="off"><button class="ib" data-mic aria-label="Voice">MIC</button><button class="ib o" id="lobbySend" aria-label="Send">›</button></div></div>
+      </div>
+      <div class="lbar" id="lbBar"></div></div>
+
+      <!-- RIDE -->
+      <div class="screen" id="s-ride">
+        <canvas id="map" width="786" height="1120"></canvas>
+        <div class="pillrow">
+          <div style="display:flex;gap:8px"><div class="pill" id="roleBadge"></div></div>
+          <div style="display:flex;gap:8px"><div class="pill btn" id="chatBtn">Chat</div><div class="pill btn" id="endBtn">End</div></div>
+        </div>
+        <div class="sheet" id="sheet">
+          <div class="grab"></div>
+          <div class="row" style="justify-content:space-between;margin-bottom:6px">
+            <div style="min-width:0;padding-right:8px"><div class="row" style="gap:8px"><span class="dot" id="stDot" style="width:10px;height:10px"></span><span class="ttl" id="stTitle">With the group</span></div><div class="sub" id="stSub" style="margin-top:2px">—</div></div>
+            <canvas id="dial" width="224" height="224" style="width:112px;height:112px;flex:none"></canvas>
+          </div>
+          <div id="roleCard"></div>
+          <div class="glass stats" id="stats"><div><span>DISTANCE</span><b id="vDist">0 m</b></div><div><span>TIME</span><b id="vTime">0:00</b></div><div><span>TOP SPEED</span><b id="vTop">0 km/h</b></div></div>
+          <canvas id="convoy" width="706" height="192" style="width:353px;height:96px;display:block"></canvas>
+          <div class="quick" id="quick"></div>
+          <div class="helprow" id="help"><span id="helpTxt">Need a hand?</span><small id="helpSm">ASK GROUP</small></div>
+          <div class="sos" id="sos"><div class="fill" id="sosfill"></div><span class="badge">SOS</span><div class="t">Hold for SOS<small>Press and hold for 1.5 seconds</small></div></div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="screen" id="s-sum"><div class="page" style="padding-top:62px">
+        <div class="row" style="gap:8px"><span id="sumlogo"></span><span class="eyebrow" style="color:var(--or)">Ride complete</span></div>
+        <div class="h-hero" style="margin-top:8px">You made<br><span style="color:var(--or)">it home.</span></div>
+        <div style="font:800 92px/88px var(--display);margin-top:26px;font-variant-numeric:tabular-nums" id="sDist">0</div>
+        <div class="eyebrow" style="color:var(--dim)">Distance</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px" id="sTiles"></div>
+        <div class="btn o" id="sumDone" style="margin-top:26px">Done</div>
+      </div></div>
+
+      <!-- GROUP / LOG / SETTINGS -->
+      <div class="screen" id="s-group"><div class="page">
+        <div class="h1"><span class="lg"></span>Group</div>
+        <div class="glass" style="padding:20px;margin-top:12px"><div class="cap" style="text-align:center;letter-spacing:1px" id="gTitle">RIDE CODE</div><div class="big-code" style="margin:6px 0 2px" id="gCode">K7MQ2X</div><div class="sub" style="text-align:center">Share it with the riders you're joining</div></div>
+        <div class="sec">Riders now</div><div class="glass" id="gList"></div>
+      </div></div>
+      <div class="screen" id="s-log"><div class="page">
+        <div class="h1"><span class="lg"></span>Log</div><div class="sub" style="margin-bottom:12px">Why ARMOR did what it did</div>
+        <div class="glass" id="logList"></div>
+      </div></div>
+      <div class="screen" id="s-set"><div class="page">
+        <div class="h1"><span class="lg"></span>Settings</div>
+        <div class="sec">Emergency contacts</div>
+        <div class="glass"><div class="li"><div class="av" style="background:var(--s3)">A</div><div class="t"><b>Asha</b><span class="s">+91 98•••• 1234</span></div></div><div class="li"><div class="av" style="background:var(--s3)">D</div><div class="t"><b>Dad</b><span class="s">+91 99•••• 5678</span></div></div></div>
+        <div class="sec">Crash sensitivity</div>
+        <div class="seg" id="sens"><button>Low · 5 g</button><button class="on">Medium · 4 g</button><button>High · 3 g</button></div>
+        <div class="sec">Monitoring</div>
+        <div class="glass"><div class="li"><div class="t"><b>Check on me when riding solo</b><span class="s">Ask "are you okay?" after a long stop</span></div><div class="sw on" data-sw></div></div><div class="li"><div class="t"><b>Keep screen on while riding</b></div><div class="sw on" data-sw></div></div></div>
+      </div></div>
+
+      <div class="nav" id="nav"></div>
+
+      <!-- CHAT OVERLAY (ride) -->
+      <div class="ov" id="chatov" style="height:560px">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="ttl">Group chat</div><button class="ib" id="chatClose" aria-label="Close">✕</button></div>
+        <div class="chatbox" style="flex:1;min-height:0"><div class="msgs" id="rideMsgs" style="height:auto;flex:1"></div>
+          <div class="qr" id="qr"></div>
+          <div class="cin"><input id="rideIn" placeholder="Message the group" maxlength="280" autocomplete="off"><button class="ib" data-mic aria-label="Voice">MIC</button><button class="ib o" id="rideSend" aria-label="Send">›</button></div></div>
+      </div>
+
+      <!-- VOICE OVERLAY -->
+      <div class="ov" id="voiceov" style="z-index:66">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px"><div class="ttl">Voice command</div><button class="ib" id="voiceClose" aria-label="Close">✕</button></div>
+        <div class="sub">Say or type a command. Stops and messages ask you to confirm first, so a misheard word can't stop the group.</div>
+        <div class="row" style="gap:8px;margin-top:12px"><input class="field" id="voiceIn" placeholder='e.g. "everyone stop for fuel"' style="height:48px;font-size:15px" autocomplete="off"><button class="ib mic" id="micBtn" aria-label="Hold to talk" style="width:48px;height:48px">MIC</button></div>
+        <div class="heard" id="heard"></div>
+        <div id="voiceConfirm"></div>
+        <div class="qr" style="padding:6px 0 0;flex-wrap:wrap;overflow:visible" id="voiceEx"></div>
+      </div>
+
+      <!-- TAKEOVER -->
+      <div class="take" id="take">
+        <div class="tglow" id="tglow"></div>
+        <div class="row" style="gap:8px" id="tEyebrow"></div>
+        <div class="bigic" id="tIcon"></div>
+        <div id="tTitle" style="font:800 38px/38px var(--display);text-transform:uppercase"></div>
+        <div class="sub" id="tSub" style="margin-top:6px"></div>
+        <div id="tBody" style="width:100%"></div>
+        <div class="bot" id="tBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rail">
+    <div class="live">LIVE PROTOTYPE</div>
+    <h2>Run the whole ride</h2>
+    <p id="railHint">Create a ride (you lead) or join one with a code (someone else leads). The group and the safety logic are simulated; use the controls to stage what happens next.</p>
+    <div class="grp" id="railGrp">
+      <button id="rLead" hidden>Lead calls a team stop<small>Arjun: everyone stop for fuel</small></button>
+      <button id="rRelease" hidden>Lead says ride on<small>Release the group</small></button>
+      <button id="rReq" hidden>Rider asks to stop<small>Meera asks for a break</small></button>
+      <button id="cStop">Stop my bike<small>Fall behind the group</small></button>
+      <button id="cGo">Ride on<small>Rejoin the road</small></button>
+      <button class="red" id="cCrash">Crash<small>Impact, 15 s to cancel</small></button>
+      <button id="cKabir">Kabir stops<small>Another rider needs help</small></button>
+      <button id="cAck">Peers acknowledge: <span id="ackState">on</span><small>Stops SOS if someone responds</small></button>
+      <button id="cFast">Speed: <span id="fastState">1×</span><small>Run the clock faster</small></button>
+      <button id="cRestart">Restart<small>Back to the welcome screen</small></button>
+    </div>
+    <div class="note">Browser prototype of the ARMOR app's flow and screens, with shortened demo timings. The riders, chat replies and lead's decisions are simulated; nothing here sends a real message or uses your location. Voice here uses simple phrase matching (and the browser's speech recognition where this page is allowed to use the mic). The Android app itself has not been run on a device.</div>
+  </div>
+</div>
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const OR='#FF6B1A',RED='#E5342F';
+const ICON={
+ fuel:'<rect x="4" y="3" width="10" height="18" rx="2"/><rect x="6.5" y="6" width="5" height="4" rx="1"/><path d="M14 9h4v8M2.5 21h13"/>',
+ cup:'<rect x="3" y="8" width="12" height="11" rx="2.5"/><path d="M15 10a3 3 0 010 6M6 3.5v2M9 3v2.5M12 3.5v2"/>',
+ wrench:'<path d="M14.5 6.5a4 4 0 00-5 5l-6 6 2.5 2.5 6-6a4 4 0 005-5l-2.5 2.5-2-2z"/>',
+ light:'<rect x="7" y="2.5" width="10" height="19" rx="3"/><circle cx="12" cy="7" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="17" r="1.6"/>',
+ cam:'<rect x="2.5" y="6.5" width="19" height="13" rx="3"/><circle cx="12" cy="13" r="3.6"/><path d="M8.5 6.5L10 4h4l1.5 2.5"/>',
+ pin:'<path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+ warn:'<path d="M12 3.5l10 17H2z"/><path d="M12 10v5M12 18v.1"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+ bell:'<path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/>',
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',
+ user:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-4 4-5.5 7.5-5.5s6.7 1.5 7.5 5.5"/>',
+ list:'<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.1M3.5 12h.1M3.5 18h.1"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
+ mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/>',
+ crown:'<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5z"/>',
+ stop:'<circle cx="12" cy="12" r="9"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/>'
+};
+const svg=(k,c='currentColor',z=24)=>`<svg width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
+const logo=(h,c=OR,face='#0A0A0B')=>`<svg width="${h*24/28}" height="${h}" viewBox="0 0 24 28"><path d="M12 1C6.2 1 2 5.3 2 10.8 2 17.5 12 27 12 27s10-9.5 10-16.2C22 5.3 17.8 1 12 1z" fill="${c}"/><circle cx="12" cy="10.8" r="7.8" fill="${face}"/><circle cx="12" cy="10.8" r="6.7" fill="none" stroke="${c}" stroke-width="1.9"/><path d="M12 10.8L18.18 12.46M12 10.8L13.66 16.98M12 10.8L7.47 15.33M12 10.8L5.82 9.14M12 10.8L10.34 4.62M12 10.8L16.53 6.27" stroke="#6A6C72" stroke-width=".6" stroke-linecap="round"/><path d="M8.6 15.9L12 4.6 15.4 15.9M9.6 12.6H14.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+$('#wordmark').innerHTML=logo(22)+'<span style="font:800 21px var(--display);letter-spacing:3px">ARMOR</span>';
+$('#herologo').innerHTML=logo(104);
+$('#sumlogo').innerHTML=logo(20);
+document.querySelectorAll('.lg').forEach(e=>e.innerHTML=logo(26));
+document.querySelectorAll('[data-mic]').forEach(e=>e.innerHTML=svg('mic'));
+$('#micBtn').innerHTML=svg('mic');
+
+/* ---------- fit the phone to the viewport ---------- */
+const wrap=$('#wrap'),phone=$('#phone');
+function fit(){
+  const availW=Math.min(window.innerWidth-32,393), availH=window.innerHeight-24;
+  const k=Math.min(1,availW/393,Math.max(.5,availH/852));
+  phone.style.transform=`scale(${k})`;wrap.style.width=393*k+'px';wrap.style.height=852*k+'px';phone.dataset.k=k;
+}
+addEventListener('resize',fit);fit();
+(function orb(){
+  const c=$('#orb'),x=c.getContext('2d');x.scale(2,2);
+  for(let r=1;r<=9;r++){const R=125*r/9,n=Math.min(90,r*11),al=.6*(1-(r-1)/10);
+    for(let k=0;k<n;k++){const a=2*Math.PI*k/n+r*.37,rr=R*(1+.07*Math.sin(a*3+r));
+      x.fillStyle=`rgba(255,107,26,${al})`;x.beginPath();x.arc(125+Math.cos(a)*rr,125+Math.sin(a)*rr,1.1,0,7);x.fill();}}
+})();
+
+/* ---------- world + state ---------- */
+const roadX=s=>140*Math.sin(s/300)+60*Math.sin(s/110);
+const P=s=>({x:roadX(s),y:s});
+const COLORS={arjun:'#8E9197',meera:'#7A7D84',kabir:'#9DA0A6',isha:'#6B6E75',me:OR};
+const NAMES={arjun:'Arjun',meera:'Meera',kabir:'Kabir',isha:'Isha'};
+const REASONS=[['FUEL','Fuel','fuel'],['BREAK','Break','cup'],['FOOD','Food','cup'],['MECH','Mechanical','wrench'],['WEATHER','Weather','light'],['OTHER','Other','pin']];
+const RLABEL=Object.fromEntries(REASONS.map(([k,l])=>[k,l]));
+const DEMO={ask:6,verify:15,group:15,crash:15};
+function fresh(){return{
+  mode:'welcome',name:'Royson',rideName:'Sunday run',code:'K7MQ2X',leadId:'me',lt:0,t:0,speedMul:1,ackOn:true,
+  roster:[],chat:[],unread:0,sentJoin:{},script:[],
+  me:{s:0,v:0,target:0,top:0,dist:0,status:null,stopSince:null,lastRiderOk:-99,ready:true},
+  peers:[
+    {id:'arjun',name:'Arjun',s:120,v:18,stopped:false,confirmAt:0},
+    {id:'meera',name:'Meera',s:60,v:18,stopped:false,confirmAt:0},
+    {id:'kabir',name:'Kabir',s:-40,v:18,stopped:false,confirmAt:0},
+    {id:'isha',name:'Isha',s:-90,v:18,stopped:false,confirmAt:0},
+  ],
+  state:{k:'normal'},incoming:null,help:null,teamStop:null,stopReq:null,picker:null,postponed:0,log:[],trail:[],viewR:300,final:null,autoStart:null};}
+let sim=fresh();
+const isLead=()=>sim.leadId==='me';
+const nameOf=id=>id==='me'?sim.name:NAMES[id];
+function log(k,t){sim.log.unshift({t:sim.t,k,msg:t});if(sim.log.length>80)sim.log.pop()}
+const fmtT=s=>{s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`:`${m}:${String(ss).padStart(2,'0')}`};
+const fmtD=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(1)+' km';
+const hyp=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.remove('on'),2800)}
+const setHtml=(el,h)=>{if(el.__h!==h){el.__h=h;el.innerHTML=h;return true}return false};
+function chat(who,text,sys){sim.chat.push({who,text,sys:!!sys,t:sim.mode==='lobby'?sim.lt:sim.t});if(who!=='me'&&!sys&&!chatOpen()&&sim.mode==='ride')sim.unread++;}
+const chatOpen=()=>$('#chatov').classList.contains('on');
+
+/* ---------- screens + nav ---------- */
+const TABS=[['ride','home'],['group','user'],['log','list'],['set','gear']];
+$('#nav').innerHTML=TABS.map(([t,i])=>`<button data-t="${t}">${svg(i)}</button>`).join('');
+let tab='ride';
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
+function screens(){
+  const m=sim.mode,onRide=tab==='ride';
+  const on={welcome:m==='welcome',lobby:m==='lobby',ride:onRide&&m==='ride',sum:onRide&&m==='sum',group:tab==='group'&&(m==='ride'||m==='sum'||m==='lobby'),log:tab==='log'&&(m==='ride'||m==='sum'),set:tab==='set'&&(m==='ride'||m==='sum')};
+  for(const k in on)$('#s-'+k).classList.toggle('on',!!on[k]);
+  const showNav=m==='ride'||m==='sum';$('#nav').style.display=showNav?'':'none';
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+}
+
+/* ---------- welcome -> lobby ---------- */
+function toLobby(asLead){
+  const nm=$('#nameIn').value.trim()||'Rider';sim=fresh();sim.name=nm;sim.mode='lobby';sim.leadId=asLead?'me':'arjun';
+  if(asLead){sim.rideName='Sunday run';sim.code='K7MQ2X';
+    sim.roster=[{id:'me',joinAt:0,readyAt:0},{id:'arjun',joinAt:1.5,readyAt:4.5},{id:'meera',joinAt:3.2,readyAt:6},{id:'kabir',joinAt:5,readyAt:8},{id:'isha',joinAt:6.6,readyAt:10}];
+    sim.script=[[2,'arjun','Here. Tank is full.'],[4,'meera','Morning! Which road are we taking?'],[7,'kabir','Can we stop for chai around the 60 km mark?'],[9.5,'isha','Two minutes late, saving a spot.']];
+    sim.me.ready=true;
+  }else{
+    const c=($('#codeIn').value||'K7MQ2X').toUpperCase().slice(0,6);sim.code=c.padEnd(6,'X');
+    sim.roster=[{id:'arjun',joinAt:0,readyAt:0},{id:'meera',joinAt:0,readyAt:2},{id:'me',joinAt:0,readyAt:1e9},{id:'kabir',joinAt:3,readyAt:6},{id:'isha',joinAt:5,readyAt:8}];
+    sim.script=[[1,'arjun','Welcome. Route is the coast road, about 90 km.'],[3,'arjun','I will call a stop for fuel at the halfway mark. Watch for the alert.'],[6,'meera','Copy that.'],[8.5,'kabir','Ready when you are.']];
+    sim.me.ready=false;
+  }
+  sim.lt=0;sim.seen={};sim.said={};
+  chat('x','You created this ride. You are the lead.',true);if(!asLead){sim.chat=[];chat('x','You joined as a rider.',true)}
+  render();
+}
+$('#bCreate').onclick=()=>toLobby(true);
+$('#bJoin').onclick=()=>toLobby(false);
+$('#codeIn').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')});
+function lobbyTick(dt){
+  sim.lt+=dt;
+  for(const r of sim.roster){
+    if(!sim.seen[r.id]&&sim.lt>=r.joinAt){sim.seen[r.id]=1;if(r.id!=='me'&&r.joinAt>0)chat('x',`${NAMES[r.id]} joined`,true)}
+    if(r.id!=='me'&&!r.ready&&sim.lt>=r.readyAt&&sim.seen[r.id])r.ready=true;
+    if(r.id==='me')r.ready=sim.me.ready;
+  }
+  sim.script.forEach((s,i)=>{if(!sim.said[i]&&sim.lt>=s[0]){sim.said[i]=1;chat(s[1],s[2])}});
+  // as a rider: once everyone is ready the lead starts the ride
+  const joined=sim.roster.filter(r=>sim.seen[r.id]);
+  const allReady=joined.length===sim.roster.length&&joined.every(r=>r.ready);
+  if(!isLead()&&allReady){if(sim.autoStart==null)sim.autoStart=sim.lt+3;if(sim.lt>=sim.autoStart){chat('x',`${nameOf(sim.leadId)} started the ride`,true);startRide()}}
+  else sim.autoStart=null;
+}
+function lobbyHtml(){
+  const rows=sim.roster.filter(r=>sim.seen[r.id]).map(r=>{const id=r.id,lead=sim.leadId===id,me=id==='me';
+    const canGive=isLead()&&!me;
+    return `<div class="li"><div class="av" style="background:${COLORS[id]};width:36px;height:36px;font-size:15px">${esc(nameOf(id)[0])}</div><div class="t"><b>${esc(nameOf(id))}${me?' (you)':''}</b></div>${lead?`<span class="crown">${svg('crown','#1A0B00',12)}LEAD</span>`:(canGive?`<button class="copy" data-give="${id}" style="padding:5px 9px;font-size:12px">Make lead</button>`:'')}<span class="rdy" style="color:${r.ready?'var(--ok)':'var(--dim)'}">${r.ready?'READY':'WAITING'}</span></div>`}).join('');
+  return rows;
+}
+function lobbyBar(){
+  const joined=sim.roster.filter(r=>sim.seen[r.id]);
+  if(isLead()){const ready=joined.filter(r=>r.id!=='me'&&r.ready).length;const ok=ready>=2;
+    return `<div class="btn o" id="startBtn" style="${ok?'':'opacity:.4;pointer-events:none'}">${ok?'Start the ride':'Waiting for riders to be ready'}</div>`}
+  return sim.me.ready?`<div class="btn g" id="rdyBtn">You're ready · waiting for ${esc(nameOf(sim.leadId))}</div>`:`<div class="btn o" id="rdyBtn">I'm ready</div>`;
+}
+$('#lbBar').addEventListener('click',e=>{
+  if(e.target.closest('#startBtn')){chat('x','You started the ride',true);startRide()}
+  if(e.target.closest('#rdyBtn')){sim.me.ready=!sim.me.ready;render()}
+});
+$('#lbList').addEventListener('click',e=>{const g=e.target.closest('[data-give]');if(g){sim.leadId=g.dataset.give;chat('x',`${NAMES[sim.leadId]} is now the lead`,true);toast(NAMES[sim.leadId]+' is now the lead');render()}});
+const copyTxt=async(t,msg)=>{try{await navigator.clipboard.writeText(t);toast(msg)}catch(e){toast(t)}};
+$('#cpLink').onclick=()=>copyTxt('https://armor.app/join/'+sim.code,'Invite link copied');
+$('#cpCode').onclick=()=>copyTxt(sim.code,'Code copied');
+
+/* ---------- chat ---------- */
+function msgsHtml(){return sim.chat.map(m=>m.sys?`<div class="m sys">${esc(m.text)}</div>`:`<div class="m${m.who==='me'?' me':''}">${m.who==='me'?'':`<b>${esc(nameOf(m.who))}${sim.leadId===m.who?' · lead':''}</b>`}${esc(m.text)}</div>`).join('')}
+function paintMsgs(el){const stick=el.scrollTop+el.clientHeight>=el.scrollHeight-30;if(setHtml(el,msgsHtml())&&stick)el.scrollTop=el.scrollHeight}
+const QR=['Fuel is low','Need a break','Follow me','Slow down','Behind you','All good','Running late'];
+$('#qr').innerHTML=QR.map(q=>`<button>${q}</button>`).join('');
+$('#qr').addEventListener('click',e=>{const b=e.target.closest('button');if(b)say(b.textContent)});
+function say(text){
+  const t=text.trim();if(!t)return;chat('me',t.slice(0,280));
+  if(sim.ackOn){const who=['meera','kabir','isha','arjun'].filter(id=>id!==sim.leadId||Math.random()<.5)[Math.floor(Math.random()*3)];
+    setTimeout(()=>{if(sim.mode==='ride'||sim.mode==='lobby'){chat(who,['Copy that.','Got it.','Understood.','👍'.length?'Roger.':'Ok'][Math.floor(Math.random()*4)]);render()}},1800/sim.speedMul)}
+  render();
+}
+for(const [inp,btn] of [['#lobbyIn','#lobbySend'],['#rideIn','#rideSend']]){
+  $(btn).onclick=()=>{const i=$(inp);say(i.value);i.value=''};
+  $(inp).addEventListener('keydown',e=>{if(e.key==='Enter'){say(e.target.value);e.target.value=''}});
+}
+$('#chatBtn').onclick=()=>{$('#chatov').classList.add('on');sim.unread=0;setTimeout(()=>{const m=$('#rideMsgs');m.scrollTop=m.scrollHeight},50)};
+$('#chatClose').onclick=()=>$('#chatov').classList.remove('on');
+
+/* ---------- voice (phrase matching, same rules as the Android parser) ---------- */
+const RW=[['FUEL',['fuel','petrol','gas','diesel','refuel','fill up','fill the tank']],['FOOD',['food','eat','lunch','dinner','breakfast','meal','tea','chai','coffee']],['MECH',['puncture','flat tyre','flat tire','breakdown','broke down','mechanical','chain','engine']],['WEATHER',['rain','raining','rainy','weather','storm','stormy','fog','foggy']],['BREAK',['break','rest','stretch','toilet','washroom','bathroom','pit stop']]];
+function has(t,...ps){return ps.some(p=>new RegExp('(^| )'+p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'( |$)').test(t))}
+function parseVoice(raw,lead){
+  const t=raw.toLowerCase().replace(/['’]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();if(!t)return null;
+  let m=t.match(/^(?:send (?:a )?message|message|tell (?:everyone|the team|the group|them)|say|text) (.+)$/);if(m)return{k:'say',text:m[1]};
+  if(has(t,'sos','emergency','call for help','call an ambulance','i crashed','i have crashed'))return{k:'sos'};
+  if(has(t,'im okay','i am okay','im ok','i am ok','im fine','i am fine','all good','cancel alert'))return{k:'ok'};
+  if(has(t,'need a hand','need help','need some help','need assistance','help me'))return{k:'hand'};
+  if(has(t,'ride on','resume','lets go','carry on','everyone go','move out','start riding'))return lead?{k:'resume'}:null;
+  const stopW=has(t,'stop','pull over','pull in','halt','park','stopping');
+  const reason=(RW.find(([,ws])=>ws.some(w=>has(t,w)))||[])[0];
+  const every=has(t,'everyone','everybody','all of us','the team','the group','all riders','team stop','we stop','lets stop','we need');
+  if(stopW||(reason&&has(t,'need','going to','i have to','ill','we need'))){
+    if(lead&&every)return{k:'team',reason:reason||'OTHER'};
+    if(lead&&has(t,'just me','only me','myself','im stopping','i am stopping'))return{k:'solo',reason:reason||'OTHER'};
+    if(reason||stopW)return(lead&&!has(t,'me','my','i'))?{k:'team',reason:reason||'OTHER'}:{k:'solo',reason:reason||'OTHER'};
+  }
+  return null;
+}
+const EX=['everyone stop for fuel','just me, stopping for petrol','tell everyone five minutes behind','I need a hand','ride on','I\'m okay','SOS'];
+$('#voiceEx').innerHTML=EX.map(x=>`<button class="copy" style="font-weight:500">${esc(x)}</button>`).join('');
+$('#voiceEx').addEventListener('click',e=>{const b=e.target.closest('button');if(b){$('#voiceIn').value=b.textContent;heard($('#voiceIn').value)}});
+document.querySelectorAll('[data-mic]').forEach(b=>b.onclick=()=>{$('#voiceov').classList.add('on');$('#voiceIn').focus()});
+$('#voiceClose').onclick=()=>{$('#voiceov').classList.remove('on');pendingVoice=null;$('#voiceConfirm').innerHTML='';$('#heard').textContent=''};
+$('#voiceIn').addEventListener('keydown',e=>{if(e.key==='Enter')heard(e.target.value)});
+let pendingVoice=null;
+function describe(i){
+  switch(i.k){case'team':return`Team stop for ${RLABEL[i.reason].toLowerCase()}: the whole group is told to stop.`;case'solo':return`Stop just you for ${RLABEL[i.reason].toLowerCase()}.`;case'resume':return'Tell the group to ride on.';case'ok':return'Say you are okay.';case'hand':return'Ask the group for a hand.';case'say':return`Send to the group: "${i.text}"`;case'sos':return'SOS is never sent by voice. Use the red button to confirm.'}
+}
+function heard(text){
+  const i=parseVoice(text,isLead());const h=$('#heard'),c=$('#voiceConfirm');pendingVoice=null;c.innerHTML='';
+  if(!i){h.innerHTML=`Heard "${esc(text)}". Didn't catch that, try again.`;return}
+  h.innerHTML=`Heard "${esc(text)}"`;
+  if(i.k==='sos'){c.innerHTML=`<div class="glass" style="padding:12px 14px;font-size:14px">${describe(i)}</div>`;$('#voiceClose').click();toast('Hold the red SOS button to send. Voice never sends it.');$('#sos').animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:500,iterations:3});return}
+  if(i.k==='ok'){act.ok();$('#voiceClose').click();toast('Marked okay');return}
+  if(i.k==='team'&&sim.mode==='ride'&&sim.teamStop){h.innerHTML+=' · a team stop is already active';return}
+  pendingVoice=i;c.innerHTML=`<div class="glass" style="padding:12px 14px;font-size:14px;margin-bottom:10px">${esc(describe(i))}</div><div class="btn o" id="vOk" style="height:50px">Confirm</div>`;
+}
+$('#voiceConfirm').addEventListener('click',e=>{if(!e.target.closest('#vOk')||!pendingVoice)return;const i=pendingVoice;pendingVoice=null;
+  if(i.k==='team')callTeamStop(i.reason);else if(i.k==='solo')soloStop(i.reason);else if(i.k==='resume')releaseTeam();else if(i.k==='hand')toggleHelp(true);else if(i.k==='say')say(i.text);
+  $('#voiceClose').click();render()});
+(function mic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const b=$('#micBtn');
+  b.onclick=()=>{
+    if(!SR){$('#heard').textContent="Speech recognition isn't available in this view. Type the command instead.";return}
+    try{const r=new SR();r.lang='en-IN';r.interimResults=false;b.classList.add('live');
+      r.onresult=e=>{const t=e.results[0][0].transcript;$('#voiceIn').value=t;heard(t)};
+      r.onerror=()=>{$('#heard').textContent="Couldn't use the microphone here. Type the command instead."};
+      r.onend=()=>b.classList.remove('live');r.start()}catch(err){$('#heard').textContent='Microphone unavailable. Type the command instead.'}
+  };
+})();
+
+/* ---------- group analysis + safety (demo timings) ---------- */
+function analyse(){
+  const pts=[{id:'me',pos:P(sim.me.s),v:sim.me.v},...sim.peers.map(p=>({id:p.id,pos:P(p.s),v:p.stopped?0:p.v}))];
+  const sp=pts.map(p=>p.v).sort((a,b)=>a-b),med=sp[Math.floor(sp.length/2)];
+  const link=sim.teamStop?600:Math.min(1500,Math.max(150,100+12*med));
+  const comp=pts.map((_,i)=>i);const find=i=>comp[i]===i?i:(comp[i]=find(comp[i]));
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++)if(hyp(pts[i].pos,pts[j].pos)<=link)comp[find(i)]=find(j);
+  const groups={};pts.forEach((p,i)=>{(groups[find(i)]??=[]).push(p.id)});
+  const main=Object.values(groups).sort((a,b)=>b.length-a.length)[0];
+  return{out:id=>!main.includes(id),main};
+}
+function step(dt){
+  const m=sim.me;
+  m.v+=(m.target-m.v)*Math.min(1,dt*1.6);if(Math.abs(m.v-m.target)<.05)m.v=m.target;
+  m.s+=m.v*dt;m.dist+=m.v*dt;m.top=Math.max(m.top,m.v);
+  for(const p of sim.peers){p.v+=((p.stopped?0:18)-p.v)*Math.min(1,dt*1.6);p.s+=p.v*dt}
+  const a=analyse();const tr=P(m.s);if(!sim.trail.length||hyp(sim.trail[sim.trail.length-1],tr)>5){sim.trail.push(tr);if(sim.trail.length>90)sim.trail.shift()}
+  const st=sim.state,moving=m.v>1;
+  if(moving)m.stopSince=null;else if(m.stopSince===null)m.stopSince=sim.t;
+  const stoppedFor=m.stopSince===null?0:sim.t-m.stopSince;
+  if(st.k==='normal'){
+    if(stoppedFor>=DEMO.ask&&a.out('me')&&!m.status&&sim.t-m.lastRiderOk>20){sim.state={k:'verifying',dl:sim.t+DEMO.verify};log('check','Stopped and separated from the group: asked "are you okay?"')}
+  }else if(st.k==='verifying'){
+    if(moving||!a.out('me')||m.status){sim.state={k:'normal'};log('ok','Check dropped')}
+    else if(sim.t>=st.dl){sim.state={k:'groupAlerted',dl:sim.t+DEMO.group,id:'a'+Math.floor(sim.t)};log('alert','No answer: group alerted');peerReact()}
+  }else if(st.k==='groupAlerted'){if(sim.t>=st.dl)sendSos('No one responded in time')}
+  else if(st.k==='crash'){if(sim.t>=st.dl)sendSos('No cancel after the crash')}
+  // team stop: peers confirm one by one; a simulated lead releases once everyone has stopped
+  const ts=sim.teamStop;
+  if(ts){
+    for(const p of sim.peers){if(!ts.conf[p.id]&&sim.t>=p.confirmAt){ts.conf[p.id]=true;p.stopped=true;chat('x',`${p.name} has stopped`,true);log('ack',`${p.name} confirmed the stop`)}}
+    if(ts.by!=='me'){
+      if(!ts.conf.me&&sim.t-ts.since>14&&!ts.nudged){ts.nudged=true;log('alert',`${nameOf(ts.by)} is waiting for you to stop`);chat('x',`${nameOf(ts.by)} is waiting for you`,true)}
+      const all=Object.keys(ts.conf).length===sim.peers.length+1;
+      if(all&&!ts.allAt)ts.allAt=sim.t;
+      if(ts.allAt&&sim.t-ts.allAt>12)simLeadReleases();
+    }
+  }
+  const k=sim.peers.find(p=>p.id==='kabir');
+  if(k.stopped&&!ts&&!sim.incoming&&a.out('kabir')&&sim.t-(k.stoppedAt||0)>6){sim.incoming={rider:'Kabir',acked:false,at:P(k.s)};log('alert',"Kabir stopped and isn't responding: alert received")}
+  if(sim.help&&!sim.help.by&&sim.t-sim.help.since>4){sim.help.by='Arjun';log('ack','Arjun said they are coming')}
+}
+function peerReact(){if(!sim.ackOn)return;const id=sim.state.id;setTimeout(()=>{if(sim.state.k==='groupAlerted'&&sim.state.id===id){sim.state={k:'acked',by:'Arjun'};log('ack','Arjun is on the way');render()}},5000/sim.speedMul)}
+function sendSos(why){sim.state={k:'sos'};log('sos','SOS sent to Asha and Dad with your last location. '+why)}
+
+/* ---------- ride actions ---------- */
+function startRide(){
+  const keep={name:sim.name,leadId:sim.leadId,code:sim.code,rideName:sim.rideName,chat:sim.chat,ackOn:sim.ackOn,speedMul:sim.speedMul};
+  const lg=sim.log;sim=Object.assign(fresh(),keep,{mode:'ride',t:0});sim.me.target=18;sim.log=[];
+  log('ride',`Ride started · 5 riders · ${nameOf(sim.leadId)} leads`);
+  chat('x','The ride has started. Ride safe.',true);tab='ride';render();
+}
+function endRide(){if(sim.mode!=='ride')return;sim.final={dist:sim.me.dist,t:sim.t,top:sim.me.top};sim.mode=sim.t>=10?'sum':'welcome';sim.state={k:'normal'};sim.incoming=null;sim.teamStop=null;$('#chatov').classList.remove('on');render()}
+function callTeamStop(reason){
+  if(!isLead()||sim.teamStop)return;
+  sim.teamStop={reason,by:'me',since:sim.t,conf:{me:true},nudged:false};sim.me.status=reason;sim.me.target=0;
+  sim.peers.forEach(p=>{p.confirmAt=sim.t+2+Math.random()*5});sim.picker=null;
+  chat('x',`${sim.name} (lead) called a team stop: ${RLABEL[reason]}`,true);log('alert',`You called the whole group to stop: ${RLABEL[reason]}`);toast('Team notified. Waiting for everyone to stop.');
+}
+function releaseTeam(){
+  const ts=sim.teamStop;if(!ts||ts.by!=='me')return;
+  sim.teamStop=null;sim.me.status=null;sim.me.target=18;sim.peers.forEach(p=>p.stopped=false);
+  chat('x',`${sim.name} (lead): ride on`,true);log('ok','You released the group to ride on');toast('Group released');
+}
+function soloStop(reason){
+  sim.me.status=reason;sim.me.target=0;sim.picker=null;
+  const lead=isLead();
+  chat('x',lead?`${sim.name} (lead) is stopping for ${RLABEL[reason].toLowerCase()}. Keep riding, they will catch up.`:`${sim.name} stopped: ${RLABEL[reason].toLowerCase()}`,true);
+  log('status',`You stopped for ${RLABEL[reason].toLowerCase()}`);toast(lead?'Team told you are stopping. They keep riding.':'Lead told you are stopping');
+}
+function askLeadStop(reason){
+  sim.picker=null;chat('me',`Can we stop for ${RLABEL[reason].toLowerCase()}?`);log('status',`You asked the lead to stop: ${RLABEL[reason]}`);toast('Request sent to the lead');
+  setTimeout(()=>{if(sim.mode==='ride'&&!sim.teamStop){chat(sim.leadId,'Copy. Everyone pull in at the next stop.');simLeadCalls(reason);render()}},3200/sim.speedMul);
+}
+function simLeadCalls(reason){
+  if(sim.teamStop||isLead())return;const L=sim.leadId;
+  sim.teamStop={reason,by:L,since:sim.t,conf:{[L]:true},nudged:false};
+  sim.peers.forEach(p=>{if(p.id===L){p.stopped=true}else p.confirmAt=sim.t+3+Math.random()*7});
+  chat('x',`${nameOf(L)} (lead) called a team stop: ${RLABEL[reason]}`,true);log('alert',`${nameOf(L)} called the whole group to stop: ${RLABEL[reason]}`);sim.postponed=0;
+}
+function confirmStop(){const ts=sim.teamStop;if(!ts)return;ts.conf.me=true;sim.me.status=ts.reason;sim.me.target=0;chat('x',`${sim.name} has stopped`,true);log('ack','You confirmed the stop')}
+function simLeadReleases(){
+  const ts=sim.teamStop;if(!ts)return;const L=ts.by;sim.teamStop=null;sim.me.status=null;sim.me.target=18;sim.peers.forEach(p=>p.stopped=false);
+  chat('x',`${nameOf(L)} (lead): ride on`,true);log('ok',`${nameOf(L)} released the group`);toast(nameOf(L)+': ride on');
+}
+function toggleHelp(force){if(sim.help&&!force){sim.help=null;log('ack','You cancelled your help request')}else if(!sim.help){sim.help={since:sim.t,by:null};log('alert','You asked the group for a hand')}}
+const act={
+  stop(){if(sim.mode!=='ride')return toast('Start a ride first');sim.me.target=0;log('ride','You stopped')},
+  go(){if(sim.mode!=='ride')return;if(sim.teamStop&&sim.teamStop.conf.me&&sim.teamStop.by!=='me')return toast('The lead has not released the group yet');sim.me.target=18;sim.me.status=sim.teamStop&&sim.teamStop.by==='me'?sim.me.status:null;if(!['sos','crash'].includes(sim.state.k))sim.state={k:'normal'}},
+  crash(){if(sim.mode!=='ride')return toast('Start a ride first');sim.me.target=0;sim.me.v=Math.min(sim.me.v,4);sim.state={k:'crash',dl:sim.t+DEMO.crash};log('crash','Crash detected: 6.3 g impact, then rotation. Countdown started')},
+  kabir(){if(sim.mode!=='ride')return toast('Start a ride first');const k=sim.peers[2];k.stopped=true;k.stoppedAt=sim.t;sim.incoming=null;log('ride','Kabir stopped')},
+  ok(){sim.state={k:'normal'};sim.me.lastRiderOk=sim.t;log('ok','You said you are okay')},
+  sos(){sendSos('You triggered it')},
+  ack(){if(!sim.incoming)return;sim.incoming.acked=true;log('ack','You are going to help Kabir');const k=sim.peers[2];setTimeout(()=>{k.stopped=false;sim.incoming=null;log('ok','Kabir is moving again');render()},9000/sim.speedMul);render()},
+  dismiss(){sim.incoming=null;sim.peers[2].stopped=false;render()},
+};
+
+/* ---------- ride sheet: role card, quick status, help, SOS ---------- */
+function roleCardHtml(){
+  const lead=isLead(),ts=sim.teamStop;
+  const picker=t=>`<div class="lbl2" style="margin:6px 4px">${t}</div><div class="rc">${REASONS.map(([k,l,i])=>`<button data-r="${k}">${l}</button>`).join('')}</div><button class="copy" data-act="cancelpick" style="margin-top:8px">Cancel</button>`;
+  if(lead){
+    if(ts&&ts.by==='me'){const total=sim.peers.length,done=sim.peers.filter(p=>ts.conf[p.id]).length;
+      return `<div class="glass" style="padding:14px 16px;margin:8px 0 10px"><div class="row" style="justify-content:space-between"><div><div class="eyebrow" style="color:var(--or)">Team stop · ${RLABEL[ts.reason]}</div><div class="sub" style="margin-top:2px">${done} of ${total} riders have stopped</div></div><div class="btn o" data-act="release" style="width:auto;height:44px;padding:0 18px;font-size:15px">Ride on</div></div>${sim.peers.map(p=>`<div class="tsrow"><span class="dot" style="background:${ts.conf[p.id]?'var(--ok)':'var(--or)'}"></span><span style="flex:1">${p.name}</span><span class="cap" style="color:${ts.conf[p.id]?'var(--ok)':'var(--or)'}">${ts.conf[p.id]?'STOPPED':'STILL MOVING'}</span></div>`).join('')}</div>`}
+    let h='';
+    if(sim.stopReq)h+=`<div class="glass" style="padding:12px 14px;margin:8px 0"><div style="font-weight:600">${esc(nameOf(sim.stopReq.by))} asks to stop: ${RLABEL[sim.stopReq.reason]}</div><div class="act2" style="margin:10px 0 0"><button class="or" data-act="acceptreq">Call team stop</button><button data-act="dismissreq">Not now</button></div></div>`;
+    if(sim.picker==='team')return h+picker('Team stop · why?');
+    if(sim.picker==='solo')return h+picker('Just you stopping · why?');
+    return h+`<div class="act2" style="margin-top:8px"><button class="or" data-act="team">Team stop<small>Everyone stops and confirms</small></button><button data-act="solo">Just me<small>Team keeps riding</small></button></div>`;
+  }
+  // rider
+  if(ts)return `<div class="glass" style="padding:14px 16px;margin:8px 0 10px"><div class="eyebrow" style="color:var(--or)">${esc(nameOf(ts.by))} called a stop · ${RLABEL[ts.reason]}</div><div class="sub" style="margin-top:2px">${ts.conf.me?'You have stopped. Waiting for the lead to ride on.':'Confirm that you are stopping.'}</div></div>`;
+  if(sim.picker==='ask')return picker('Ask the lead to stop · why?');
+  return `<div class="act2" style="margin-top:8px"><button data-act="ask">Ask lead to stop<small>${esc(nameOf(sim.leadId))} decides</small></button><button data-act="solo">I'm stopping<small>Just me, lead is told</small></button></div>${sim.picker==='solo'?picker('You are stopping · why?'):''}`;
+}
+$('#roleCard').addEventListener('click',e=>{
+  const r=e.target.closest('[data-r]');
+  if(r){const k=r.dataset.r;if(sim.picker==='team')callTeamStop(k);else if(sim.picker==='solo')soloStop(k);else if(sim.picker==='ask')askLeadStop(k);render();return}
+  const a=e.target.closest('[data-act]');if(!a)return;const v=a.dataset.act;
+  if(v==='team')sim.picker='team';else if(v==='solo')sim.picker='solo';else if(v==='ask')sim.picker='ask';else if(v==='cancelpick')sim.picker=null;
+  else if(v==='release')releaseTeam();
+  else if(v==='acceptreq'){const q=sim.stopReq;sim.stopReq=null;callTeamStop(q.reason)}
+  else if(v==='dismissreq'){sim.stopReq=null}
+  render();
+});
+const QS=[['fuel','Fuel','FUEL'],['cup','Break','BREAK'],['wrench','Repair','MECH'],['light','Wait','WEATHER'],['cam','Photo','OTHER']];
+$('#quick').innerHTML=QS.map(([i,l,k])=>`<div class="q" data-k="${k}"><i>${svg(i)}</i>${l}</div>`).join('');
+document.querySelectorAll('.q').forEach(q=>q.onclick=()=>{const k=q.dataset.k;if(sim.teamStop)return toast('A team stop is active');sim.me.status=sim.me.status===k?null:k;if(sim.me.status){log('status','Status set to '+q.textContent.trim());if(['verifying','groupAlerted'].includes(sim.state.k))sim.state={k:'normal'}}render()});
+$('#help').onclick=()=>{toggleHelp();render()};
+(function(){
+  const s=$('#sos'),f=$('#sosfill');let t0=0,raf=0;
+  const loop=()=>{const p=Math.min(1,(performance.now()-t0)/1500);f.style.width=p*100+'%';if(p>=1){stop();act.sos();render();return}raf=requestAnimationFrame(loop)};
+  s.addEventListener('pointerdown',()=>{t0=performance.now();raf=requestAnimationFrame(loop)});
+  const stop=()=>{cancelAnimationFrame(raf);f.style.width='0'};
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>s.addEventListener(ev,stop));
+})();
+$('#endBtn').onclick=endRide;$('#sumDone').onclick=()=>{sim=fresh();$('#nameIn').value=sim.name;render()};
+
+/* ---------- rail ---------- */
+$('#cStop').onclick=act.stop;$('#cGo').onclick=act.go;$('#cCrash').onclick=act.crash;$('#cKabir').onclick=act.kabir;
+$('#rLead').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');simLeadCalls('FUEL');render()};
+$('#rRelease').onclick=()=>{simLeadReleases();render()};
+$('#rReq').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');sim.stopReq={by:'meera',reason:'BREAK'};chat('meera','Can we stop for a break?');toast('Meera asks to stop');render()};
+$('#cAck').onclick=()=>{sim.ackOn=!sim.ackOn;$('#ackState').textContent=sim.ackOn?'on':'off'};
+$('#cFast').onclick=()=>{sim.speedMul=sim.speedMul===1?3:1;$('#fastState').textContent=sim.speedMul+'×'};
+$('#cRestart').onclick=()=>{sim=fresh();$('#chatov').classList.remove('on');$('#voiceov').classList.remove('on');tab='ride';render()};
+document.querySelectorAll('[data-sw]').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
+document.querySelectorAll('#sens button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#sens button').forEach(x=>x.classList.remove('on'));b.classList.add('on')});
+
+/* ---------- takeover ---------- */
+let takeKey='';
+function ringHtml(f,col,t,cap){
+  let d='';for(let i=0;i<120;i++){const a=(-90+i*3)*Math.PI/180,on=i<120*f;d+=`<circle cx="${112+Math.cos(a)*105}" cy="${112+Math.sin(a)*105}" r="${on?3.2:2}" fill="${on?col:'rgba(255,255,255,.1)'}"/>`}
+  return `<div class="ring"><div style="position:absolute;inset:-10px;border-radius:50%;background:radial-gradient(${col}38,transparent 68%)"></div><svg width="224" height="224" style="position:relative">${d}<circle cx="112" cy="112" r="90" fill="none" stroke="${col}" stroke-opacity=".12"/></svg><div class="num"><b>${t}</b><div class="sub" style="margin-top:4px">${cap}</div></div></div>`;
+}
+const stepsHtml=a=>`<div class="glass steps">${a.map(([t,w],i)=>`<div class="li"><div class="n">${i+1}</div><div class="t">${t}</div><span class="s">${w}</span></div>`).join('')}</div>`;
+function renderTake(){
+  const st=sim.state,take=$('#take');let v=null;
+  if(sim.mode==='ride'){
+    const left=x=>Math.max(0,Math.ceil(x-sim.t)),ts=sim.teamStop;
+    if(st.k==='verifying')v={col:OR,glow:'255,107,26,.34',ic:'warn',t:'Are you okay?',sub:"You've stopped away from your group.",ring:[(st.dl-sim.t)/DEMO.verify,fmtT(left(st.dl)),'until your group is alerted'],steps:[['Your group is alerted',fmtT(left(st.dl))],['They get a minute to respond','then'],['SOS is texted to your contacts','then']],btns:[['w',"I'm okay",act.ok],['ghost','Send SOS now',act.sos]]};
+    else if(st.k==='groupAlerted')v={col:RED,glow:'229,52,47,.38',ic:'bell',t:'Your group has been alerted',sub:'No answer, so we told them.',ring:[(st.dl-sim.t)/DEMO.group,fmtT(left(st.dl)),'until SOS is sent'],steps:[['Waiting for a rider to respond','now'],['SOS is texted to your contacts',fmtT(left(st.dl))]],btns:[['w',"I'm okay",act.ok],['ghost','Send SOS now',act.sos]]};
+    else if(st.k==='crash')v={col:RED,glow:'229,52,47,.38',ic:'warn',t:'Crash detected',sub:"We'll send SOS with your location.",ring:[(st.dl-sim.t)/DEMO.crash,fmtT(left(st.dl)),'until SOS is sent'],steps:[['SOS texted with your location',fmtT(left(st.dl))],['Your group is alerted','at once'],['An alarm sounds at full volume','now']],btns:[['w',"I'm okay, cancel",act.ok],['ghost','Send SOS now',act.sos]]};
+    else if(st.k==='sos')v={col:RED,glow:'229,52,47,.38',ic:'check',solid:1,t:'SOS sent',sub:'Your last known location was shared.',body:`<div class="glass steps" style="margin-top:22px">${[['Asha','Sent'],['Dad','Sent'],['Your group','Alerted']].map(([n,s])=>`<div class="li"><div class="av" style="background:var(--s3);width:34px;height:34px;font-size:14px">${n[0]}</div><div class="t"><b>${n}</b></div><span class="s" style="color:var(--ok);font-weight:600">✓ ${s}</span></div>`).join('')}</div><div class="cap" style="margin-top:10px">Demo: no real messages are sent.</div>`,btns:[['w','Call 112',()=>toast('Demo: this would open the dialler')],['g',"I'm okay, cancel SOS",act.ok]]};
+    else if(ts&&ts.by!=='me'&&!ts.conf.me&&sim.t>=sim.postponed){
+      const L=nameOf(ts.by),n=ts.nudged;
+      v={col:n?RED:OR,glow:n?'229,52,47,.38':'255,107,26,.34',ic:'stop',t:`${L} called a stop`,sub:n?`${L} is waiting for you. Please stop now.`:`Everyone stops for ${RLABEL[ts.reason].toLowerCase()}. Find a safe place and pull in.`,
+        body:`<div class="glass" style="margin-top:22px;padding:6px 16px;text-align:left"><div class="eyebrow" style="color:var(--dim);padding:10px 0 2px">Stopped so far</div>${sim.peers.map(p=>`<div class="tsrow"><span class="dot" style="background:${ts.conf[p.id]?'var(--ok)':'var(--dim)'}"></span><span style="flex:1">${p.name}${p.id===ts.by?' · lead':''}</span><span class="cap">${ts.conf[p.id]?'stopped':'moving'}</span></div>`).join('')}</div>`,
+        btns:[['o',"I'm stopping",()=>{confirmStop()}],['g','Need a moment, slowing down',()=>{sim.postponed=sim.t+12;chat('me','Slowing down, will stop in a minute');toast('Lead told you need a moment')}]]};
+    }
+    else if(sim.incoming&&!sim.incoming.acked){const d=Math.round(hyp(P(sim.me.s),sim.incoming.at)),dy=sim.incoming.at.y-P(sim.me.s).y;v={col:OR,glow:'255,107,26,.34',ic:'pin',t:sim.incoming.rider+' needs help',sub:sim.incoming.rider+" has stopped and isn't responding.",body:`<div class="glass" style="margin-top:24px;padding:22px 16px"><div style="font:800 54px/1 var(--display);text-transform:none">${fmtD(d)}</div><div class="sub" style="margin-top:6px">${dy<0?'behind':'ahead of'} you</div></div>`,btns:[['o',"I'm going",act.ack],['g','Call 112',()=>toast('Demo: this would open the dialler')],['dis','Dismiss',act.dismiss]]}}
+  }
+  if(!v){take.classList.remove('on');setGlow();takeKey='';return}
+  const key=st.k+(sim.incoming?'i':'')+(sim.teamStop?'t'+(sim.teamStop.nudged?'n':''):'')+v.t;
+  take.classList.add('on');
+  $('#tglow').style.background=`radial-gradient(ellipse 120% 40% at 50% -4%,rgba(${v.glow}),transparent 70%)`;
+  setHtml($('#tEyebrow'),logo(18,v.col)+`<span class="eyebrow" style="color:${v.col}">Safety alert</span>`);
+  $('#tIcon').style.background=v.solid?v.col:v.col+'29';$('#tIcon').style.color=v.solid?'#fff':v.col;setHtml($('#tIcon'),svg(v.ic,'currentColor',v.solid?40:38));
+  $('#tTitle').textContent=v.t;$('#tSub').textContent=v.sub;
+  setHtml($('#tBody'),(v.ring?ringHtml(Math.max(0,v.ring[0]),v.col,v.ring[1],v.ring[2]):'')+(v.steps?stepsHtml(v.steps):'')+(v.body||''));
+  if(key!==takeKey){takeKey=key;setHtml($('#tBtns'),v.btns.map(([c,l],i)=>c==='dis'?`<div class="sub" style="font-weight:600;margin-top:4px;cursor:pointer;padding:6px" data-i="${i}">${l}</div>`:`<div class="btn ${c}" data-i="${i}">${l}</div>`).join(''))}
+  $('#tBtns').querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{v.btns[+b.dataset.i][2]();render()});
+  setGlow(v.col===RED?'red':'amber');
+}
+function setGlow(c){$('#glow').className='glow'+(c?' '+c:'')}
+
+/* ---------- drawing ---------- */
+const mapC=$('#map'),mx=mapC.getContext('2d');mx.scale(2,2);
+const dialC=$('#dial'),dx=dialC.getContext('2d');dx.scale(2,2);
+const cvC=$('#convoy'),cx=cvC.getContext('2d');cx.scale(2,2);
+let shownKmh=0;
+const tag=id=>nameOf(id)+(sim.leadId===id?' ★':'');
+function drawMap(){
+  const W=393,H=560;mx.clearRect(0,0,W,H);mx.fillStyle='#12161B';mx.fillRect(0,0,W,H);
+  const me=P(sim.me.s),cxm=W/2,cym=186;
+  const riders=[{id:'me',s:sim.me.s,self:true},...sim.peers.map(p=>({id:p.id,s:p.s}))];
+  let far=250;riders.forEach(r=>{far=Math.max(far,hyp(P(r.s),me)*1.18)});sim.viewR+=(far-sim.viewR)*.06;
+  const ppm=Math.min(cxm-40,100)/sim.viewR;const X=q=>cxm+(q.x-me.x)*ppm,Y=q=>cym-(q.y-me.y)*ppm;
+  mx.save();mx.translate(cxm,cym);mx.rotate(-18*Math.PI/180);mx.strokeStyle='rgba(255,255,255,.035)';mx.lineWidth=7;
+  for(let i=-8;i<9;i++){mx.beginPath();mx.moveTo(i*52,-500);mx.lineTo(i*52,500);mx.stroke()}
+  mx.lineWidth=5;mx.strokeStyle='rgba(255,255,255,.03)';for(let i=-8;i<9;i++){mx.beginPath();mx.moveTo(-500,i*66);mx.lineTo(500,i*66);mx.stroke()}mx.restore();
+  [.33,.66,1].forEach((f,i)=>{mx.strokeStyle=`rgba(255,255,255,${.09-i*.02})`;mx.lineWidth=1;mx.beginPath();mx.arc(cxm,cym,sim.viewR*ppm*f,0,7);mx.stroke()});
+  mx.lineCap='round';mx.lineJoin='round';mx.beginPath();const s0=sim.me.s-sim.viewR*2.2,s1=sim.me.s+sim.viewR*2.2;
+  for(let s=s0;s<=s1;s+=14){const q=P(s);s===s0?mx.moveTo(X(q),Y(q)):mx.lineTo(X(q),Y(q))}
+  mx.strokeStyle='#2c2e34';mx.lineWidth=14;mx.stroke();mx.strokeStyle='#202226';mx.lineWidth=11;mx.stroke();
+  const a=analyse();const mainPts=[...a.main].map(id=>id==='me'?me:P(sim.peers.find(p=>p.id===id).s));
+  if(mainPts.length>1){const c0={x:mainPts.reduce((u,q)=>u+q.x,0)/mainPts.length,y:mainPts.reduce((u,q)=>u+q.y,0)/mainPts.length};const r=Math.max(...mainPts.map(q=>hyp(q,c0)))+22/ppm;
+    mx.fillStyle='rgba(255,255,255,.07)';mx.strokeStyle='rgba(255,255,255,.4)';mx.lineWidth=1.5;mx.beginPath();mx.arc(X(c0),Y(c0),r*ppm,0,7);mx.fill();mx.stroke()}
+  if(sim.trail.length>1){mx.beginPath();sim.trail.forEach((q,i)=>i?mx.lineTo(X(q),Y(q)):mx.moveTo(X(q),Y(q)));mx.lineTo(cxm,cym);mx.strokeStyle='rgba(255,107,26,.22)';mx.lineWidth=13;mx.stroke();mx.strokeStyle=OR;mx.lineWidth=3.5;mx.stroke()}
+  riders.forEach(r=>{const q=P(r.s),x=X(q),y=Y(q),out=a.out(r.id);const lab=r.self?(sim.teamStop?'You · stopped':(sim.me.v<1?'You · stopped':'You'))+(sim.leadId==='me'?' ★':''):tag(r.id);
+    if(r.self){mx.fillStyle='rgba(255,107,26,.15)';mx.beginPath();mx.arc(x,y,30,0,7);mx.fill();mx.fillStyle='#fff';mx.beginPath();mx.arc(x,y,13,0,7);mx.fill();mx.fillStyle=OR;mx.beginPath();mx.arc(x,y,10,0,7);mx.fill()}
+    else{mx.fillStyle='#fff';mx.beginPath();mx.arc(x,y,17,0,7);mx.fill();mx.fillStyle=COLORS[r.id];mx.beginPath();mx.arc(x,y,14.5,0,7);mx.fill();
+      if(out&&!sim.teamStop){mx.strokeStyle=RED;mx.lineWidth=2.5;mx.beginPath();mx.arc(x,y,20,0,7);mx.stroke()}
+      mx.fillStyle='#fff';mx.font='700 14px Inter,sans-serif';mx.textAlign='center';mx.fillText(NAMES[r.id][0],x,y+5)}
+    mx.font='600 11.5px Inter,sans-serif';const w=mx.measureText(lab).width+16;
+    mx.fillStyle='rgba(14,16,19,.78)';mx.beginPath();mx.roundRect(x-w/2,y+(r.self?18:23),w,19,9.5);mx.fill();
+    mx.fillStyle=out&&!r.self&&!sim.teamStop?'#ff7a75':'#fff';mx.textAlign='center';mx.fillText(lab,x,y+(r.self?32:37))});
+}
+function drawDial(){
+  const z=112,c=z/2,r=z/2;dx.clearRect(0,0,z,z);shownKmh+=(sim.me.v*3.6-shownKmh)*.12;const k=shownKmh;
+  for(let i=0;i<=24;i++){const v=i*5,a=(135+i*270/24)*Math.PI/180,mj=i%4===0,lit=v<=k;
+    dx.strokeStyle=!lit?'rgba(255,255,255,.14)':v>=100?RED:OR;dx.lineWidth=mj?3:2;dx.lineCap='round';
+    const r1=r*(mj?.8:.87),r2=r*.98;dx.beginPath();dx.moveTo(c+Math.cos(a)*r1,c+Math.sin(a)*r1);dx.lineTo(c+Math.cos(a)*r2,c+Math.sin(a)*r2);dx.stroke()}
+  dx.fillStyle='#F4F4F5';dx.textAlign='center';dx.font=`800 ${z*.4}px "Barlow Condensed",sans-serif`;dx.fillText(Math.round(k),c,c+z*.11);
+  dx.fillStyle='#6E7076';dx.font='600 11px "Barlow Condensed",sans-serif';dx.fillText('K M / H',c,c+z*.3);
+}
+function drawConvoy(){
+  const W=353,pad=30;cx.clearRect(0,0,W,96);const a=analyse();
+  const items=[{id:'me',n:'You'+(sim.leadId==='me'?' ★':''),ax:0,me:1,out:a.out('me')},...sim.peers.map(p=>({id:p.id,n:tag(p.id),ax:p.s-sim.me.s,out:a.out(p.id)}))];
+  const min=Math.min(...items.map(i=>i.ax)),max=Math.max(...items.map(i=>i.ax)),span=Math.max(max-min,160);
+  let xs=items.map(i=>pad+(i.ax-min)/span*(W-pad*2));
+  const ord=items.map((_,i)=>i).sort((p,q)=>xs[p]-xs[q]);for(let k=1;k<ord.length;k++)if(xs[ord[k]]-xs[ord[k-1]]<36)xs[ord[k]]=xs[ord[k-1]]+36;
+  const over=Math.max(...xs)-(W-pad);if(over>0)xs=xs.map(x=>x-over);
+  const y=34;cx.lineCap='round';cx.strokeStyle='#28292D';cx.lineWidth=6;cx.beginPath();cx.moveTo(pad-14,y);cx.lineTo(W-pad+14,y);cx.stroke();
+  const outF=i=>items[i].out&&!sim.teamStop;const inn=items.map((_,i)=>i).filter(i=>!outF(i));
+  if(inn.length>1){cx.strokeStyle='rgba(255,255,255,.45)';cx.beginPath();cx.moveTo(Math.min(...inn.map(i=>xs[i])),y);cx.lineTo(Math.max(...inn.map(i=>xs[i])),y);cx.stroke()}
+  items.forEach((it,i)=>{if(!outF(i)||!inn.length)return;const nn=inn.slice().sort((p,q)=>Math.abs(xs[p]-xs[i])-Math.abs(xs[q]-xs[i]))[0];cx.setLineDash([10,9]);cx.strokeStyle=RED;cx.lineWidth=2;cx.beginPath();cx.moveTo(xs[i],y);cx.lineTo(xs[nn],y);cx.stroke();cx.setLineDash([])});
+  items.forEach((it,i)=>{const x=xs[i];if(it.me){cx.fillStyle='rgba(255,107,26,.22)';cx.beginPath();cx.arc(x,y,24,0,7);cx.fill()}
+    cx.fillStyle='#fff';cx.beginPath();cx.arc(x,y,16,0,7);cx.fill();cx.fillStyle=it.me?OR:COLORS[it.id];cx.beginPath();cx.arc(x,y,14,0,7);cx.fill();
+    if(outF(i)&&!it.me){cx.strokeStyle=RED;cx.lineWidth=2;cx.beginPath();cx.arc(x,y,18,0,7);cx.stroke()}
+    cx.fillStyle='#fff';cx.font='700 13px Inter,sans-serif';cx.textAlign='center';cx.fillText(it.me?sim.name[0]:NAMES[it.id][0],x,y+5);
+    const lab=outF(i)&&!it.me?`${it.n} · ${fmtD(Math.abs(it.ax))}`:it.n;cx.font='500 11px Inter,sans-serif';cx.fillStyle=outF(i)&&!it.me?'#ff7a75':'#F4F4F5';
+    cx.fillText(lab,Math.min(Math.max(x,cx.measureText(lab).width/2),W-cx.measureText(lab).width/2),y+36)});
+  cx.fillStyle='#6E7076';cx.font='500 10px Inter,sans-serif';cx.textAlign='left';cx.fillText('BEHIND',0,92);cx.textAlign='right';cx.fillText('AHEAD →',W,92);
+}
+function look(){
+  const st=sim.state,a=analyse(),ts=sim.teamStop;
+  if(ts)return[`Team stop · ${RLABEL[ts.reason]}`,ts.by==='me'?`${sim.peers.filter(p=>ts.conf[p.id]).length} of ${sim.peers.length} riders have stopped`:(ts.conf.me?'You have stopped. Waiting for the lead.':`${nameOf(ts.by)} called a stop`),OR];
+  if(st.k==='acked')return['Arjun is on the way','Help is coming. Stay where you are.',OR];
+  if(['normal','verifying','groupAlerted'].includes(st.k)){
+    if(sim.me.status&&sim.me.v<1)return[`Stopped · ${RLABEL[sim.me.status]}`,isLead()?'Team keeps riding and has been told':'The lead has been told',OR];
+    if(a.out('me')){const near=Math.min(...sim.peers.map(p=>Math.abs(p.s-sim.me.s)));return['Separated',(sim.me.stopSince!==null&&sim.t-sim.me.stopSince>=10?`Stopped ${fmtT(sim.t-sim.me.stopSince)} · `:'')+`${fmtD(near)} from the group`,RED]}
+    const far=Math.max(...sim.peers.map(p=>Math.abs(p.s-sim.me.s)));return['With the group',`5 riders within ${fmtD(far)}`,'#EDEDEF']}
+  return['Safety check in progress','Follow the prompt on screen',OR];
+}
+function renderRide(){
+  const[t,s,c]=look();$('#stTitle').textContent=t;$('#stSub').textContent=s;$('#stDot').style.background=c;
+  $('#vDist').textContent=fmtD(sim.me.dist);$('#vTime').textContent=fmtT(sim.t);$('#vTop').textContent=Math.round(sim.me.top*3.6)+' km/h';
+  document.querySelectorAll('.q').forEach(q=>q.classList.toggle('on',q.dataset.k===sim.me.status));
+  const h=sim.help;$('#help').classList.toggle('on',!!h);$('#helpTxt').textContent=!h?'Need a hand?':h.by?`${h.by} is coming`:'Help requested · waiting';$('#helpSm').textContent=h?'CANCEL':'ASK GROUP';
+  setHtml($('#roleBadge'),isLead()?`<span class="crown" style="padding:3px 9px">${svg('crown','#1A0B00',12)}LEAD</span><b style="letter-spacing:.5px">${esc(sim.name)}</b>`:`<span class="crown rid" style="padding:3px 9px">RIDER</span><b style="letter-spacing:.5px">${esc(nameOf(sim.leadId))} leads</b>`);
+  $('#chatBtn').innerHTML='Chat'+(sim.unread?` <span class="crown" style="padding:1px 7px">${sim.unread}</span>`:'');
+  setHtml($('#roleCard'),roleCardHtml());
+}
+function renderLists(){
+  const a=analyse();
+  setHtml($('#gList'),[{id:'me'},...sim.peers].map(r=>{const out=a.out(r.id)&&!sim.teamStop,lead=sim.leadId===r.id,peer=sim.peers.find(p=>p.id===r.id);const v=r.id==='me'?sim.me.v:(peer.stopped?0:peer.v);
+    return `<div class="li"><div class="av" style="background:${COLORS[r.id]}">${esc(nameOf(r.id)[0])}</div><div class="t"><b style="color:${out?'#ff7a75':'inherit'}">${esc(nameOf(r.id))}${r.id==='me'?' (you)':''}</b><span class="s">${Math.round(v*3.6)} km/h${r.id!=='me'?' · '+fmtD(Math.abs(peer.s-sim.me.s)):''}</span></div>${lead?`<span class="crown">${svg('crown','#1A0B00',12)}LEAD</span>`:''}${out?'<span class="s" style="color:#ff7a75">separated</span>':''}</div>`}).join(''));
+  const colr={sos:RED,alert:RED,crash:RED,check:OR,ack:OR,ok:'#EDEDEF',ride:'#EDEDEF',status:OR};
+  setHtml($('#logList'),sim.log.length?sim.log.map(e=>`<div class="li" style="align-items:flex-start"><span class="dot" style="background:${colr[e.k]||'#EDEDEF'};margin-top:7px"></span><div class="t"><span class="s" style="color:var(--on)">${esc(e.msg)}</span></div><span class="cap">${fmtT(e.t)}</span></div>`).join(''):'<div class="li"><div class="t sub">Nothing yet. Start a ride.</div></div>');
+  $('#gCode').textContent=sim.code;$('#gTitle').textContent=(sim.rideName+' · RIDE CODE').toUpperCase();
+}
+function renderSummary(){
+  const f=sim.final||{dist:0,t:0,top:0};$('#sDist').textContent=fmtD(f.dist);const avg=f.dist/Math.max(1,f.t)*3.6;
+  $('#sTiles').innerHTML=[['TIME',fmtT(f.t)],['MOVING',fmtT(f.t*.94)],['TOP SPEED',Math.round(f.top*3.6)+' km/h'],['AVG',Math.round(avg)+' km/h']].map(([l,v])=>`<div class="glass" style="padding:16px;border-radius:24px"><div class="eyebrow" style="font-size:12px;color:var(--dim)">${l}</div><div style="font:700 30px/1.1 var(--display);margin-top:2px">${v}</div></div>`).join('');
+}
+function renderRail(){
+  const ride=sim.mode==='ride',ts=sim.teamStop;
+  $('#rLead').hidden=!(ride&&!isLead()&&!ts);$('#rRelease').hidden=!(ride&&!isLead()&&ts&&ts.by!=='me');$('#rReq').hidden=!(ride&&isLead()&&!ts);
+  $('#railHint').textContent={welcome:'Create a ride (you lead) or join one with a code (someone else leads). The group and the safety logic are simulated.',lobby:isLead()?'Riders join and ready up on their own. Start the ride when two or more are ready. Tap "Make lead" on a rider to hand over the lead.':'Mark yourself ready. When everyone is ready the lead starts the ride.',ride:isLead()?'You are the lead: call a team stop (everyone must confirm) or stop just yourself. Use "Rider asks to stop" to see a request reach you.':'You are a rider: the lead decides group stops. Use "Lead calls a team stop" to see the alert you must confirm.',sum:'Ride complete.'}[sim.mode];
+}
+function render(){
+  screens();renderRide();renderTake();renderLists();renderRail();
+  if(sim.mode==='sum')renderSummary();
+  if(sim.mode==='lobby'){setHtml($('#lbList'),lobbyHtml());setHtml($('#lbBar'),lobbyBar());$('#lbTitle').textContent=sim.rideName;$('#lbCode').textContent=sim.code;$('#lbLink').textContent=`armor.app/join/${sim.code} (example link)`;$('#lbCount').textContent=`· ${sim.roster.filter(r=>sim.seen[r.id]).length} of ${sim.roster.length}`;paintMsgs($('#lobbyMsgs'))}
+  if(sim.mode==='ride'||chatOpen())paintMsgs($('#rideMsgs'));
+}
+
+/* ---------- main loop ---------- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.25,(now-last)/1000)*sim.speedMul;last=now;
+  if(sim.mode==='lobby'){lobbyTick(dt);render()}
+  else if(sim.mode==='ride'){step(dt);sim.t+=dt;if(tab==='ride'){drawMap();drawDial();drawConvoy()}renderRide();renderTake();if(tab!=='ride')renderLists();paintMsgs($('#rideMsgs'));renderRail()}
+  requestAnimationFrame(frame);
+}
+render();requestAnimationFrame(frame);
+setInterval(()=>{const d=new Date();$('#clock').textContent=d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')},15000);
+})();
+
+</script>

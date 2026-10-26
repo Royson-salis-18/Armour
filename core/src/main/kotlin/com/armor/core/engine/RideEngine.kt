@@ -373,7 +373,7 @@ class RideEngine(
         val reason = StopReason.entries.firstOrNull { it.name == a.detail } ?: StopReason.OTHER
         val others = views.filter { !it.isStale && it.id != a.riderId }
         val (stopped, waiting) = others.partition { it.speedMps < 1.0 || it.status != null }
-        return TeamStopView(reason, a.riderName, a.riderId == selfId, a.raisedAtMs, stopped.map { it.name }, waiting.map { it.name })
+        return TeamStopView(a.id, reason, a.riderName, a.riderId == selfId, a.raisedAtMs, stopped.map { it.name }, waiting.map { it.name })
     }
 
     private fun view(r: RiderReport, nowMs: Long, me: LatLon?, cluster: ClusterResult, isSelf: Boolean): RiderView {

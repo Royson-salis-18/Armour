@@ -1,9 +1,16 @@
 package com.armor.app.net
 
+import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
 import com.armor.core.model.RiderReport
 
-data class GroupData(val riders: List<RiderReport>, val alerts: List<GroupAlert>)
+data class GroupData(
+    val riders: List<RiderReport>,
+    val alerts: List<GroupAlert>,
+    val messages: List<ChatMessage> = emptyList(),
+    /** Rider id of the group's lead, when the server knows it. */
+    val leadId: String? = null,
+)
 
 /** A remote ride group: a shared place where riders publish themselves and raise/acknowledge alerts. */
 interface GroupTransport {
@@ -16,6 +23,9 @@ interface GroupTransport {
     suspend fun upsertAlert(alert: GroupAlert): Boolean
 
     suspend fun resolveAlert(alertId: String): Boolean
+
+    /** Posts a chat message to the group. Transports without chat just report failure. */
+    suspend fun sendMessage(message: ChatMessage): Boolean = false
 
     suspend fun acknowledge(alertId: String, byId: String, byName: String): Boolean
 

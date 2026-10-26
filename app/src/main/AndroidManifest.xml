@@ -17,6 +17,11 @@
 
     <!-- Optional online group sync -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Voice commands (speech recognition). Optional: the app works without it. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+    </queries>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />

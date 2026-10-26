@@ -46,6 +46,7 @@ data class IncomingAlert(
 
 /** The lead's call for everyone to stop, with who has and hasn't yet. */
 data class TeamStopView(
+    val alertId: String,
     val reason: StopReason,
     val calledByName: String,
     val calledByMe: Boolean,

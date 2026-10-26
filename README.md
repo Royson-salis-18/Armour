@@ -177,3 +177,27 @@ with an in-memory MongoDB stand-in, not against a deployed server.
 - **Need a hand?** asks the group for non-emergency help (fuel, a puncture). It never escalates to an SOS by itself and
   shows who is coming; cancel any time.
 - **Ride summary** appears when a ride ends: distance, time, moving time, top and average moving speed.
+
+## Lead, team stops, chat and voice
+
+The person who creates a ride is its **lead** (the server records the creator; `GroupData.leadId`). On the ride screen:
+
+- **Team stop** (lead): pick a reason (fuel, break, food, mechanical, weather, other). Every rider gets a full-screen alert
+  and must confirm **I'm stopping**; the alert stays up until they do, even if someone else already has. Confirming sets
+  the rider's stop status, so no "are you okay?" check fires while parked. The lead sees who has stopped and who is still
+  moving, and ends it with **Ride on**, which clears everyone's stop status.
+- **Just me** (lead): the lead stops alone; the group is told why and keeps riding. Any rider has the same **I'm stopping**.
+- **Chat**: group messages with quick replies. Messages are de-duplicated by id, capped at 280 characters.
+- **Voice**: the mic uses the phone's own speech recogniser (offline where the language pack is installed) and
+  `VoiceCommands` maps the words to an action with plain phrase matching, not a model: it is deterministic and tested.
+  Stops and messages need a tap to confirm; "I'm okay" is immediate; an **SOS is never sent by voice**.
+
+Over the ARMOR server these travel as `events` (team stop = an `alert` event with `detail`, chat = a `status_update`
+event carrying `message`). Over Firebase they live under `groups/{code}/messages` and `alerts`.
+
+**Not built yet:** a pre-ride lobby that waits for the lead to start (the lobby exists only in the browser prototype), and
+the lead handing over the lead role. The Android app's Group tab can create or join a ride, but starting the ride is still
+each rider's own slide-to-ride.
+
+A clickable browser prototype of the whole flow is in `docs/prototype/index.html` (open it in a browser). It simulates the
+group and uses shortened timings; it is not the Android app.

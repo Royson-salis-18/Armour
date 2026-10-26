@@ -39,6 +39,7 @@ import com.armor.app.service.ArmorRuntime
 import com.armor.core.engine.IncomingAlert
 import com.armor.core.engine.RideSnapshot
 import com.armor.core.model.AlertKind
+import com.armor.core.model.StopReason
 import com.armor.core.safety.SafetyState
 import kotlin.math.roundToInt
 
@@ -99,8 +100,8 @@ fun CriticalScreen(snapshot: RideSnapshot, emergencyNumber: String) {
             }
         }
 
-        else -> snapshot.incomingAlerts.firstOrNull { !it.acknowledgedByMe && it.alert.ackedById == null }?.let {
-            IncomingAlertScreen(it, emergencyNumber)
+        else -> snapshot.incomingAlerts.firstOrNull { it.needsMe }?.let {
+            if (it.alert.kind == AlertKind.TEAM_STOP) TeamStopScreen(it, snapshot) else IncomingAlertScreen(it, emergencyNumber)
         }
     }
 }
@@ -114,6 +115,7 @@ private fun IncomingAlertScreen(incoming: IncomingAlert, emergencyNumber: String
         AlertKind.CRASH -> "may have crashed."
         AlertKind.STATIONARY -> "has stopped and isn't responding."
         AlertKind.HELP -> "asked for a hand."
+        AlertKind.TEAM_STOP -> "called a stop."
     }
     val distance = incoming.distanceM
     val bearing = incoming.bearingDeg
@@ -131,6 +133,28 @@ private fun IncomingAlertScreen(incoming: IncomingAlert, emergencyNumber: String
             "Dismiss", Type.BodyStrong, ArmorColors.Muted, align = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().clickableNoRipple { ArmorRuntime.send(ArmorRuntime.Command.Dismiss(alert.id)) }.padding(8.dp),
         )
+    }
+}
+
+/**
+ * The lead has called everyone to stop. Unlike other alerts it stays up until this rider confirms, because it is
+ * addressed to the whole group; confirming sets the rider's stop status so no safety check fires while parked.
+ */
+@Composable
+private fun TeamStopScreen(incoming: IncomingAlert, snapshot: RideSnapshot) {
+    val alert = incoming.alert
+    val reason = StopReason.entries.firstOrNull { it.name == alert.detail } ?: StopReason.OTHER
+    val others = snapshot.riders.filter { !it.isSelf && !it.isStale }
+    Takeover(
+        icon = Icons.Filled.Warning, accent = ArmorColors.Orange, title = "${alert.riderName} called a stop",
+        subtitle = "Everyone stops for ${reason.label.lowercase()}. Find a safe place and pull in.",
+        detail = if (others.isEmpty()) null else others.joinToString("\n") { r -> "${r.name}: ${if (r.speedMps < 1.0 || r.status != null) "stopped" else "moving"}" },
+    ) {
+        PrimaryButton("I'm stopping", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00)) { ArmorRuntime.send(ArmorRuntime.Command.ConfirmTeamStop(alert.id)) }
+        SecondaryButton("Need a moment") {
+            ArmorRuntime.send(ArmorRuntime.Command.SendMessage("Slowing down, will stop shortly"))
+            ArmorRuntime.send(ArmorRuntime.Command.Dismiss(alert.id))
+        }
     }
 }
 

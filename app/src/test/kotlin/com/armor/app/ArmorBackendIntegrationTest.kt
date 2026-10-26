@@ -2,6 +2,8 @@ package com.armor.app
 
 import com.armor.app.net.ArmorBackendTransport
 import com.armor.core.model.AlertKind
+import com.armor.core.model.ChatMessage
+import com.armor.core.model.StopReason
 import com.armor.core.model.GroupAlert
 import com.armor.core.model.LatLon
 import com.armor.core.model.LocationFix
@@ -64,6 +66,37 @@ class ArmorBackendIntegrationTest {
         assertTrue(assertNotNull(a.fetch()).alerts.single().resolved)
 
         assertTrue(a.endRide())
+    }
+
+    @Test fun `lead, team stop with its reason, and chat travel through the server`() = runBlocking {
+        val lead = assertNotNull(ArmorBackendTransport.createRide(url, "Coast road", "Arjun"))
+        val rider = assertNotNull(ArmorBackendTransport.joinRide(url, lead.code, "Meera"))
+        val a = ArmorBackendTransport(url, lead.rideId)
+        val b = ArmorBackendTransport(url, rider.rideId)
+        assertTrue(a.publishSelf(report(lead.riderId, "Arjun", 12.9)))
+
+        // The ride's creator is the lead, as the server records it.
+        assertEquals(lead.riderId, assertNotNull(b.fetch()).leadId)
+
+        // Lead calls a team stop; the reason survives the trip and the rider sees it.
+        val stop = GroupAlert("stop-1", lead.riderId, "Arjun", AlertKind.TEAM_STOP, LatLon(12.9, 77.5), System.currentTimeMillis(), detail = StopReason.FUEL.name)
+        assertTrue(a.upsertAlert(stop))
+        val seen = assertNotNull(b.fetch()).alerts.single { it.id == "stop-1" }
+        assertEquals(AlertKind.TEAM_STOP, seen.kind)
+        assertEquals(StopReason.FUEL.name, seen.detail)
+
+        // Chat both ways, oldest first, ids preserved so the engine can de-duplicate.
+        val now = System.currentTimeMillis()
+        assertTrue(b.sendMessage(ChatMessage("m1", rider.riderId, "Meera", "Stopping now, tank is low", now)))
+        assertTrue(a.sendMessage(ChatMessage("m2", lead.riderId, "Arjun", "Copy. Chai after fuel", now + 1)))
+        val msgs = assertNotNull(a.fetch()).messages.sortedBy { it.timeMs }
+        assertEquals(listOf("m1", "m2"), msgs.map { it.id })
+        assertEquals("Stopping now, tank is low", msgs.first().text)
+        assertEquals("Meera", msgs.first().riderName)
+
+        // The lead releases the group.
+        assertTrue(a.resolveAlert("stop-1"))
+        assertTrue(assertNotNull(b.fetch()).alerts.single { it.id == "stop-1" }.resolved)
     }
 
     @Test fun `joining with a wrong code fails cleanly`() = runBlocking {

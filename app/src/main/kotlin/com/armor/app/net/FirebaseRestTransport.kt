@@ -1,6 +1,7 @@
 package com.armor.app.net
 
 import com.armor.core.model.AlertKind
+import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
 import com.armor.core.model.LatLon
 import com.armor.core.model.LocationFix
@@ -52,6 +53,9 @@ class FirebaseRestTransport(
 
     override suspend fun upsertAlert(alert: GroupAlert): Boolean =
         put("$group/alerts/${alert.id}.json", alert.toJson().toString())
+
+    override suspend fun sendMessage(message: ChatMessage): Boolean =
+        put("$group/messages/${message.id}.json", JSONObject().put("rid", message.riderId).put("name", message.riderName).put("text", message.text).put("t", message.timeMs).toString())
 
     override suspend fun resolveAlert(alertId: String): Boolean = put("$group/resolved/$alertId.json", "true")
 
@@ -113,7 +117,15 @@ class FirebaseRestTransport(
                 )
             }.toList()
         }.orEmpty()
-        return GroupData(riders, alerts)
+        val messages = root.optJSONObject("messages")?.let { o ->
+            o.keys().asSequence().mapNotNull { id ->
+                o.optJSONObject(id)?.let { m ->
+                    val text = m.optString("text")
+                    if (text.isEmpty()) null else ChatMessage(id, m.optString("rid"), m.optString("name", "Rider"), text, m.optLong("t"))
+                }
+            }.toList()
+        }.orEmpty()
+        return GroupData(riders, alerts, messages, root.optString("lead").takeIf { it.isNotEmpty() })
     }
 
     private fun RiderReport.toJson() = JSONObject()
@@ -148,6 +160,7 @@ class FirebaseRestTransport(
         .put("riderId", riderId).put("riderName", riderName).put("kind", kind.name).put("t", raisedAtMs)
         .apply {
             position?.let { put("lat", it.lat); put("lon", it.lon) }
+            detail?.let { put("detail", it) }
         }
 
     private fun JSONObject.toAlert(id: String, ackedById: String?, ackedByName: String?, resolved: Boolean): GroupAlert? = try {
@@ -161,6 +174,7 @@ class FirebaseRestTransport(
             ackedById = ackedById,
             ackedByName = ackedByName,
             resolved = resolved,
+            detail = optString("detail").takeIf { it.isNotEmpty() },
         )
     } catch (e: JSONException) {
         null

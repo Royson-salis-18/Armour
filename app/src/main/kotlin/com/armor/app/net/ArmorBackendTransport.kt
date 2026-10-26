@@ -1,6 +1,7 @@
 package com.armor.app.net
 
 import com.armor.core.model.AlertKind
+import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
 import com.armor.core.model.LatLon
 import com.armor.core.model.LocationFix
@@ -68,8 +69,12 @@ class ArmorBackendTransport(
     override suspend fun upsertAlert(alert: GroupAlert): Boolean {
         val data = JSONObject().put("alertId", alert.id).put("kind", alert.kind.name).put("riderName", alert.riderName).put("raisedAtMs", alert.raisedAtMs)
         alert.position?.let { data.put("lat", it.lat).put("lon", it.lon) }
-        return postEvent(alert.riderId, "alert", if (alert.kind == AlertKind.HELP || alert.kind == AlertKind.STATIONARY) "warning" else "critical", data)
+        alert.detail?.let { data.put("detail", it) }
+        return postEvent(alert.riderId, "alert", if (alert.kind == AlertKind.HELP || alert.kind == AlertKind.STATIONARY || alert.kind == AlertKind.TEAM_STOP) "warning" else "critical", data)
     }
+
+    override suspend fun sendMessage(message: ChatMessage): Boolean =
+        postEvent(message.riderId, "status_update", "info", JSONObject().put("message", JSONObject().put("id", message.id).put("name", message.riderName).put("text", message.text).put("t", message.timeMs)))
 
     override suspend fun resolveAlert(alertId: String): Boolean =
         postEvent(rider = null, "status_update", "info", JSONObject().put("resolvedAlertId", alertId))
@@ -118,6 +123,7 @@ class ArmorBackendTransport(
         val alerts = LinkedHashMap<String, GroupAlert>()
         val acks = HashMap<String, Pair<String, String>>()
         val resolved = HashSet<String>()
+        val messages = ArrayList<ChatMessage>()
         for (i in events.length() - 1 downTo 0) { // server returns newest first; replay oldest → newest
             val e = events.getJSONObject(i)
             val d = e.optJSONObject("data") ?: continue
@@ -127,15 +133,21 @@ class ArmorBackendTransport(
                     if (id.isEmpty()) continue
                     val kind = AlertKind.entries.firstOrNull { it.name == d.optString("kind") } ?: AlertKind.STATIONARY
                     val pos = if (d.has("lat") && d.has("lon")) LatLon(d.getDouble("lat"), d.getDouble("lon")) else null
-                    alerts[id] = GroupAlert(id, e.getString("rider_id"), d.optString("riderName", names[e.getString("rider_id")] ?: "Rider"), kind, pos, d.optLong("raisedAtMs"))
+                    alerts[id] = GroupAlert(id, e.getString("rider_id"), d.optString("riderName", names[e.getString("rider_id")] ?: "Rider"), kind, pos, d.optLong("raisedAtMs"), detail = d.optString("detail").takeIf { it.isNotEmpty() })
                 }
                 "acknowledgement" -> d.optString("alertId").takeIf { it.isNotEmpty() }?.let { acks.putIfAbsent(it, d.optString("byId") to d.optString("byName")) }
-                "status_update" -> d.optString("resolvedAlertId").takeIf { it.isNotEmpty() }?.let { resolved += it }
+                "status_update" -> {
+                    d.optString("resolvedAlertId").takeIf { it.isNotEmpty() }?.let { resolved += it }
+                    d.optJSONObject("message")?.let { m ->
+                        val text = m.optString("text")
+                        if (text.isNotEmpty()) messages += ChatMessage(m.optString("id", "m$i"), e.getString("rider_id"), m.optString("name", "Rider"), text, m.optLong("t"))
+                    }
+                }
             }
         }
         return GroupData(riders, alerts.values.map { a ->
             a.copy(ackedById = acks[a.id]?.first, ackedByName = acks[a.id]?.second, resolved = a.id in resolved)
-        })
+        }, messages, ride.optJSONObject("ride")?.optString("admin_id")?.takeIf { it.isNotEmpty() })
     }
 
     // ---- HTTP -------------------------------------------------------------------------------

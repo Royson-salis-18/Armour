@@ -234,6 +234,10 @@ class RideService : Service() {
             ArmorRuntime.Command.RiderOk -> engine.onRiderOk(now)
             ArmorRuntime.Command.ManualSos -> engine.onManualSos(now)
             ArmorRuntime.Command.RequestHelp -> engine.requestHelp(now)
+            is ArmorRuntime.Command.CallTeamStop -> engine.callTeamStop(command.reason, now)
+            ArmorRuntime.Command.ResumeTeam -> engine.resumeTeam(now)
+            is ArmorRuntime.Command.ConfirmTeamStop -> engine.confirmTeamStop(command.alertId, now)
+            is ArmorRuntime.Command.SendMessage -> engine.sendMessage(command.text, now)
             ArmorRuntime.Command.CancelHelp -> engine.cancelHelp(now)
             is ArmorRuntime.Command.SetStatus -> engine.setQuickStatus(command.status, now)
             is ArmorRuntime.Command.Acknowledge -> engine.acknowledgeIncoming(command.alertId, now)
@@ -272,13 +276,14 @@ class RideService : Service() {
     private fun handleEffects(effects: List<EngineEffect>) {
         for (e in effects) when (e) {
             is EngineEffect.PublishAlert -> enqueue("alert:${e.alert.id}") { it.upsertAlert(e.alert) }
+            is EngineEffect.PublishMessage -> enqueue("msg:${e.message.id}") { it.sendMessage(e.message) }
             is EngineEffect.ResolveAlert -> enqueue("resolve:${e.alertId}") { it.resolveAlert(e.alertId) }
             is EngineEffect.AcknowledgeAlert -> enqueue("ack:${e.alertId}") { it.acknowledge(e.alertId, e.byId, e.byName) }
             is EngineEffect.DispatchSos -> dispatchSos(e)
             is EngineEffect.CancelSos -> cancelSos()
             is EngineEffect.Log -> recorder.record(e.type.name, e.detail, e.timeMs)
         }
-        if (effects.any { it is EngineEffect.PublishAlert || it is EngineEffect.ResolveAlert || it is EngineEffect.AcknowledgeAlert }) flushOutbox()
+        if (effects.any { it is EngineEffect.PublishMessage || it is EngineEffect.PublishAlert || it is EngineEffect.ResolveAlert || it is EngineEffect.AcknowledgeAlert }) flushOutbox()
     }
 
     // ---- group sync -------------------------------------------------------------------------
@@ -321,6 +326,8 @@ class RideService : Service() {
                 polling.set(false)
                 if (data != null && started) {
                     engine.onPeers(data.riders)
+                    data.leadId?.let { engine.setLead(it) }
+                    engine.onMessages(data.messages)
                     engine.onGroupAlerts(data.alerts, clock.now())
                 }
             }
