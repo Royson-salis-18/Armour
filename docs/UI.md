@@ -28,6 +28,7 @@ A rider's phone is on a handlebar, so: large touch targets, very few controls pe
 - **Map (full-bleed):** with a Google Maps API key and a connection this is a real **Google map** in ARMOR's dark style (see README, "Google Maps"), with your route in orange, you as an orange dot and riders as avatar pucks; with no key or no connection it falls back to the offline map below, so nothing safety-related depends on tiles. The offline map: north-up and centred on you; works offline. Soft range rings over a faint street-grid texture, **your route as a glowing orange line**, you as the orange marker with a heading cone, other riders as grey avatars with a white ring, and the group's area as a soft white blob. A rider who has fallen away gets a red **!** badge. Chips float over the map for GPS and connection status, and **End**.
 - **Bottom sheet:**
   - **Status:** "With the group · 5 riders within 230 m", or "Separated", "Riding solo", "<name> is on the way", with a **tachometer dial** (ticks every 5 km/h, red from 100).
+  - **Ride stats:** distance, time and top speed so far (GPS jitter while stopped adds no distance).
   - **Convoy strip:** every rider placed along the direction of travel (ahead on the right). A rider who has dropped off gets a red ring and a dashed red link back to the group, labelled with the gap.
   - **Quick status:** round line-icon buttons — Fuel, Break, Repair, Wait, Photo. Selected turns orange. Each pauses the "are you okay?" check for 15 minutes.
   - **Hold for SOS:** red pill; hold ~1.5 s while it charges.

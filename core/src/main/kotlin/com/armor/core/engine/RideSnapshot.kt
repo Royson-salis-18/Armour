@@ -49,6 +49,7 @@ data class RideSnapshot(
     val incomingAlerts: List<IncomingAlert>,
     val voice: VoiceRoute,
     val online: Boolean,
+    val stats: RideSummary = RideSummary.EMPTY,
 ) {
     val self: RiderView? get() = riders.firstOrNull { it.isSelf }
 

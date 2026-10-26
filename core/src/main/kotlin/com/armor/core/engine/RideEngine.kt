@@ -64,6 +64,7 @@ class RideEngine(
     private val machine = SafetyStateMachine(selfId, config.safety)
 
     private var selfFix: LocationFix? = null
+    private val stats = RideStats()
     private val speedHistory = ArrayDeque<Pair<Long, Double>>()
     private val peers = LinkedHashMap<String, RiderReport>()
     private var groupAlerts: Map<String, GroupAlert> = emptyMap()
@@ -86,6 +87,7 @@ class RideEngine(
 
     fun onLocation(fix: LocationFix) {
         selfFix = fix
+        stats.onFix(fix)
         stationary.onFix(fix)
         speedHistory.addLast(fix.timeMs to fix.speedMps)
         while (speedHistory.isNotEmpty() && fix.timeMs - speedHistory.first().first > SPEED_HISTORY_MS) speedHistory.removeFirst()
@@ -264,6 +266,7 @@ class RideEngine(
             incomingAlerts = incoming,
             voice = CommsPlanner.select(online, intercomConnected),
             online = online,
+            stats = stats.summary(nowMs),
         )
     }
 

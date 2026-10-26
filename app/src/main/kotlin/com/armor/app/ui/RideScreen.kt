@@ -187,6 +187,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 Gap(14.dp)
                 StatusRow(s, look)
                 Gap(14.dp)
+                StatsStrip(s)
+                Gap(14.dp)
                 val others = s.riders.filter { !it.isSelf }
                 if (others.isNotEmpty()) {
                     ConvoyStrip(s)
@@ -248,6 +250,28 @@ private fun StatusRow(s: RideSnapshot, look: LinkLook) {
             Txt(look.sub, Type.Body.copy(fontSize = 14.sp), ArmorColors.Muted, Modifier.padding(top = 2.dp), maxLines = 2)
         }
         SpeedDial(kmh)
+    }
+}
+
+/** Distance, time and top speed for the ride so far, in the cluster-style condensed numerals. */
+@Composable
+private fun StatsStrip(s: RideSnapshot) {
+    val st = s.stats
+    val shape = RoundedCornerShape(20.dp)
+    Row(Modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape).padding(vertical = 12.dp)) {
+        listOf(
+            Triple("DISTANCE", fmtDistance(st.distanceM), ""),
+            Triple("TIME", fmtHms(st.elapsedMs), ""),
+            Triple("TOP SPEED", (st.maxSpeedMps * 3.6).roundToInt().toString(), " km/h"),
+        ).forEach { (label, value, unit) ->
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Txt(label, Type.Eyebrow.copy(fontSize = 11.sp, letterSpacing = 1.5.sp), ArmorColors.Dim)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Txt(value, Type.Title.copy(fontSize = 24.sp))
+                    if (unit.isNotEmpty()) Txt(unit, Type.Caption, ArmorColors.Muted, Modifier.padding(start = 2.dp, bottom = 3.dp))
+                }
+            }
+        }
     }
 }
 

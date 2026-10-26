@@ -30,3 +30,12 @@ fun QuickStatus.shortLabel(): String = when (this) {
     QuickStatus.TRAFFIC -> "Wait"
     QuickStatus.PHOTO -> "Photo"
 }
+
+/** Elapsed time as m:ss under an hour, h:mm:ss after. */
+fun fmtHms(ms: Long): String {
+    val total = (ms / 1000).coerceAtLeast(0)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val sec = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%d:%02d".format(m, sec)
+}
