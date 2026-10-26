@@ -228,6 +228,8 @@ class RideService : Service() {
         when (command) {
             ArmorRuntime.Command.RiderOk -> engine.onRiderOk(now)
             ArmorRuntime.Command.ManualSos -> engine.onManualSos(now)
+            ArmorRuntime.Command.RequestHelp -> engine.requestHelp(now)
+            ArmorRuntime.Command.CancelHelp -> engine.cancelHelp(now)
             is ArmorRuntime.Command.SetStatus -> engine.setQuickStatus(command.status, now)
             is ArmorRuntime.Command.Acknowledge -> engine.acknowledgeIncoming(command.alertId, now)
             is ArmorRuntime.Command.Dismiss -> engine.dismissIncoming(command.alertId)

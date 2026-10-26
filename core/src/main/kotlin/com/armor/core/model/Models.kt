@@ -35,7 +35,8 @@ data class RiderReport(
     val safety: SafetyCode,
 )
 
-enum class AlertKind { STATIONARY, CRASH, SOS }
+/** HELP is a non-emergency request (fuel, puncture, a hand): it never escalates to SOS on its own. */
+enum class AlertKind { STATIONARY, CRASH, SOS, HELP }
 
 /**
  * A group-visible alert raised by [riderId]. Other riders acknowledge it; the first

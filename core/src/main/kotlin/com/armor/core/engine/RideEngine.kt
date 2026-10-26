@@ -10,6 +10,7 @@ import com.armor.core.crash.CrashVerdict
 import com.armor.core.geo.Geo
 import com.armor.core.group.ClusterAnalyzer
 import com.armor.core.group.ClusterResult
+import com.armor.core.model.AlertKind
 import com.armor.core.model.GroupAlert
 import com.armor.core.model.LatLon
 import com.armor.core.model.LocationFix
@@ -71,6 +72,7 @@ class RideEngine(
     private val dismissedAlertIds = HashSet<String>()
     private val acknowledgedByMe = HashSet<String>()
     private var pendingCrash: CrashCandidate? = null
+    private var helpAlertId: String? = null
     private var quickStatus: QuickStatus? = null
     private var quickStatusSinceMs = 0L
     private var online = false
@@ -130,6 +132,25 @@ class RideEngine(
                 emit(machine.onRiderResponded(nowMs), nowMs)
             }
         }
+    }
+
+    /**
+     * Asks the group for a hand without declaring an emergency. Does nothing if help is already requested or an SOS is
+     * active (the SOS already tells everyone). Stays up until cancelled; it never escalates to an SOS by itself.
+     */
+    fun requestHelp(nowMs: Long) {
+        if (helpAlertId != null || machine.state is SafetyState.Sos) return
+        val id = "help-$selfId-$nowMs"
+        helpAlertId = id
+        effects += EngineEffect.PublishAlert(GroupAlert(id, selfId, selfName, AlertKind.HELP, selfFix?.position, nowMs))
+        effects += EngineEffect.Log(EventType.GROUP_ALERT, "you asked the group for help", nowMs)
+    }
+
+    fun cancelHelp(nowMs: Long) {
+        val id = helpAlertId ?: return
+        helpAlertId = null
+        effects += EngineEffect.ResolveAlert(id)
+        effects += EngineEffect.Log(EventType.GROUP_ALERT, "you cancelled your help request", nowMs)
     }
 
     fun onRiderOk(nowMs: Long) = emit(machine.onRiderResponded(nowMs), nowMs)
@@ -267,6 +288,7 @@ class RideEngine(
             voice = CommsPlanner.select(online, intercomConnected),
             online = online,
             stats = stats.summary(nowMs),
+            help = helpAlertId?.let { id -> HelpRequest(groupAlerts[id]?.ackedByName) },
         )
     }
 

@@ -113,11 +113,12 @@ private fun IncomingAlertScreen(incoming: IncomingAlert, emergencyNumber: String
         AlertKind.SOS -> "has sent an SOS."
         AlertKind.CRASH -> "may have crashed."
         AlertKind.STATIONARY -> "has stopped and isn't responding."
+        AlertKind.HELP -> "asked for a hand."
     }
     val distance = incoming.distanceM
     val bearing = incoming.bearingDeg
     Takeover(
-        icon = Icons.Filled.LocationOn, accent = ArmorColors.Orange, title = "${alert.riderName} needs help",
+        icon = Icons.Filled.LocationOn, accent = ArmorColors.Orange, title = if (alert.kind == AlertKind.HELP) "${alert.riderName} needs a hand" else "${alert.riderName} needs help",
         subtitle = "${alert.riderName} $what",
         keyFact = distance?.let { fmtDistance(it) },
         keyCaption = if (bearing != null) "${compass(bearing)} of you · bearing ${bearing.roundToInt()}°" else "Location unknown",

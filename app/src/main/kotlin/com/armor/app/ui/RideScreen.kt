@@ -206,6 +206,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 }
                 QuickStatusRow(s.quickStatus)
                 Gap(16.dp)
+                HelpRow(s)
+                Gap(10.dp)
                 HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
                 if (demo) {
                     Gap(14.dp)
@@ -298,6 +300,30 @@ private fun QuickStatusRow(current: QuickStatus?) {
                 Txt(st.shortLabel(), Type.Caption, if (on) ArmorColors.Orange else ArmorColors.Muted, Modifier.padding(top = 6.dp))
             }
         }
+    }
+}
+
+/** Non-emergency "I need a hand": one tap to ask, and the same row shows who is coming and lets you cancel. */
+@Composable
+private fun HelpRow(s: RideSnapshot) {
+    val help = s.help
+    val shape = RoundedCornerShape(28.dp)
+    Row(
+        Modifier.fillMaxWidth().height(52.dp).clip(shape).background(if (help != null) ArmorColors.Orange.copy(alpha = 0.14f) else ArmorColors.S2)
+            .border(1.dp, if (help != null) ArmorColors.Orange else ArmorColors.Line, shape)
+            .clickable { ArmorRuntime.send(if (help != null) ArmorRuntime.Command.CancelHelp else ArmorRuntime.Command.RequestHelp) }
+            .padding(horizontal = 20.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Txt(
+            when {
+                help == null -> "Need a hand?"
+                help.ackedByName != null -> "${help.ackedByName} is coming"
+                else -> "Help requested · waiting"
+            },
+            Type.BodyStrong, if (help != null) ArmorColors.Orange else ArmorColors.OnBg,
+        )
+        Txt(if (help != null) "CANCEL" else "ASK GROUP", Type.Eyebrow, if (help != null) ArmorColors.Orange else ArmorColors.Muted)
     }
 }
 

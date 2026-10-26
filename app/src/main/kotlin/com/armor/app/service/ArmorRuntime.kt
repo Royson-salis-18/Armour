@@ -14,6 +14,8 @@ object ArmorRuntime {
     sealed interface Command {
         data object RiderOk : Command
         data object ManualSos : Command
+        data object RequestHelp : Command
+        data object CancelHelp : Command
         data class SetStatus(val status: QuickStatus?) : Command
         data class Acknowledge(val alertId: String) : Command
         data class Dismiss(val alertId: String) : Command

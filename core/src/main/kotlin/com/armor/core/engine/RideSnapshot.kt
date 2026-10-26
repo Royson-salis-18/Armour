@@ -34,6 +34,9 @@ data class IncomingAlert(
     val bearingDeg: Double?,
 )
 
+/** This rider's open non-emergency request to the group; [ackedByName] is who said they are coming. */
+data class HelpRequest(val ackedByName: String?)
+
 /** Everything the UI and the alert layer need, rebuilt on each tick. */
 data class RideSnapshot(
     val nowMs: Long,
@@ -50,6 +53,7 @@ data class RideSnapshot(
     val voice: VoiceRoute,
     val online: Boolean,
     val stats: RideSummary = RideSummary.EMPTY,
+    val help: HelpRequest? = null,
 ) {
     val self: RiderView? get() = riders.firstOrNull { it.isSelf }
 
