@@ -59,3 +59,19 @@ Standard grouped lists: **Group** shows your code large, your name and the optio
 ## Demo ride
 
 A demo ride adds a *Demo controls* panel (Stop my bike, Crash, Kabir stops, Everyone rides, Peers acknowledge) so every alert above can be walked through in under a minute.
+
+## Motion
+
+- The speed dial eases between GPS readings instead of jumping.
+- The start-screen orb breathes (a GPU scale on a finished layer, not a redraw of its dots).
+- Slide-to-ride springs back if released early and gives a haptic tick when it completes.
+- The countdown ring's glow throbs in its last third.
+- Tabs and the start / riding / summary screens cross-fade (the ride crossfade keys on the screen kind, not on every tick).
+
+Motion is only on the start screen and the countdowns, where the rider isn't also being asked to read a fast-changing display,
+and it stays off the always-on ride screen to spare the battery. Not yet measured on a device.
+
+## Performance
+
+`EnginePerformanceTest` guards the per-second engine tick: with 150 riders it averages about 3 ms on a JVM, so the engine is
+not the bottleneck for realistic groups. UI cost has not been profiled on a phone.

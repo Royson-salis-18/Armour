@@ -1,5 +1,6 @@
 package com.armor.app.ui
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -225,10 +226,16 @@ fun HoldToSosButton(
 @Composable
 fun CountdownRing(fraction: Float, color: Color, modifier: Modifier = Modifier, size: Dp = 224.dp, content: @Composable () -> Unit) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        // In the last third the glow throbs, so the urgency is felt without reading the number.
+        val throb by androidx.compose.animation.core.rememberInfiniteTransition(label = "throb").animateFloat(
+            0.55f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(700), androidx.compose.animation.core.RepeatMode.Reverse), label = "throb",
+        )
+        val pulse = if (fraction < 0.34f) throb else 1f
         Canvas(Modifier.fillMaxSize()) {
             val c = center
             val r = this.size.minDimension / 2f
-            drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.22f), Color.Transparent), c, r * 1.15f), r * 1.15f, c)
+            drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.30f * pulse), Color.Transparent), c, r * 1.15f), r * 1.15f, c)
             // One dot per 3 degrees; the lit ones are the time remaining.
             val total = 120
             val lit = (total * fraction.coerceIn(0f, 1f)).toInt()

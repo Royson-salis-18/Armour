@@ -76,10 +76,18 @@ fun RideScreen(settings: Settings) {
     val warning by ArmorRuntime.warning.collectAsState()
     val summary by ArmorRuntime.lastSummary.collectAsState()
     val s = snapshot
-    when {
-        !running && summary != null -> RideSummaryScreen(summary!!) { ArmorRuntime.lastSummary.value = null }
-        !running || s == null -> PreRideHost(settings, starting = running)
-        else -> ActiveRide(s, demo, warning)
+    // Crossfade on the screen kind only (not on every snapshot), so ticks never restart the transition.
+    val kind = when {
+        !running && summary != null -> 2
+        !running || s == null -> 0
+        else -> 1
+    }
+    androidx.compose.animation.Crossfade(kind, animationSpec = androidx.compose.animation.core.tween(250), label = "ride") { k ->
+        when (k) {
+            2 -> summary?.let { RideSummaryScreen(it) { ArmorRuntime.lastSummary.value = null } }
+            0 -> PreRideHost(settings, starting = running)
+            else -> s?.let { ActiveRide(it, demo, warning) }
+        }
     }
 }
 

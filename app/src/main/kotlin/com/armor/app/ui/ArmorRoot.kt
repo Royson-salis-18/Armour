@@ -61,11 +61,13 @@ fun ArmorRoot() {
             },
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
-                when (Tab.entries[tab]) {
-                    Tab.RIDE -> RideScreen(settings)
-                    Tab.GROUP -> Box(Modifier.statusBarsPadding()) { GroupScreen(settings) }
-                    Tab.EVENTS -> Box(Modifier.statusBarsPadding()) { EventsScreen() }
-                    Tab.SETTINGS -> Box(Modifier.statusBarsPadding()) { SettingsScreen(settings) }
+                androidx.compose.animation.Crossfade(tab, animationSpec = androidx.compose.animation.core.tween(180), label = "tab") { t ->
+                    when (Tab.entries[t]) {
+                        Tab.RIDE -> RideScreen(settings)
+                        Tab.GROUP -> Box(Modifier.statusBarsPadding()) { GroupScreen(settings) }
+                        Tab.EVENTS -> Box(Modifier.statusBarsPadding()) { EventsScreen() }
+                        Tab.SETTINGS -> Box(Modifier.statusBarsPadding()) { SettingsScreen(settings) }
+                    }
                 }
             }
         }

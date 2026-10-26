@@ -1,5 +1,15 @@
 package com.armor.app.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,9 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -39,7 +48,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +68,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.launch
 
 private fun svgPath(d: String): Path = PathParser().parsePathString(d).toPath()
 
@@ -89,8 +102,10 @@ fun Wordmark(height: Dp = 22.dp) {
 /** The start screen's hero: the mark, large, over a dotted orb with a pool of orange light beneath it. */
 @Composable
 fun LogoHero(modifier: Modifier = Modifier) {
+    // The orb breathes by scaling a finished layer on the GPU; the 500 dots are not redrawn each frame.
+    val breath by rememberInfiniteTransition(label = "orb").animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath")
     Box(modifier, contentAlignment = Alignment.Center) {
-        DotOrb(Modifier.fillMaxSize())
+        DotOrb(Modifier.fillMaxSize().graphicsLayer { scaleX = breath; scaleY = breath })
         ArmorLogo(112.dp)
     }
 }
@@ -100,7 +115,9 @@ fun LogoHero(modifier: Modifier = Modifier) {
  * (100 km/h and over) is the red zone.
  */
 @Composable
-fun SpeedDial(kmh: Double, size: Dp = 112.dp) {
+fun SpeedDial(target: Double, size: Dp = 112.dp) {
+    // Speed arrives about once a second; easing between readings makes the needle sweep instead of jump.
+    val kmh by animateFloatAsState(target.toFloat(), tween(900, easing = LinearOutSlowInEasing), label = "speed")
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val r = this.size.minDimension / 2f
@@ -206,24 +223,31 @@ fun ConvoyStrip(s: RideSnapshot, modifier: Modifier = Modifier) {
  */
 @Composable
 fun SlideToStart(label: String, onComplete: () -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(32.dp)).background(ArmorColors.Orange)) {
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val x = remember { Animatable(0f) }
+    BoxWithConstraints(Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(32.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)))) {
         val thumb = 52.dp
         val inset = 6.dp
         val travel = with(androidx.compose.ui.platform.LocalDensity.current) { (maxWidth - thumb - inset * 2).toPx() }
-        var x by remember { mutableFloatStateOf(0f) }
-        val progress = if (travel > 0f) (x / travel).coerceIn(0f, 1f) else 0f
+        val progress = if (travel > 0f) (x.value / travel).coerceIn(0f, 1f) else 0f
 
         Text(label, Modifier.align(Alignment.Center).padding(start = 36.dp).alpha(1f - progress), color = Color(0xFF1A0B00), style = Type.Title.copy(fontSize = 22.sp, letterSpacing = 1.sp))
-        Text("›››", Modifier.align(Alignment.CenterEnd).padding(end = 22.dp).alpha(0.65f * (1f - progress)), color = Color(0xFF1A0B00), style = Type.Title.copy(fontSize = 26.sp))
+        Text("\u203A\u203A\u203A", Modifier.align(Alignment.CenterEnd).padding(end = 22.dp).alpha(0.65f * (1f - progress)), color = Color(0xFF1A0B00), style = Type.Title.copy(fontSize = 26.sp))
         Box(
             Modifier.align(Alignment.CenterStart)
-                .offset { IntOffset((x + inset.toPx()).roundToInt(), 0) }
+                .offset { IntOffset((x.value + inset.toPx()).roundToInt(), 0) }
                 .size(thumb).clip(CircleShape).background(Color(0xFF1A0B00))
                 .pointerInput(travel) {
                     detectHorizontalDragGestures(
-                        onDragEnd = { if (x > travel * 0.85f) onComplete(); x = 0f },
-                        onDragCancel = { x = 0f },
-                        onHorizontalDrag = { change, dx -> change.consume(); x = (x + dx).coerceIn(0f, travel) },
+                        onDragEnd = {
+                            scope.launch {
+                                if (x.value > travel * 0.85f) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onComplete() }
+                                x.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                            }
+                        },
+                        onDragCancel = { scope.launch { x.animateTo(0f, spring()) } },
+                        onHorizontalDrag = { change, dx -> change.consume(); scope.launch { x.snapTo((x.value + dx).coerceIn(0f, travel)) } },
                     )
                 },
             contentAlignment = Alignment.Center,
