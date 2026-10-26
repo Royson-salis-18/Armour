@@ -180,6 +180,7 @@ class RideService : Service() {
     private fun endRide() {
         if (!started) return
         recorder.record(EventType.RIDE.name, "ride ended", clock.now())
+        ArmorRuntime.snapshot.value?.stats?.takeIf { it.elapsedMs >= 30_000 }?.let { ArmorRuntime.lastSummary.value = it }
         app.prefs.rideActive = false
         release()
         stopForeground(STOP_FOREGROUND_REMOVE)

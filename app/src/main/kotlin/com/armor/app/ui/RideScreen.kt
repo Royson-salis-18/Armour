@@ -58,6 +58,7 @@ import com.armor.app.service.ArmorRuntime
 import com.armor.app.service.RideService
 import com.armor.app.sim.DemoAction
 import com.armor.core.engine.RideSnapshot
+import com.armor.core.engine.RideSummary
 import com.armor.core.engine.RiderView
 import com.armor.core.geo.Geo
 import com.armor.core.model.LatLon
@@ -73,8 +74,13 @@ fun RideScreen(settings: Settings) {
     val snapshot by ArmorRuntime.snapshot.collectAsState()
     val demo by ArmorRuntime.demoMode.collectAsState()
     val warning by ArmorRuntime.warning.collectAsState()
+    val summary by ArmorRuntime.lastSummary.collectAsState()
     val s = snapshot
-    if (!running || s == null) PreRideHost(settings, starting = running) else ActiveRide(s, demo, warning)
+    when {
+        !running && summary != null -> RideSummaryScreen(summary!!) { ArmorRuntime.lastSummary.value = null }
+        !running || s == null -> PreRideHost(settings, starting = running)
+        else -> ActiveRide(s, demo, warning)
+    }
 }
 
 @Composable
@@ -306,5 +312,44 @@ private fun DemoControls() {
             item { Pill("Everyone rides", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.RESUME_ALL)) } }
             item { Pill("Peers acknowledge", color = ArmorColors.S3) { ArmorRuntime.send(ArmorRuntime.Command.Demo(DemoAction.TOGGLE_PEER_ACK)) } }
         }
+    }
+}
+
+/** Shown after a ride ends: the totals, big, and one button to leave. */
+@Composable
+internal fun RideSummaryScreen(sum: RideSummary, onDone: () -> Unit) {
+    Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().padding(horizontal = 20.dp, vertical = 24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ArmorLogo(20.dp)
+            Txt("RIDE COMPLETE", Type.Eyebrow, ArmorColors.Orange)
+        }
+        Gap(8.dp)
+        Txt("YOU MADE", Type.Hero)
+        Txt("IT HOME.", Type.Hero, ArmorColors.Orange)
+        Gap(28.dp)
+        Txt(fmtDistance(sum.distanceM), Type.Display)
+        Txt("DISTANCE", Type.Eyebrow, ArmorColors.Dim)
+        Gap(22.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SummaryTile("TIME", fmtHms(sum.elapsedMs), Modifier.weight(1f))
+            SummaryTile("MOVING", fmtHms(sum.movingMs), Modifier.weight(1f))
+        }
+        Gap(12.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SummaryTile("TOP SPEED", "${(sum.maxSpeedMps * 3.6).roundToInt()} km/h", Modifier.weight(1f))
+            SummaryTile("AVG MOVING", "${(sum.avgMovingSpeedMps * 3.6).roundToInt()} km/h", Modifier.weight(1f))
+        }
+        Box(Modifier.weight(1f))
+        PrimaryButton("Done", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00), onClick = onDone)
+        Gap(90.dp)
+    }
+}
+
+@Composable
+private fun SummaryTile(label: String, value: String, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(modifier.clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape).padding(16.dp)) {
+        Txt(label, Type.Eyebrow.copy(fontSize = 12.sp), ArmorColors.Dim)
+        Txt(value, Type.Headline.copy(fontSize = 30.sp))
     }
 }

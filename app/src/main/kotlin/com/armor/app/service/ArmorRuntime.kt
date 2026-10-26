@@ -3,6 +3,7 @@ package com.armor.app.service
 import com.armor.app.sim.DemoAction
 import com.armor.core.engine.RideSnapshot
 import com.armor.core.model.QuickStatus
+import com.armor.core.engine.RideSummary
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -28,6 +29,9 @@ object ArmorRuntime {
 
     /** Human-readable progress of the SOS message delivery, shown on the SOS screen. */
     val sosStatus = MutableStateFlow<String?>(null)
+
+    /** Totals of the ride that just ended, shown on the summary screen until dismissed. */
+    val lastSummary = MutableStateFlow<RideSummary?>(null)
 
     /** Set when GPS/permission trouble means the ride is not fully protected. */
     val warning = MutableStateFlow<String?>(null)
