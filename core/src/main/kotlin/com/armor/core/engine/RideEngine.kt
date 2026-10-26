@@ -11,7 +11,9 @@ import com.armor.core.geo.Geo
 import com.armor.core.group.ClusterAnalyzer
 import com.armor.core.group.ClusterResult
 import com.armor.core.model.AlertKind
+import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
+import com.armor.core.model.StopReason
 import com.armor.core.model.LatLon
 import com.armor.core.model.LocationFix
 import com.armor.core.model.OutlierAssessment
@@ -39,6 +41,7 @@ sealed interface EngineEffect {
     ) : EngineEffect
 
     data class CancelSos(val alertId: String, val position: LatLon?) : EngineEffect
+    data class PublishMessage(val message: ChatMessage) : EngineEffect
     data class Log(val type: EventType, val detail: String, val timeMs: Long) : EngineEffect
 }
 
@@ -73,6 +76,12 @@ class RideEngine(
     private val acknowledgedByMe = HashSet<String>()
     private var pendingCrash: CrashCandidate? = null
     private var helpAlertId: String? = null
+    var leadId: String? = null
+        private set
+    private var teamStopId: String? = null
+    private var localTeamStop: GroupAlert? = null
+    private var adoptedStopId: String? = null
+    private val messages = ArrayList<ChatMessage>()
     private var quickStatus: QuickStatus? = null
     private var quickStatusSinceMs = 0L
     private var online = false
@@ -109,6 +118,7 @@ class RideEngine(
 
     fun onGroupAlerts(alerts: Collection<GroupAlert>, nowMs: Long) {
         groupAlerts = alerts.associateBy { it.id }
+        releaseTeamStopIfEnded(nowMs)
         val s = machine.state
         if (s is SafetyState.GroupAlerted) {
             val mine = groupAlerts[s.alertId]
@@ -132,6 +142,67 @@ class RideEngine(
                 emit(machine.onRiderResponded(nowMs), nowMs)
             }
         }
+    }
+
+    // ---- lead, team stop and chat -------------------------------------------------------------
+
+    fun setLead(id: String?) { leadId = id }
+
+    /** The lead calls every rider to stop for [reason]. Only the lead can; the lead's own check is paused too. */
+    fun callTeamStop(reason: StopReason, nowMs: Long) {
+        if (leadId != selfId || teamStopId != null) return
+        val id = "stop-$selfId-$nowMs"
+        teamStopId = id
+        val alert = GroupAlert(id, selfId, selfName, AlertKind.TEAM_STOP, selfFix?.position, nowMs, detail = reason.name)
+        localTeamStop = alert
+        effects += EngineEffect.PublishAlert(alert)
+        effects += EngineEffect.Log(EventType.GROUP_ALERT, "you called the whole group to stop: ${reason.label}", nowMs)
+        setQuickStatus(reason.status, nowMs)
+    }
+
+    /** The lead releases the group: everyone's stop status clears and they ride on. */
+    fun resumeTeam(nowMs: Long) {
+        val id = teamStopId ?: return
+        teamStopId = null
+        localTeamStop = null
+        effects += EngineEffect.ResolveAlert(id)
+        effects += EngineEffect.Log(EventType.GROUP_ALERT, "you released the group to ride on", nowMs)
+        setQuickStatus(null, nowMs)
+    }
+
+    /** A rider confirms they are stopping for the lead's call. Their stop status is set so no safety check fires. */
+    fun confirmTeamStop(alertId: String, nowMs: Long) {
+        val alert = groupAlerts[alertId] ?: return
+        if (alert.kind != AlertKind.TEAM_STOP) return
+        adoptedStopId = alertId
+        acknowledgeIncoming(alertId, nowMs)
+        val reason = StopReason.entries.firstOrNull { it.name == alert.detail } ?: StopReason.OTHER
+        setQuickStatus(reason.status, nowMs)
+    }
+
+    private fun releaseTeamStopIfEnded(nowMs: Long) {
+        val id = adoptedStopId ?: return
+        val a = groupAlerts[id]
+        if (a == null || a.resolved) {
+            adoptedStopId = null
+            effects += EngineEffect.Log(EventType.GROUP_ALERT, "the lead released the group", nowMs)
+            setQuickStatus(null, nowMs)
+        }
+    }
+
+    fun onMessages(list: Collection<ChatMessage>) {
+        val known = messages.map { it.id }.toHashSet()
+        list.filter { it.id !in known }.forEach { messages += it }
+        messages.sortBy { it.timeMs }
+        while (messages.size > MAX_MESSAGES) messages.removeAt(0)
+    }
+
+    fun sendMessage(text: String, nowMs: Long) {
+        val clean = text.trim().take(MAX_MESSAGE_CHARS)
+        if (clean.isEmpty()) return
+        val msg = ChatMessage("m-$selfId-$nowMs", selfId, selfName, clean, nowMs)
+        onMessages(listOf(msg))
+        effects += EngineEffect.PublishMessage(msg)
     }
 
     /**
@@ -289,7 +360,20 @@ class RideEngine(
             online = online,
             stats = stats.summary(nowMs),
             help = helpAlertId?.let { id -> HelpRequest(groupAlerts[id]?.ackedByName) },
+            leadId = leadId,
+            teamStop = teamStopView(views),
+            messages = messages.toList(),
         )
+    }
+
+    private fun teamStopView(views: List<RiderView>): TeamStopView? {
+        val a = groupAlerts.values.filter { it.kind == AlertKind.TEAM_STOP && !it.resolved }.maxByOrNull { it.raisedAtMs }
+            ?: localTeamStop
+        if (a == null) return null
+        val reason = StopReason.entries.firstOrNull { it.name == a.detail } ?: StopReason.OTHER
+        val others = views.filter { !it.isStale && it.id != a.riderId }
+        val (stopped, waiting) = others.partition { it.speedMps < 1.0 || it.status != null }
+        return TeamStopView(reason, a.riderName, a.riderId == selfId, a.raisedAtMs, stopped.map { it.name }, waiting.map { it.name })
     }
 
     private fun view(r: RiderReport, nowMs: Long, me: LatLon?, cluster: ClusterResult, isSelf: Boolean): RiderView {
@@ -314,6 +398,8 @@ class RideEngine(
 
     private companion object {
         const val SPEED_HISTORY_MS = 20_000L
+        const val MAX_MESSAGES = 100
+        const val MAX_MESSAGE_CHARS = 280
         const val PRE_IMPACT_WINDOW_MS = 6_000L
         const val POST_IMPACT_SETTLE_MS = 2_000L
     }

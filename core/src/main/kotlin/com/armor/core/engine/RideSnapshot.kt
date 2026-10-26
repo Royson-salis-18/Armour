@@ -2,7 +2,9 @@ package com.armor.core.engine
 
 import com.armor.core.comms.VoiceRoute
 import com.armor.core.group.Cluster
+import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
+import com.armor.core.model.StopReason
 import com.armor.core.model.LatLon
 import com.armor.core.model.OutlierAssessment
 import com.armor.core.model.QuickStatus
@@ -32,6 +34,24 @@ data class IncomingAlert(
     val acknowledgedByMe: Boolean,
     val distanceM: Double?,
     val bearingDeg: Double?,
+) {
+    /**
+     * True while this alert should take over the screen. Most alerts stop needing attention once *anyone* has answered
+     * them; a team stop is addressed to everyone, so it stays until this rider has confirmed.
+     */
+    val needsMe: Boolean
+        get() = !acknowledgedByMe && !alert.resolved &&
+            (alert.kind == com.armor.core.model.AlertKind.TEAM_STOP || alert.ackedById == null)
+}
+
+/** The lead's call for everyone to stop, with who has and hasn't yet. */
+data class TeamStopView(
+    val reason: StopReason,
+    val calledByName: String,
+    val calledByMe: Boolean,
+    val sinceMs: Long,
+    val stopped: List<String>,
+    val waiting: List<String>,
 )
 
 /** This rider's open non-emergency request to the group; [ackedByName] is who said they are coming. */
@@ -54,11 +74,15 @@ data class RideSnapshot(
     val online: Boolean,
     val stats: RideSummary = RideSummary.EMPTY,
     val help: HelpRequest? = null,
+    val leadId: String? = null,
+    val teamStop: TeamStopView? = null,
+    val messages: List<ChatMessage> = emptyList(),
 ) {
     val self: RiderView? get() = riders.firstOrNull { it.isSelf }
+    val isLead: Boolean get() = leadId != null && leadId == self?.id
 
     /** True whenever the rider must be interrupted: a prompt, a countdown, an SOS, or a group member needing help. */
     val needsAttention: Boolean
         get() = (safety !is SafetyState.Normal && safety !is SafetyState.Acknowledged) ||
-            incomingAlerts.any { !it.acknowledgedByMe && it.alert.ackedById == null }
+            incomingAlerts.any { it.needsMe }
 }

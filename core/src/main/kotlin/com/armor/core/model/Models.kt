@@ -36,7 +36,8 @@ data class RiderReport(
 )
 
 /** HELP is a non-emergency request (fuel, puncture, a hand): it never escalates to SOS on its own. */
-enum class AlertKind { STATIONARY, CRASH, SOS, HELP }
+/** TEAM_STOP is the lead calling the whole group to stop (fuel, break...); [GroupAlert.detail] holds the [StopReason] name. */
+enum class AlertKind { STATIONARY, CRASH, SOS, HELP, TEAM_STOP }
 
 /**
  * A group-visible alert raised by [riderId]. Other riders acknowledge it; the first
@@ -52,6 +53,7 @@ data class GroupAlert(
     val ackedById: String? = null,
     val ackedByName: String? = null,
     val resolved: Boolean = false,
+    val detail: String? = null,
 )
 
 /** Where the rider stands relative to the group, as seen from the rider's own phone. */
@@ -67,3 +69,15 @@ enum class OutlierAssessment {
 }
 
 enum class SosReason { MANUAL, STATIONARY_UNACKNOWLEDGED, CRASH_NO_RESPONSE }
+
+/** Why the lead is calling a stop. Each maps to the rider-status that pauses the "are you okay?" check while stopped. */
+enum class StopReason(val label: String, val status: QuickStatus) {
+    FUEL("Fuel", QuickStatus.FUEL),
+    BREAK("Break", QuickStatus.BREAK),
+    FOOD("Food", QuickStatus.BREAK),
+    MECHANICAL("Mechanical", QuickStatus.MECHANICAL),
+    WEATHER("Weather", QuickStatus.BREAK),
+    OTHER("Other", QuickStatus.TRAFFIC),
+}
+
+data class ChatMessage(val id: String, val riderId: String, val riderName: String, val text: String, val timeMs: Long)
