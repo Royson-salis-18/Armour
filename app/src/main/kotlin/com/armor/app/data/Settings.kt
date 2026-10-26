@@ -23,8 +23,16 @@ data class Settings(
     val soloMonitoring: Boolean,
     val sensitivity: Sensitivity,
     val usesIntercom: Boolean,
+    /** ARMOR server root, e.g. https://armor.example.com. Blank disables the ride-session flow. */
+    val backendUrl: String = "",
+    /** The ride this rider has created or joined on the ARMOR server (blank when not in one). */
+    val rideId: String = "",
+    val rideCode: String = "",
+    val rideName: String = "",
+    val isRideAdmin: Boolean = false,
 ) {
-    val syncConfigured: Boolean get() = groupCode.isNotBlank() && firebaseUrl.isNotBlank()
+    val backendConfigured: Boolean get() = backendUrl.isNotBlank() && rideId.isNotBlank()
+    val syncConfigured: Boolean get() = backendConfigured || (groupCode.isNotBlank() && firebaseUrl.isNotBlank())
 }
 
 /** Small SharedPreferences wrapper that also exposes the current values as a [StateFlow] for the UI. */
@@ -51,6 +59,12 @@ class Prefs(context: Context) {
             .putBoolean("soloMonitoring", next.soloMonitoring)
             .putString("sensitivity", next.sensitivity.name)
             .putBoolean("usesIntercom", next.usesIntercom)
+            .putString("riderId", next.riderId)
+            .putString("backendUrl", next.backendUrl)
+            .putString("rideId", next.rideId)
+            .putString("rideCode", next.rideCode)
+            .putString("rideName", next.rideName)
+            .putBoolean("isRideAdmin", next.isRideAdmin)
             .apply()
         _settings.value = next
     }
@@ -71,6 +85,11 @@ class Prefs(context: Context) {
             soloMonitoring = sp.getBoolean("soloMonitoring", true),
             sensitivity = runCatching { Sensitivity.valueOf(sp.getString("sensitivity", null) ?: "MEDIUM") }.getOrDefault(Sensitivity.MEDIUM),
             usesIntercom = sp.getBoolean("usesIntercom", false),
+            backendUrl = sp.getString("backendUrl", "") ?: "",
+            rideId = sp.getString("rideId", "") ?: "",
+            rideCode = sp.getString("rideCode", "") ?: "",
+            rideName = sp.getString("rideName", "") ?: "",
+            isRideAdmin = sp.getBoolean("isRideAdmin", false),
         )
     }
 }

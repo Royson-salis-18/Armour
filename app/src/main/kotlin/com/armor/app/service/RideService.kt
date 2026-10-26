@@ -21,6 +21,7 @@ import com.armor.app.data.ContactEntity
 import com.armor.app.data.EventRecorder
 import com.armor.app.data.Settings
 import com.armor.app.net.ConnectivityMonitor
+import com.armor.app.net.ArmorBackendTransport
 import com.armor.app.net.FirebaseRestTransport
 import com.armor.app.net.GroupTransport
 import com.armor.app.net.RemoteEvent
@@ -168,7 +169,11 @@ class RideService : Service() {
                 else if (!m.hasGyroscope) recorder.record(EventType.SYSTEM.name, "no gyroscope: crash detection uses impact and tilt only", clock.now())
             }
             connectivity = ConnectivityMonitor(this, handler) { online -> networkOnline = online; pushConnectivity() }.also { it.start() }
-            if (settings.syncConfigured) transport = FirebaseRestTransport(settings.firebaseUrl, settings.groupCode)
+            transport = when {
+                settings.backendConfigured -> ArmorBackendTransport(settings.backendUrl, settings.rideId)
+                settings.syncConfigured -> FirebaseRestTransport(settings.firebaseUrl, settings.groupCode)
+                else -> null
+            }
         }
         bluetooth = BluetoothAudioMonitor(this, handler) { names -> bluetoothNames = names; ArmorRuntime.bluetoothAudio.value = names; pushConnectivity() }.also { it.start() }
         pushConnectivity()

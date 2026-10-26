@@ -15,6 +15,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
+import com.armor.app.net.ArmorBackendTransport
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -44,7 +50,9 @@ fun GroupScreen(settings: Settings) {
         ScreenTitle("Group")
         if (running) Text("Changes apply from your next ride.", color = ArmorColors.Amber, fontSize = 12.sp)
 
-        if (settings.groupCode.isNotBlank()) {
+        RideSessionCard(settings)
+
+        if (settings.groupCode.isNotBlank() && !settings.backendConfigured) {
             Card2 {
                 Txt("GROUP CODE", Type.Caption, ArmorColors.Dim, Modifier.fillMaxWidth(), TextAlign.Center)
                 Txt(settings.groupCode, Type.Display.copy(fontSize = 42.sp, letterSpacing = 10.sp), ArmorColors.Orange, Modifier.fillMaxWidth(), TextAlign.Center)
@@ -110,6 +118,83 @@ fun GroupScreen(settings: Settings) {
                     if (r.safety != SafetyCode.NORMAL) Text(r.safety.name.lowercase(), color = ArmorColors.Amber, fontSize = 12.sp)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Create a ride on the ARMOR server, or join one with its code. The creator is the admin and can start and end the ride
+ * for everyone; once in a ride, the group code is shown big for sharing.
+ */
+@Composable
+private fun RideSessionCard(settings: Settings) {
+    val prefs = ArmorApp.instance.prefs
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var rideName by remember { mutableStateOf("") }
+    var joinCode by remember { mutableStateOf("") }
+    val name = settings.riderName.ifBlank { "Rider" }
+
+    fun adopt(session: com.armor.app.net.RideSession?, failure: String) {
+        busy = false
+        if (session == null) { message = failure; return }
+        message = null
+        prefs.update { it.copy(riderId = session.riderId, rideId = session.rideId, rideCode = session.code, rideName = session.rideName, isRideAdmin = session.isAdmin) }
+    }
+
+    if (settings.backendConfigured) {
+        Card2 {
+            SectionTitle(if (settings.isRideAdmin) "Your ride · admin" else "Your ride")
+            Txt(settings.rideName.ifBlank { "Ride" }, Type.Title, modifier = Modifier.fillMaxWidth(), align = TextAlign.Center)
+            Txt(settings.rideCode, Type.Display.copy(fontSize = 44.sp, letterSpacing = 10.sp), ArmorColors.Orange, Modifier.fillMaxWidth(), TextAlign.Center)
+            Txt("Share this code with the riders you're joining", Type.Caption, ArmorColors.Muted, Modifier.fillMaxWidth(), TextAlign.Center)
+            if (settings.isRideAdmin) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(enabled = !busy, onClick = {
+                        busy = true
+                        scope.launch { val ok = ArmorBackendTransport(settings.backendUrl, settings.rideId).startRide(); busy = false; message = if (ok) "Ride started for everyone." else "Couldn't reach the server." }
+                    }) { Text("Start ride", color = ArmorColors.Orange) }
+                    TextButton(enabled = !busy, onClick = {
+                        busy = true
+                        scope.launch {
+                            val ok = ArmorBackendTransport(settings.backendUrl, settings.rideId).endRide()
+                            busy = false
+                            if (ok) prefs.update { it.copy(rideId = "", rideCode = "", rideName = "", isRideAdmin = false) } else message = "Couldn't reach the server."
+                        }
+                    }) { Text("End ride for all", color = ArmorColors.Red) }
+                }
+            }
+            TextButton(onClick = { prefs.update { it.copy(rideId = "", rideCode = "", rideName = "", isRideAdmin = false) } }) { Text("Leave ride", color = ArmorColors.Muted) }
+            message?.let { Txt(it, Type.Caption, ArmorColors.Amber) }
+        }
+    } else {
+        Card2 {
+            SectionTitle("Group ride")
+            OutlinedTextField(
+                value = settings.backendUrl, onValueChange = { v -> prefs.update { it.copy(backendUrl = v.trim()) } },
+                label = { Text("ARMOR server URL") }, singleLine = true,
+                supportingText = { Text("e.g. https://your-armor-server.example.com") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(value = rideName, onValueChange = { rideName = it.take(40) }, label = { Text("Ride name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            PrimaryButton(if (busy) "Creating…" else "Create ride", color = ArmorColors.Orange, contentColor = androidx.compose.ui.graphics.Color(0xFF1A0B00)) {
+                if (!busy && settings.backendUrl.isNotBlank() && rideName.isNotBlank()) {
+                    busy = true
+                    scope.launch { adopt(ArmorBackendTransport.createRide(settings.backendUrl, rideName.trim(), name), "Couldn't create the ride. Check the server URL.") }
+                }
+            }
+            OutlinedTextField(
+                value = joinCode, onValueChange = { v -> joinCode = v.uppercase().filter { c -> c.isLetterOrDigit() }.take(8) },
+                label = { Text("Ride code") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            )
+            SecondaryButton(if (busy) "Joining…" else "Join ride") {
+                if (!busy && settings.backendUrl.isNotBlank() && joinCode.isNotBlank()) {
+                    busy = true
+                    scope.launch { adopt(ArmorBackendTransport.joinRide(settings.backendUrl, joinCode, name), "Couldn't join. Check the code and the server URL.") }
+                }
+            }
+            message?.let { Txt(it, Type.Caption, ArmorColors.Amber) }
         }
     }
 }

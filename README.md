@@ -151,3 +151,29 @@ The ride screen uses a Google map when a key is configured, and the built-in off
 Put your key in `local.properties` (git-ignored) as `MAPS_API_KEY=...`, or set the `MAPS_API_KEY` environment variable,
 and enable "Maps SDK for Android" for it in Google Cloud. The map code (`ui/GoogleRiderMap.kt`) has only been
 compile-checked against stand-ins for the maps libraries here; it has not been run with a real key or on a device.
+
+## Group rides on the ARMOR server
+
+Instead of Firebase, riders can use the ARMOR FastAPI server (the `backend/` of the ARMOR repo). On the **Group** tab, enter
+the server URL, then **Create ride** (you become the admin: you can start and end the ride for everyone) or **Join ride**
+with the 6-character code. Positions, rider status, alerts, acknowledgements and the audit trail all go through that server.
+
+Notes from running against the real server:
+
+- It has no push channel, so the app polls.
+- It has no alert concept, so alerts travel as `events` (`alert`, `acknowledgement`, and a `status_update` carrying
+  `resolvedAlertId`); the newest event for an alert id wins.
+- It answers 404 when a rider's status is set to the value it already has, which the client treats as success.
+- It has **no authentication**: anyone who knows a ride's code, or its ids, can read it and post to it. Put it behind
+  authentication before using it for real rides.
+- Timestamps are naive UTC from the server's clock; a badly wrong server clock makes riders look stale.
+
+`ArmorBackendIntegrationTest` runs the whole flow (create, join, positions, alert, acknowledge, resolve, end) against a live
+server when `ARMOR_BACKEND_URL` is set, and is skipped otherwise. I ran it against the unmodified `backend/server.py`
+with an in-memory MongoDB stand-in, not against a deployed server.
+
+## Also in the ride screen
+
+- **Need a hand?** asks the group for non-emergency help (fuel, a puncture). It never escalates to an SOS by itself and
+  shows who is coming; cancel any time.
+- **Ride summary** appears when a ride ends: distance, time, moving time, top and average moving speed.
