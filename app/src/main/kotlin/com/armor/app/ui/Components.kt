@@ -113,13 +113,19 @@ fun Card2(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
 /** Group heading above a card, in the style of an inset grouped list. */
 @Composable
 fun SectionTitle(text: String) {
-    Txt(text, Type.Label, ArmorColors.Muted, Modifier.padding(start = 4.dp, top = 8.dp))
+    Row(Modifier.padding(start = 4.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(width = 14.dp, height = 3.dp).clip(CircleShape).background(ArmorColors.Orange))
+        Txt(text.uppercase(), Type.Eyebrow, ArmorColors.Muted)
+    }
 }
 
 @Composable
 fun ScreenTitle(text: String, sub: String? = null) {
     Column(Modifier.padding(bottom = 4.dp)) {
-        Txt(text, Type.Headline)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ArmorLogo(26.dp)
+            Txt(text.uppercase(), Type.Hero.copy(fontSize = 40.sp, lineHeight = 42.sp))
+        }
         if (sub != null) Txt(sub, Type.Body, ArmorColors.Muted, Modifier.padding(top = 2.dp))
     }
 }
