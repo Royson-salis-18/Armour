@@ -478,7 +478,8 @@ function serveStatic(req, res, url) {
     const ext = path.extname(file);
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' || file.endsWith('sw.js') ? 'no-cache' : 'public, max-age=86400',
+      // App files revalidate every time so a deploy shows up straight away; only vendored libraries are cached.
+      'Cache-Control': file.includes(`${path.sep}vendor${path.sep}`) ? 'public, max-age=86400' : 'no-cache',
     });
     res.end(data);
   });
