@@ -57,7 +57,10 @@ class AlertController(private val context: Context, private val handler: Handler
         }
     }
 
-    fun update(s: RideSnapshot?) = setLevel(levelFor(s))
+    /** A silent SOS keeps the phone quiet (no siren) while the texts still go out. */
+    fun update(s: RideSnapshot?) = setLevel(
+        if (com.armor.app.service.ArmorRuntime.silentSos.value && s?.safety is com.armor.core.safety.SafetyState.Sos) Level.NONE else levelFor(s),
+    )
 
     fun stop() = setLevel(Level.NONE)
 

@@ -37,7 +37,14 @@ data class RiderReport(
 
 /** HELP is a non-emergency request (fuel, puncture, a hand): it never escalates to SOS on its own. */
 /** TEAM_STOP is the lead calling the whole group to stop (fuel, break...); [GroupAlert.detail] holds the [StopReason] name. */
-enum class AlertKind { STATIONARY, CRASH, SOS, HELP, TEAM_STOP }
+/**
+ * HAZARD, LOW_BATTERY and REGROUP are informational: they show on the map and in the feed but never take over the
+ * screen. For HAZARD the [GroupAlert.detail] is a [HazardType] name, for LOW_BATTERY the battery percent, for REGROUP
+ * an optional place label.
+ */
+enum class AlertKind { STATIONARY, CRASH, SOS, HELP, TEAM_STOP, HAZARD, LOW_BATTERY, REGROUP;
+    val informational: Boolean get() = this == HAZARD || this == LOW_BATTERY || this == REGROUP
+}
 
 /**
  * A group-visible alert raised by [riderId]. Other riders acknowledge it; the first
@@ -81,3 +88,23 @@ enum class StopReason(val label: String, val status: QuickStatus) {
 }
 
 data class ChatMessage(val id: String, val riderId: String, val riderName: String, val text: String, val timeMs: Long)
+
+/** Things a rider can flag on the road for everyone behind them. */
+enum class HazardType(val label: String) {
+    POTHOLE("Pothole"),
+    OIL("Oil or gravel"),
+    ACCIDENT("Accident"),
+    ANIMAL("Animal on road"),
+    POLICE("Police check"),
+    ROADWORK("Roadwork"),
+}
+
+/** What first responders need to know; shown on the SOS screen and sent as a second text with an SOS. */
+data class MedicalInfo(
+    val bloodGroup: String = "",
+    val allergies: String = "",
+    val conditions: String = "",
+    val medications: String = "",
+) {
+    val isEmpty: Boolean get() = listOf(bloodGroup, allergies, conditions, medications).all { it.isBlank() }
+}

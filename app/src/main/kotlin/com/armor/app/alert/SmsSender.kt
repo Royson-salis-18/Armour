@@ -16,6 +16,22 @@ class SmsSender(private val context: Context) {
         if (android.os.Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java)
         else @Suppress("DEPRECATION") SmsManager.getDefault()
 
+    /**
+     * A follow-up text with no delivery tracking (medical info, safe-arrival notes). Kept apart from [send] so its
+     * result can never be mistaken for the SOS itself in the retry logic.
+     */
+    fun sendPlain(phone: String, text: String): Boolean {
+        val manager = sms ?: return false
+        return try {
+            manager.sendMultipartTextMessage(phone, null, manager.divideMessage(text), null, null)
+            true
+        } catch (e: SecurityException) {
+            false
+        } catch (e: IllegalArgumentException) {
+            false
+        }
+    }
+
     /** Returns false if the request could not even be queued (permission denied, malformed number...). */
     fun send(phone: String, text: String, attempt: Int): Boolean {
         val manager = sms ?: return false

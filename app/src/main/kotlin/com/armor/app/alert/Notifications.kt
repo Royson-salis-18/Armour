@@ -17,6 +17,7 @@ object Notifications {
     const val CHANNEL_ALERT = "alert"
     const val ID_RIDE = 1
     const val ID_ALERT = 2
+    const val ID_REMINDER = 3
 
     fun createChannels(context: Context) {
         val nm = context.requireService<NotificationManager>()

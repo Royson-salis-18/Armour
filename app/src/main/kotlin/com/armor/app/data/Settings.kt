@@ -30,7 +30,15 @@ data class Settings(
     val rideCode: String = "",
     val rideName: String = "",
     val isRideAdmin: Boolean = false,
+    val bloodGroup: String = "",
+    val allergies: String = "",
+    val conditions: String = "",
+    val medications: String = "",
+    /** Roadside assistance / breakdown number (insurer, OEM, local mechanic). */
+    val roadsideNumber: String = "",
 ) {
+    val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
+
     val backendConfigured: Boolean get() = backendUrl.isNotBlank() && rideId.isNotBlank()
     val syncConfigured: Boolean get() = backendConfigured || (groupCode.isNotBlank() && firebaseUrl.isNotBlank())
 }
@@ -65,6 +73,11 @@ class Prefs(context: Context) {
             .putString("rideCode", next.rideCode)
             .putString("rideName", next.rideName)
             .putBoolean("isRideAdmin", next.isRideAdmin)
+            .putString("bloodGroup", next.bloodGroup)
+            .putString("allergies", next.allergies)
+            .putString("conditions", next.conditions)
+            .putString("medications", next.medications)
+            .putString("roadsideNumber", next.roadsideNumber)
             .apply()
         _settings.value = next
     }
@@ -90,6 +103,11 @@ class Prefs(context: Context) {
             rideCode = sp.getString("rideCode", "") ?: "",
             rideName = sp.getString("rideName", "") ?: "",
             isRideAdmin = sp.getBoolean("isRideAdmin", false),
+            bloodGroup = sp.getString("bloodGroup", "") ?: "",
+            allergies = sp.getString("allergies", "") ?: "",
+            conditions = sp.getString("conditions", "") ?: "",
+            medications = sp.getString("medications", "") ?: "",
+            roadsideNumber = sp.getString("roadsideNumber", "") ?: "",
         )
     }
 }

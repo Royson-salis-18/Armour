@@ -41,6 +41,7 @@ data class IncomingAlert(
      */
     val needsMe: Boolean
         get() = !acknowledgedByMe && !alert.resolved &&
+            !alert.kind.informational &&
             (alert.kind == com.armor.core.model.AlertKind.TEAM_STOP || alert.ackedById == null)
 }
 
@@ -78,6 +79,16 @@ data class RideSnapshot(
     val leadId: String? = null,
     val teamStop: TeamStopView? = null,
     val messages: List<ChatMessage> = emptyList(),
+    /** Hazards flagged by anyone in the group (own ones included), newest first, within the alert age limit. */
+    val hazards: List<GroupAlert> = emptyList(),
+    /** Riders whose phone battery is low: their crash detection and location may stop soon. */
+    val lowBatteryRiders: List<String> = emptyList(),
+    /** The lead's regroup point, if one is set. */
+    val regroup: GroupAlert? = null,
+    val crashDetectionPaused: Boolean = false,
+    val arrival: ArrivalWatch.Plan? = null,
+    val arrived: Boolean = false,
+    val riddenSinceBreakMs: Long = 0,
 ) {
     val self: RiderView? get() = riders.firstOrNull { it.isSelf }
     val isLead: Boolean get() = leadId != null && leadId == self?.id

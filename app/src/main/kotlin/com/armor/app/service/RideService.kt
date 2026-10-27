@@ -25,6 +25,7 @@ import com.armor.app.net.ArmorBackendTransport
 import com.armor.app.net.FirebaseRestTransport
 import com.armor.app.net.GroupTransport
 import com.armor.app.net.RemoteEvent
+import com.armor.app.sensors.BatteryMonitor
 import com.armor.app.sensors.BluetoothAudioMonitor
 import com.armor.app.sensors.GpsLocationSource
 import com.armor.app.sensors.PhoneMotionSource
@@ -76,6 +77,7 @@ class RideService : Service() {
     private var started = false
     private var demo: DemoRide? = null
     private var transport: GroupTransport? = null
+    private var batteryMonitor: BatteryMonitor? = null
     private var gps: GpsLocationSource? = null
     private var motion: PhoneMotionSource? = null
     private var connectivity: ConnectivityMonitor? = null
@@ -178,6 +180,7 @@ class RideService : Service() {
         bluetooth = BluetoothAudioMonitor(this, handler) { names -> bluetoothNames = names; ArmorRuntime.bluetoothAudio.value = names; pushConnectivity() }.also { it.start() }
         pushConnectivity()
         checkReadiness()
+        batteryMonitor = BatteryMonitor(this) { pct, charging -> handler.post { if (started) engine.onBattery(pct, charging, clock.now()) } }.also { it.start() }
 
         handler.post(tickRunnable)
     }
@@ -195,7 +198,7 @@ class RideService : Service() {
     private fun release() {
         started = false
         handler.removeCallbacksAndMessages(null)
-        gps?.stop(); motion?.stop(); connectivity?.stop(); bluetooth?.stop()
+        gps?.stop(); motion?.stop(); connectivity?.stop(); bluetooth?.stop(); batteryMonitor?.stop()
         alerts.release()
         requireService<NotificationManager>().cancel(Notifications.ID_ALERT)
         ArmorRuntime.detach()
@@ -231,13 +234,18 @@ class RideService : Service() {
         if (!started) return
         val now = clock.now()
         when (command) {
-            ArmorRuntime.Command.RiderOk -> engine.onRiderOk(now)
+            ArmorRuntime.Command.RiderOk -> { ArmorRuntime.silentSos.value = false; engine.onRiderOk(now) }
             ArmorRuntime.Command.ManualSos -> engine.onManualSos(now)
             ArmorRuntime.Command.RequestHelp -> engine.requestHelp(now)
             is ArmorRuntime.Command.CallTeamStop -> engine.callTeamStop(command.reason, now)
             ArmorRuntime.Command.ResumeTeam -> engine.resumeTeam(now)
             is ArmorRuntime.Command.ConfirmTeamStop -> engine.confirmTeamStop(command.alertId, now)
             is ArmorRuntime.Command.SendMessage -> engine.sendMessage(command.text, now)
+            is ArmorRuntime.Command.ReportHazard -> engine.reportHazard(command.type, now)
+            is ArmorRuntime.Command.SetRegroup -> engine.snapshot?.self?.position?.let { engine.setRegroupPoint(it, command.label, now) }
+            ArmorRuntime.Command.ClearRegroup -> engine.clearRegroupPoint()
+            is ArmorRuntime.Command.PauseCrashDetection -> engine.setCrashDetectionPaused(command.paused, now)
+            ArmorRuntime.Command.SilentSos -> { ArmorRuntime.silentSos.value = true; engine.onManualSos(now) }
             ArmorRuntime.Command.CancelHelp -> engine.cancelHelp(now)
             is ArmorRuntime.Command.SetStatus -> engine.setQuickStatus(command.status, now)
             is ArmorRuntime.Command.Acknowledge -> engine.acknowledgeIncoming(command.alertId, now)
@@ -282,6 +290,11 @@ class RideService : Service() {
             is EngineEffect.DispatchSos -> dispatchSos(e)
             is EngineEffect.CancelSos -> cancelSos()
             is EngineEffect.Log -> recorder.record(e.type.name, e.detail, e.timeMs)
+            is EngineEffect.Reminder -> requireService<NotificationManager>().notify(Notifications.ID_REMINDER, Notifications.alert(this, "ARMOR", e.text, canAnswer = false))
+            is EngineEffect.ArrivalUpdate -> textContacts(
+                if (e.arrived) SosMessages.arrived(settings.riderName.ifBlank { "A rider" }, e.label)
+                else SosMessages.late(settings.riderName.ifBlank { "A rider" }, e.label, e.position),
+            )
         }
         if (effects.any { it is EngineEffect.PublishMessage || it is EngineEffect.PublishAlert || it is EngineEffect.ResolveAlert || it is EngineEffect.AcknowledgeAlert }) flushOutbox()
     }
@@ -380,6 +393,17 @@ class RideService : Service() {
             }
         }
         refreshSosStatus(sos)
+        // Medical details for first responders, as a separate untracked text so the SOS itself stays one SMS.
+        SosMessages.medical(settings.riderName.ifBlank { "A rider" }, settings.medical)?.let { m -> contacts.forEach { sms.sendPlain(it.phone, m) } }
+    }
+
+    /** A plain, untracked text to every emergency contact (safe arrival, running late). Never in demo mode. */
+    private fun textContacts(text: String) {
+        if (demo != null) { recorder.record(EventType.SYSTEM.name, "demo: would text contacts: $text", clock.now()); return }
+        scope.launch {
+            val contacts = app.db.contacts().snapshot()
+            handler.post { contacts.forEach { sms.sendPlain(it.phone, text) } }
+        }
     }
 
     private fun onSmsResult(r: ArmorRuntime.Command.SmsResult) {
@@ -435,7 +459,7 @@ class RideService : Service() {
         }
 
         val state = s.safety
-        val incoming = s.incomingAlerts.firstOrNull { !it.acknowledgedByMe && it.alert.ackedById == null }
+        val incoming = s.incomingAlerts.firstOrNull { it.needsMe }
         val (title, body, canAnswer) = when (state) {
             is SafetyState.Verifying -> Triple("Are you OK?", "Tap I'm OK, or the group will be alerted in ${secondsLeft(state.deadlineMs, s.nowMs)} s", true)
             is SafetyState.GroupAlerted -> Triple("Group alerted", "SOS in ${secondsLeft(state.deadlineMs, s.nowMs)} s unless someone responds", true)

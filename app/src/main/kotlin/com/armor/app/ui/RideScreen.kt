@@ -86,7 +86,7 @@ fun RideScreen(settings: Settings) {
         when (k) {
             2 -> summary?.let { RideSummaryScreen(it) { ArmorRuntime.lastSummary.value = null } }
             0 -> PreRideHost(settings, starting = running)
-            else -> s?.let { ActiveRide(it, demo, warning) }
+            else -> s?.let { ActiveRide(it, demo, warning, settings) }
         }
     }
 }
@@ -160,7 +160,7 @@ private fun ReadyChip(label: String, ok: Boolean, modifier: Modifier = Modifier)
 }
 
 @Composable
-internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
+internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settings: Settings) {
     // Your recent route, drawn on the map as a navigation-style line.
     val trail = remember { mutableStateListOf<LatLon>() }
     val here = s.self?.position
@@ -204,6 +204,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?) {
                 StatusRow(s, look)
                 Gap(14.dp)
                 LeadCard(s)
+                Gap(10.dp)
+                SafetyTools(s, settings)
                 Gap(14.dp)
                 StatsStrip(s)
                 Gap(14.dp)

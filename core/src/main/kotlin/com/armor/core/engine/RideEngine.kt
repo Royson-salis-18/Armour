@@ -13,6 +13,7 @@ import com.armor.core.group.ClusterResult
 import com.armor.core.model.AlertKind
 import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
+import com.armor.core.model.HazardType
 import com.armor.core.model.StopReason
 import com.armor.core.model.LatLon
 import com.armor.core.model.LocationFix
@@ -42,6 +43,10 @@ sealed interface EngineEffect {
 
     data class CancelSos(val alertId: String, val position: LatLon?) : EngineEffect
     data class PublishMessage(val message: ChatMessage) : EngineEffect
+    /** A gentle prompt for the rider (fatigue break, arrival); the host shows it as a notification. */
+    data class Reminder(val text: String, val timeMs: Long) : EngineEffect
+    /** Safe-arrival plan: tell the family the rider [arrived] or is running late (when [arrived] is false). */
+    data class ArrivalUpdate(val arrived: Boolean, val label: String, val position: LatLon?) : EngineEffect
     data class Log(val type: EventType, val detail: String, val timeMs: Long) : EngineEffect
 }
 
@@ -82,6 +87,14 @@ class RideEngine(
     private var localTeamStop: GroupAlert? = null
     private var adoptedStopId: String? = null
     private val messages = ArrayList<ChatMessage>()
+    private val fatigue = FatigueWatch()
+    private val battery = BatteryWatch()
+    private val arrival = ArrivalWatch()
+    private var batteryAlertId: String? = null
+    private var regroupId: String? = null
+    private var localRegroup: GroupAlert? = null
+    private val localHazards = ArrayList<GroupAlert>()
+    private var crashPaused = false
     private var quickStatus: QuickStatus? = null
     private var quickStatusSinceMs = 0L
     private var online = false
@@ -99,6 +112,9 @@ class RideEngine(
     fun onLocation(fix: LocationFix) {
         selfFix = fix
         stats.onFix(fix)
+        if (fatigue.onFix(fix)) effects += EngineEffect.Reminder("You've ridden ${fatigue.riddenSinceBreakMs / 3_600_000} h without a break. Plan a stop soon.", fix.timeMs)
+        // Crash detection paused while off the bike resumes by itself once riding again.
+        if (crashPaused && fix.speedMps >= RESUME_CRASH_MPS) { crashPaused = false; effects += EngineEffect.Log(EventType.SYSTEM, "crash detection resumed: riding again", fix.timeMs) }
         stationary.onFix(fix)
         speedHistory.addLast(fix.timeMs to fix.speedMps)
         while (speedHistory.isNotEmpty() && fix.timeMs - speedHistory.first().first > SPEED_HISTORY_MS) speedHistory.removeFirst()
@@ -143,6 +159,58 @@ class RideEngine(
             }
         }
     }
+
+    // ---- hazards, battery, regroup, arrival, pause --------------------------------------------
+
+    /** Flags a hazard at the rider's position for everyone in the group. */
+    fun reportHazard(type: HazardType, nowMs: Long) {
+        val pos = selfFix?.position ?: return
+        val a = GroupAlert("hz-$selfId-$nowMs", selfId, selfName, AlertKind.HAZARD, pos, nowMs, detail = type.name)
+        localHazards += a
+        effects += EngineEffect.PublishAlert(a)
+        effects += EngineEffect.Log(EventType.STATUS, "you reported: ${type.label}", nowMs)
+    }
+
+    /** Phone battery level; low battery is shared with the group once, and cleared when charging. */
+    fun onBattery(percent: Int, charging: Boolean, nowMs: Long) {
+        when (battery.onLevel(percent, charging)) {
+            BatteryWatch.Change.RAISE -> {
+                val id = "bat-$selfId-$nowMs"
+                batteryAlertId = id
+                effects += EngineEffect.PublishAlert(GroupAlert(id, selfId, selfName, AlertKind.LOW_BATTERY, selfFix?.position, nowMs, detail = percent.toString()))
+                effects += EngineEffect.Log(EventType.SYSTEM, "battery at $percent%: group told", nowMs)
+            }
+            BatteryWatch.Change.CLEAR -> batteryAlertId?.let { effects += EngineEffect.ResolveAlert(it); batteryAlertId = null }
+            null -> Unit
+        }
+    }
+
+    /** Lead only: where the group should meet up. */
+    fun setRegroupPoint(position: LatLon, label: String, nowMs: Long) {
+        if (leadId != selfId) return
+        regroupId?.let { effects += EngineEffect.ResolveAlert(it) }
+        val a = GroupAlert("rg-$selfId-$nowMs", selfId, selfName, AlertKind.REGROUP, position, nowMs, detail = label.take(40))
+        regroupId = a.id; localRegroup = a
+        effects += EngineEffect.PublishAlert(a)
+        effects += EngineEffect.Log(EventType.GROUP_ALERT, "regroup point set: ${a.detail}", nowMs)
+    }
+
+    fun clearRegroupPoint() {
+        regroupId?.let { effects += EngineEffect.ResolveAlert(it) }
+        regroupId = null; localRegroup = null
+    }
+
+    /** Off the bike (walking, at a cafe): no crash alarms. Resumes automatically above walking-plus speed. */
+    fun setCrashDetectionPaused(paused: Boolean, nowMs: Long) {
+        if (paused && (machine.state is SafetyState.CrashCountdown || pendingCrash != null)) return
+        crashPaused = paused
+        effects += EngineEffect.Log(EventType.SYSTEM, if (paused) "crash detection paused (off the bike)" else "crash detection resumed", nowMs)
+    }
+
+    /** Safe arrival: family is told when the rider gets there, or if they are well past the expected time. */
+    fun setDestination(destination: LatLon, label: String, expectedAtMs: Long) = arrival.set(destination, label, expectedAtMs)
+
+    fun clearDestination() = arrival.clear()
 
     // ---- lead, team stop and chat -------------------------------------------------------------
 
@@ -242,6 +310,14 @@ class RideEngine(
 
     fun tick(nowMs: Long): RideSnapshot {
         crashDetector.poll(nowMs)?.let(::onCandidate)
+        when (arrival.check(selfFix?.position, nowMs)) {
+            ArrivalWatch.Event.ARRIVED -> arrival.plan?.let { effects += EngineEffect.ArrivalUpdate(true, it.label, selfFix?.position) }
+            ArrivalWatch.Event.LATE -> arrival.plan?.let {
+                effects += EngineEffect.ArrivalUpdate(false, it.label, selfFix?.position)
+                effects += EngineEffect.Reminder("You're past your expected arrival at ${it.label}. Your contacts have been told.", nowMs)
+            }
+            null -> Unit
+        }
         assessPendingCrash(nowMs)
 
         if (quickStatus != null && nowMs - quickStatusSinceMs > config.safety.intentionalStopGraceMs) {
@@ -273,6 +349,7 @@ class RideEngine(
     // ---- internals --------------------------------------------------------------------------
 
     private fun onCandidate(c: CrashCandidate) {
+        if (crashPaused) return
         if (pendingCrash != null || machine.state is SafetyState.Sos || machine.state is SafetyState.CrashCountdown) return
         pendingCrash = c
         effects += EngineEffect.Log(
@@ -363,6 +440,14 @@ class RideEngine(
             leadId = leadId,
             teamStop = teamStopView(views),
             messages = messages.toList(),
+            hazards = (groupAlerts.values.filter { it.kind == AlertKind.HAZARD && !it.resolved } + localHazards)
+                .distinctBy { it.id }.filter { nowMs - it.raisedAtMs <= config.alertMaxAgeMs }.sortedByDescending { it.raisedAtMs },
+            lowBatteryRiders = groupAlerts.values.filter { it.kind == AlertKind.LOW_BATTERY && !it.resolved && it.riderId != selfId }.map { it.riderName },
+            regroup = groupAlerts.values.filter { it.kind == AlertKind.REGROUP && !it.resolved }.maxByOrNull { it.raisedAtMs } ?: localRegroup,
+            crashDetectionPaused = crashPaused,
+            arrival = arrival.plan,
+            arrived = arrival.arrived,
+            riddenSinceBreakMs = fatigue.riddenSinceBreakMs,
         )
     }
 
@@ -399,6 +484,7 @@ class RideEngine(
     private companion object {
         const val SPEED_HISTORY_MS = 20_000L
         const val MAX_MESSAGES = 100
+        const val RESUME_CRASH_MPS = 6.0
         const val MAX_MESSAGE_CHARS = 280
         const val PRE_IMPACT_WINDOW_MS = 6_000L
         const val POST_IMPACT_SETTLE_MS = 2_000L

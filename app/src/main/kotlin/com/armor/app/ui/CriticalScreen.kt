@@ -49,7 +49,7 @@ import kotlin.math.roundToInt
  * gloved or hurt and must never have to work out what to do.
  */
 @Composable
-fun CriticalScreen(snapshot: RideSnapshot, emergencyNumber: String) {
+fun CriticalScreen(snapshot: RideSnapshot, emergencyNumber: String, medical: com.armor.core.model.MedicalInfo = com.armor.core.model.MedicalInfo()) {
     val now = snapshot.nowMs
     val sosStatus by ArmorRuntime.sosStatus.collectAsState()
 
@@ -91,7 +91,7 @@ fun CriticalScreen(snapshot: RideSnapshot, emergencyNumber: String) {
             Takeover(
                 icon = Icons.Filled.Check, accent = ArmorColors.Red, solidIcon = true, title = "SOS sent",
                 subtitle = "Your last known location was shared.",
-                detail = sosStatus ?: "Your group and emergency contacts have been alerted.",
+                detail = (sosStatus ?: "Your group and emergency contacts have been alerted.") + medicalLines(medical),
             ) {
                 PrimaryButton("Call $emergencyNumber") {
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$emergencyNumber")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -116,6 +116,7 @@ private fun IncomingAlertScreen(incoming: IncomingAlert, emergencyNumber: String
         AlertKind.STATIONARY -> "has stopped and isn't responding."
         AlertKind.HELP -> "asked for a hand."
         AlertKind.TEAM_STOP -> "called a stop."
+        AlertKind.HAZARD, AlertKind.LOW_BATTERY, AlertKind.REGROUP -> "posted an update."
     }
     val distance = incoming.distanceM
     val bearing = incoming.bearingDeg
@@ -125,7 +126,11 @@ private fun IncomingAlertScreen(incoming: IncomingAlert, emergencyNumber: String
         keyFact = distance?.let { fmtDistance(it) },
         keyCaption = if (bearing != null) "${compass(bearing)} of you · bearing ${bearing.roundToInt()}°" else "Location unknown",
     ) {
-        PrimaryButton("I'm going", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00)) { ArmorRuntime.send(ArmorRuntime.Command.Acknowledge(alert.id)) }
+        PrimaryButton("I'm going", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00)) {
+            ArmorRuntime.send(ArmorRuntime.Command.Acknowledge(alert.id))
+            alert.position?.let { openNavigation(context, it) }
+        }
+        alert.position?.let { p -> SecondaryButton("Navigate in Google Maps") { openNavigation(context, p) } }
         SecondaryButton("Call $emergencyNumber") {
             context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$emergencyNumber")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
@@ -227,4 +232,16 @@ private fun Takeover(
         }
         Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { buttons() }
     }
+}
+
+/** The Medical ID, for whoever reaches the rider first: shown on the SOS screen (which also shows over the lock screen). */
+private fun medicalLines(m: com.armor.core.model.MedicalInfo): String {
+    if (m.isEmpty) return ""
+    val lines = buildList {
+        if (m.bloodGroup.isNotBlank()) add("Blood group: ${m.bloodGroup}")
+        if (m.allergies.isNotBlank()) add("Allergies: ${m.allergies}")
+        if (m.conditions.isNotBlank()) add("Conditions: ${m.conditions}")
+        if (m.medications.isNotBlank()) add("Medications: ${m.medications}")
+    }
+    return "\n\nMEDICAL ID\n" + lines.joinToString("\n")
 }

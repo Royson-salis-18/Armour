@@ -71,7 +71,7 @@ fun ArmorRoot() {
                 }
             }
         }
-        if (critical != null) CriticalScreen(critical, settings.emergencyNumber)
+        if (critical != null) CriticalScreen(critical, settings.emergencyNumber, settings.medical)
     }
 }
 

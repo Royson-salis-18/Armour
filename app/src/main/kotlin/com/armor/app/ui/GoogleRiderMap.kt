@@ -74,6 +74,22 @@ fun GoogleRiderMap(snapshot: RideSnapshot, trail: List<LatLon>, modifier: Modifi
             Polyline(points = trail.map { it.g() }, color = ArmorColors.Orange.copy(alpha = 0.35f), width = 22f)
             Polyline(points = trail.map { it.g() }, color = ArmorColors.Orange, width = 9f)
         }
+        snapshot.hazards.forEach { h ->
+            h.position?.let { pos ->
+                MarkerComposable(h.id, state = rememberMarkerState(key = h.id, position = pos.g()), anchor = androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) {
+                    Box(Modifier.size(26.dp).background(ArmorColors.Amber, CircleShape).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("!", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
+        }
+        snapshot.regroup?.position?.let { pos ->
+            MarkerComposable("regroup", state = rememberMarkerState(key = "regroup", position = pos.g()), anchor = androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) {
+                Box(Modifier.size(30.dp).background(ArmorColors.Orange, CircleShape).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                    Text("R", color = Color(0xFF1A0B00), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
         snapshot.riders.forEach { r ->
             if (r.isSelf) Circle(center = r.position.g(), radius = maxOf(r.accuracyM, 6.0), fillColor = ArmorColors.Orange.copy(alpha = 0.16f), strokeColor = Color.Transparent, strokeWidth = 0f)
             MarkerComposable(r.id, r.isSelf, r.isOutlier, r.isStale, state = rememberMarkerState(position = r.position.g()), anchor = androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) {

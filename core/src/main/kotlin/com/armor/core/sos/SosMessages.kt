@@ -31,6 +31,31 @@ object SosMessages {
         return "ARMOR SOS: ${ascii(riderName)} $what. $where"
     }
 
+    /**
+     * A second text with what first responders need. Kept separate so the SOS itself always fits one SMS; this one is
+     * trimmed to one SMS as well, or null when nothing was filled in.
+     */
+    fun medical(riderName: String, info: com.armor.core.model.MedicalInfo): String? {
+        if (info.isEmpty) return null
+        val parts = buildList {
+            if (info.bloodGroup.isNotBlank()) add("Blood ${info.bloodGroup.trim()}")
+            if (info.allergies.isNotBlank()) add("Allergies: ${info.allergies.trim()}")
+            if (info.conditions.isNotBlank()) add("Conditions: ${info.conditions.trim()}")
+            if (info.medications.isNotBlank()) add("Meds: ${info.medications.trim()}")
+        }
+        val text = "ARMOR medical, ${ascii(riderName)}: " + parts.joinToString(". ").map { if (it.code in 32..126) it else '?' }.joinToString("")
+        return if (text.length <= 160) text else text.take(157) + "..."
+    }
+
+    /** Safe-arrival texts for family. */
+    fun arrived(riderName: String, label: String): String = "ARMOR: ${ascii(riderName)} has arrived safely at ${ascii(label)}."
+
+    fun late(riderName: String, label: String, position: LatLon?): String =
+        "ARMOR: ${ascii(riderName)} has not reached ${ascii(label)} yet and is past the expected time." + (position?.let { " Last loc: ${mapsLink(it)}" } ?: "")
+
+    /** Google Maps turn-by-turn directions to [p] (opens the Maps app on phones). */
+    fun directionsLink(p: LatLon): String = String.format(Locale.ROOT, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=driving", p.lat, p.lon)
+
     fun cancelled(riderName: String): String =
         "ARMOR: ${ascii(riderName)} has cancelled the earlier SOS and says they are OK."
 

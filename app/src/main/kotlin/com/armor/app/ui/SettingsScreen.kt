@@ -89,6 +89,27 @@ fun SettingsScreen(settings: Settings) {
         }
 
         Card2 {
+            SectionTitle("Medical ID")
+            Text("Shown on the SOS screen for whoever reaches you first, and texted to your contacts with an SOS.", color = ArmorColors.Muted, fontSize = 12.sp)
+            OutlinedTextField(settings.bloodGroup, { v -> app.prefs.update { it.copy(bloodGroup = v.take(6)) } }, label = { Text("Blood group (e.g. O+)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(settings.allergies, { v -> app.prefs.update { it.copy(allergies = v.take(60)) } }, label = { Text("Allergies") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(settings.conditions, { v -> app.prefs.update { it.copy(conditions = v.take(60)) } }, label = { Text("Medical conditions") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(settings.medications, { v -> app.prefs.update { it.copy(medications = v.take(60)) } }, label = { Text("Medications") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+
+        Card2 {
+            SectionTitle("Roadside help")
+            OutlinedTextField(
+                settings.roadsideNumber,
+                { v -> app.prefs.update { it.copy(roadsideNumber = v.filter { ch -> ch.isDigit() || ch == '+' }.take(16)) } },
+                label = { Text("Breakdown / roadside assistance number") }, singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text("Your insurer's or bike maker's helpline. Shows as a Roadside help button during rides.", color = ArmorColors.Muted, fontSize = 12.sp)
+        }
+
+        Card2 {
             SectionTitle("Crash sensitivity")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Sensitivity.entries.forEach { level ->
