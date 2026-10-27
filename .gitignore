@@ -14,6 +14,7 @@ captures/
 # Signing & secrets
 *.jks
 *.keystore
+!app/keystore/armor-debug.keystore
 google-services.json
 
 # OS

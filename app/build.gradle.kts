@@ -30,6 +30,16 @@ android {
         buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
     }
 
+    // One shared debug key so every machine and CI build has the same SHA-1 to register with the Maps API key.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("keystore/armor-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildFeatures {
         buildConfig = true
     }
