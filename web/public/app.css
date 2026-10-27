@@ -291,7 +291,7 @@ a.btn.danger{color:#fff}a.btn.primary{color:#0A0A0B}
 
 /* map when tiles are still loading */
 #map{background:radial-gradient(circle at 50% 40%,#16171a,#0b0c0e 70%)}
-.leaflet-tile{filter:saturate(.9)}
+.tiles-dark{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55)}
 .leaflet-tile-pane{transition:opacity .4s}
 
 /* critical screens: centre content better on tall phones */

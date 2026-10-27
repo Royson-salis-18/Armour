@@ -487,7 +487,8 @@ function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  // OpenStreetMap's tile servers want a Referer, so send the origin only.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), accelerometer=(self)');
   try {
     if (url.pathname === '/healthz') return send(res, 200, { ok: true, rides: rides.size });

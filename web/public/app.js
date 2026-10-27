@@ -446,9 +446,11 @@ let map = null, trackLine = null, meMarker = null, accCircle = null, routeLine =
 const markers = new Map();
 const hazardMarkers = new Map();
 let regroupMarker = null, destMarker = null, routeFor = null;
+// No-key tile sources. "Dark" is OpenStreetMap restyled by CSS (see .tiles-dark).
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const TILES = [
-  ['Dark', 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>', { subdomains: 'abcd', maxZoom: 20 }],
-  ['Streets', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', { maxZoom: 19 }],
+  ['Dark', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', OSM_ATTR, { maxZoom: 19, className: 'tiles-dark' }],
+  ['Streets', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', OSM_ATTR, { maxZoom: 19 }],
   ['Satellite', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Imagery &copy; Esri, Maxar, Earthstar Geographics', { maxZoom: 19 }],
 ];
 let tileIdx = store.get('tiles', 0) % TILES.length, tileLayer = null;
