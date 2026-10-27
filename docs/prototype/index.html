@@ -190,7 +190,7 @@ body{background:#050506;color:var(--on);font:15px/1.35 var(--body);padding-left:
         <canvas id="map" width="786" height="1120"></canvas>
         <div class="pillrow">
           <div style="display:flex;gap:8px"><div class="pill" id="roleBadge"></div></div>
-          <div style="display:flex;gap:8px"><div class="pill btn" id="chatBtn">Chat</div><div class="pill btn" id="endBtn">End</div></div>
+          <div style="display:flex;gap:8px"><a class="pill btn" id="gmLink" href="#" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Maps ↗</a><div class="pill btn" id="chatBtn">Chat</div><div class="pill btn" id="endBtn">End</div></div>
         </div>
         <div class="sheet" id="sheet">
           <div class="grab"></div>
@@ -199,11 +199,13 @@ body{background:#050506;color:var(--on);font:15px/1.35 var(--body);padding-left:
             <canvas id="dial" width="224" height="224" style="width:112px;height:112px;flex:none"></canvas>
           </div>
           <div id="roleCard"></div>
+          <div id="tools"></div>
           <div class="glass stats" id="stats"><div><span>DISTANCE</span><b id="vDist">0 m</b></div><div><span>TIME</span><b id="vTime">0:00</b></div><div><span>TOP SPEED</span><b id="vTop">0 km/h</b></div></div>
           <canvas id="convoy" width="706" height="192" style="width:353px;height:96px;display:block"></canvas>
           <div class="quick" id="quick"></div>
           <div class="helprow" id="help"><span id="helpTxt">Need a hand?</span><small id="helpSm">ASK GROUP</small></div>
           <div class="sos" id="sos"><div class="fill" id="sosfill"></div><span class="badge">SOS</span><div class="t">Hold for SOS<small>Press and hold for 1.5 seconds</small></div></div>
+          <div style="text-align:center;margin-top:10px"><button class="link" id="silentSos" style="margin:0">Silent SOS (no siren)</button></div>
         </div>
       </div>
 
@@ -231,6 +233,22 @@ body{background:#050506;color:var(--on);font:15px/1.35 var(--body);padding-left:
         <div class="h1"><span class="lg"></span>Settings</div>
         <div class="sec">Emergency contacts</div>
         <div class="glass"><div class="li"><div class="av" style="background:var(--s3)">A</div><div class="t"><b>Asha</b><span class="s">+91 98•••• 1234</span></div></div><div class="li"><div class="av" style="background:var(--s3)">D</div><div class="t"><b>Dad</b><span class="s">+91 99•••• 5678</span></div></div></div>
+        <div class="sec">Medical ID</div>
+        <div class="glass" style="padding:14px 16px;display:grid;gap:8px">
+          <div class="cap">Shown on the SOS screen for whoever reaches you first, and texted to your contacts with an SOS.</div>
+          <label class="cap" for="mBlood">Blood group</label><input class="field" id="mBlood" value="O+" maxlength="6" style="height:44px">
+          <label class="cap" for="mAllergy">Allergies</label><input class="field" id="mAllergy" value="Penicillin" maxlength="60" style="height:44px">
+          <label class="cap" for="mCond">Conditions</label><input class="field" id="mCond" value="" placeholder="e.g. asthma" maxlength="60" style="height:44px">
+        </div>
+        <div class="sec">Live location for family</div>
+        <div class="glass" style="padding:14px 16px;display:grid;gap:8px">
+          <div class="cap">Asha and Dad can follow your ride on a live map and get a text when you arrive, or if you are running late.</div>
+          <div class="row" style="justify-content:space-between"><b>Destination</b><span class="s">Nandi Hills</span></div>
+          <div class="row" style="justify-content:space-between"><b>Expected arrival</b><span class="s" id="famEta">in 1 h 15 min</span></div>
+          <button class="copy" id="famCopy">Copy live link</button>
+        </div>
+        <div class="sec">Roadside help</div>
+        <div class="glass" style="padding:14px 16px;display:grid;gap:8px"><label class="cap" for="mRoad">Breakdown / roadside number</label><input class="field" id="mRoad" value="1800 209 8282" maxlength="16" style="height:44px"></div>
         <div class="sec">Crash sensitivity</div>
         <div class="seg" id="sens"><button>Low · 5 g</button><button class="on">Medium · 4 g</button><button>High · 3 g</button></div>
         <div class="sec">Monitoring</div>
@@ -278,6 +296,10 @@ body{background:#050506;color:var(--on);font:15px/1.35 var(--body);padding-left:
       <button id="rLead" hidden>Lead calls a team stop<small>Arjun: everyone stop for fuel</small></button>
       <button id="rRelease" hidden>Lead says ride on<small>Release the group</small></button>
       <button id="rReq" hidden>Rider asks to stop<small>Meera asks for a break</small></button>
+      <button id="rHaz">Arjun reports oil<small>Hazard ahead on the road</small></button>
+      <button id="rBat">Isha's battery 12%<small>Low battery warning</small></button>
+      <button id="rFat">Ride for 2 hours<small>Fatigue break reminder</small></button>
+      <button id="rArr">Arrive at Nandi Hills<small>Family told you arrived</small></button>
       <button id="cStop">Stop my bike<small>Fall behind the group</small></button>
       <button id="cGo">Ride on<small>Rejoin the road</small></button>
       <button class="red" id="cCrash">Crash<small>Impact, 15 s to cancel</small></button>
@@ -339,6 +361,13 @@ addEventListener('resize',fit);fit();
 /* ---------- world + state ---------- */
 const roadX=s=>140*Math.sin(s/300)+60*Math.sin(s/110);
 const P=s=>({x:roadX(s),y:s});
+// The simulated road is anchored to real coordinates: Hebbal, Bengaluru, heading north toward Nandi Hills.
+const ORIGIN={lat:13.0358,lon:77.5970};
+const toLL=q=>({lat:ORIGIN.lat+q.y/111320,lon:ORIGIN.lon+q.x/(111320*Math.cos(ORIGIN.lat*Math.PI/180))});
+const gDir=q=>{const l=toLL(q);return `https://www.google.com/maps/dir/?api=1&destination=${l.lat.toFixed(6)},${l.lon.toFixed(6)}&travelmode=driving`};
+const gPlace=q=>{const l=toLL(q);return `https://www.google.com/maps/search/?api=1&query=${l.lat.toFixed(6)},${l.lon.toFixed(6)}`};
+const HAZ=[['POTHOLE','Pothole'],['OIL','Oil or gravel'],['ACCIDENT','Accident'],['ANIMAL','Animal on road'],['POLICE','Police check'],['ROADWORK','Roadwork']];
+const HLABEL=Object.fromEntries(HAZ);
 const COLORS={arjun:'#8E9197',meera:'#7A7D84',kabir:'#9DA0A6',isha:'#6B6E75',me:OR};
 const NAMES={arjun:'Arjun',meera:'Meera',kabir:'Kabir',isha:'Isha'};
 const REASONS=[['FUEL','Fuel','fuel'],['BREAK','Break','cup'],['FOOD','Food','cup'],['MECH','Mechanical','wrench'],['WEATHER','Weather','light'],['OTHER','Other','pin']];
@@ -354,7 +383,8 @@ function fresh(){return{
     {id:'kabir',name:'Kabir',s:-40,v:18,stopped:false,confirmAt:0},
     {id:'isha',name:'Isha',s:-90,v:18,stopped:false,confirmAt:0},
   ],
-  state:{k:'normal'},incoming:null,help:null,teamStop:null,stopReq:null,picker:null,postponed:0,log:[],trail:[],viewR:300,final:null,autoStart:null};}
+  state:{k:'normal'},incoming:null,help:null,teamStop:null,stopReq:null,picker:null,postponed:0,log:[],trail:[],viewR:300,final:null,autoStart:null,
+  hazards:[],lowBat:[],regroup:null,crashPaused:false,silent:false,hazPick:false,banner:null};}
 let sim=fresh();
 const isLead=()=>sim.leadId==='me';
 const nameOf=id=>id==='me'?sim.name:NAMES[id];
@@ -523,6 +553,7 @@ function step(dt){
   const m=sim.me;
   m.v+=(m.target-m.v)*Math.min(1,dt*1.6);if(Math.abs(m.v-m.target)<.05)m.v=m.target;
   m.s+=m.v*dt;m.dist+=m.v*dt;m.top=Math.max(m.top,m.v);
+  if(sim.crashPaused&&m.v>6){sim.crashPaused=false;log('status','Crash detection resumed: riding again')}
   for(const p of sim.peers){p.v+=((p.stopped?0:18)-p.v)*Math.min(1,dt*1.6);p.s+=p.v*dt}
   const a=analyse();const tr=P(m.s);if(!sim.trail.length||hyp(sim.trail[sim.trail.length-1],tr)>5){sim.trail.push(tr);if(sim.trail.length>90)sim.trail.shift()}
   const st=sim.state,moving=m.v>1;
@@ -597,9 +628,9 @@ function toggleHelp(force){if(sim.help&&!force){sim.help=null;log('ack','You can
 const act={
   stop(){if(sim.mode!=='ride')return toast('Start a ride first');sim.me.target=0;log('ride','You stopped')},
   go(){if(sim.mode!=='ride')return;if(sim.teamStop&&sim.teamStop.conf.me&&sim.teamStop.by!=='me')return toast('The lead has not released the group yet');sim.me.target=18;sim.me.status=sim.teamStop&&sim.teamStop.by==='me'?sim.me.status:null;if(!['sos','crash'].includes(sim.state.k))sim.state={k:'normal'}},
-  crash(){if(sim.mode!=='ride')return toast('Start a ride first');sim.me.target=0;sim.me.v=Math.min(sim.me.v,4);sim.state={k:'crash',dl:sim.t+DEMO.crash};log('crash','Crash detected: 6.3 g impact, then rotation. Countdown started')},
+  crash(){if(sim.mode!=='ride')return toast('Start a ride first');if(sim.crashPaused){log('status','Impact ignored: crash detection paused (off the bike)');return toast('Crash detection is paused (off the bike), so the impact was ignored')}sim.me.target=0;sim.me.v=Math.min(sim.me.v,4);sim.state={k:'crash',dl:sim.t+DEMO.crash};log('crash','Crash detected: 6.3 g impact, then rotation. Countdown started')},
   kabir(){if(sim.mode!=='ride')return toast('Start a ride first');const k=sim.peers[2];k.stopped=true;k.stoppedAt=sim.t;sim.incoming=null;log('ride','Kabir stopped')},
-  ok(){sim.state={k:'normal'};sim.me.lastRiderOk=sim.t;log('ok','You said you are okay')},
+  ok(){sim.silent=false;sim.state={k:'normal'};sim.me.lastRiderOk=sim.t;log('ok','You said you are okay')},
   sos(){sendSos('You triggered it')},
   ack(){if(!sim.incoming)return;sim.incoming.acked=true;log('ack','You are going to help Kabir');const k=sim.peers[2];setTimeout(()=>{k.stopped=false;sim.incoming=null;log('ok','Kabir is moving again');render()},9000/sim.speedMul);render()},
   dismiss(){sim.incoming=null;sim.peers[2].stopped=false;render()},
@@ -657,6 +688,39 @@ $('#cRestart').onclick=()=>{sim=fresh();$('#chatov').classList.remove('on');$('#
 document.querySelectorAll('[data-sw]').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
 document.querySelectorAll('#sens button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#sens button').forEach(x=>x.classList.remove('on'));b.classList.add('on')});
 
+/* ---------- safety tools: hazards, battery, regroup, off-bike, roadside, medical ---------- */
+function medHtml(){const bl=$('#mBlood').value.trim(),al=$('#mAllergy').value.trim(),co=$('#mCond').value.trim();if(!bl&&!al&&!co)return'';
+  return `<div class="glass" style="margin-top:12px;padding:12px 16px;text-align:left"><div class="eyebrow" style="color:var(--red)">Medical ID</div>${bl?`<div class="s" style="margin-top:4px">Blood group: <b>${esc(bl)}</b></div>`:''}${al?`<div class="s">Allergies: <b>${esc(al)}</b></div>`:''}${co?`<div class="s">Conditions: <b>${esc(co)}</b></div>`:''}</div>`}
+function banner(t,sub,col,link,linkLabel){return `<div class="row" style="gap:10px;border:1px solid ${col}80;background:${col}1f;border-radius:18px;padding:10px 14px;margin-bottom:8px"><div style="flex:1;min-width:0"><div class="eyebrow" style="color:${col};font-size:13px">${t}</div><div class="cap" style="color:var(--mid)">${sub}</div></div>${link?`<a href="${link}" target="_blank" rel="noopener" class="eyebrow" style="color:${col};font-size:13px;text-decoration:none">${linkLabel} ↗</a>`:''}</div>`}
+function toolsHtml(){
+  let h='';
+  if(sim.regroup)h+=banner('Regroup · '+esc(sim.regroup.label),'Set by '+esc(nameOf(sim.regroup.by)),OR,gDir(sim.regroup.at),'NAVIGATE');
+  if(sim.lowBat.length)h+=banner('Low battery',sim.lowBat.map(esc).join(', ')+': tracking may stop soon','#FF9F43');
+  if(sim.crashPaused)h+=banner('Crash detection paused','Resumes by itself when you ride again','#A3A5AB');
+  const hz=sim.hazards.filter(x=>x.by!=='me'&&x.s>sim.me.s-50)[0];
+  if(hz)h+=banner('Ahead: '+HLABEL[hz.type],'Reported by '+esc(nameOf(hz.by))+' · '+fmtD(Math.max(0,hz.s-sim.me.s))+' ahead','#FF9F43',gPlace(P(hz.s)),'MAP');
+  if(sim.banner)h+=banner(sim.banner[0],sim.banner[1],OR);
+  const chip=(act,l,on)=>`<button data-tool="${act}" style="flex:1;height:44px;border-radius:14px;border:1px solid ${on?'var(--or)':'var(--line)'};background:${on?'rgba(255,107,26,.18)':'var(--s2)'};color:${on?'var(--or)':'var(--on)'};font:600 13px var(--body);cursor:pointer">${l}</button>`;
+  h+=`<div class="row" style="gap:8px;margin:2px 0 8px">${chip('haz','Report hazard',sim.hazPick)}${chip('off',sim.crashPaused?'Back on bike':'Off the bike',sim.crashPaused)}${isLead()?chip('regroup','Regroup here',false):chip('road','Roadside help',false)}</div>`;
+  if(sim.hazPick)h+=`<div class="rc" style="margin:0 0 10px">${HAZ.map(([k,l])=>`<button data-haz="${k}">${l}</button>`).join('')}</div>`;
+  return h;
+}
+$('#tools').addEventListener('click',e=>{
+  const hz=e.target.closest('[data-haz]');if(hz){sim.hazards.unshift({type:hz.dataset.haz,by:'me',s:sim.me.s,t:sim.t});sim.hazPick=false;chat('x',`${sim.name} reported: ${HLABEL[hz.dataset.haz]}`,true);log('status','You reported: '+HLABEL[hz.dataset.haz]);toast('Group warned: '+HLABEL[hz.dataset.haz]);render();return}
+  const b=e.target.closest('[data-tool]');if(!b)return;const k=b.dataset.tool;
+  if(k==='haz')sim.hazPick=!sim.hazPick;
+  else if(k==='off'){sim.crashPaused=!sim.crashPaused;if(sim.crashPaused){sim.me.target=0;sim.me.v=Math.min(sim.me.v,5.5)}else sim.me.target=18;log('status',sim.crashPaused?'Crash detection paused (off the bike)':'Crash detection resumed');toast(sim.crashPaused?'Crash detection paused until you ride again':'Crash detection on')}
+  else if(k==='regroup'){sim.regroup={label:'Fuel station, NH 44',by:'me',at:P(sim.me.s+2500)};chat('x',`${sim.name} (lead) set a regroup point: Fuel station, NH 44`,true);log('alert','Regroup point set');toast('Regroup point sent to the group')}
+  else if(k==='road'){toast('Demo: this would dial roadside help '+$('#mRoad').value)}
+  render();
+});
+$('#silentSos').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');sim.silent=true;act.sos();render()};
+$('#rHaz').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');const a=sim.peers[0];sim.hazards.unshift({type:'OIL',by:'arjun',s:a.s,t:sim.t});chat('x','Arjun reported: Oil or gravel',true);log('alert','Arjun reported oil on the road ahead');toast('Arjun reported oil ahead');render()};
+$('#rBat').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');if(!sim.lowBat.includes('Isha'))sim.lowBat.push('Isha');chat('x',"Isha's battery is at 12%",true);log('alert',"Isha's phone battery is low (12%)");render()};
+$('#rFat').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');sim.banner=['Time for a break','2 h riding without a stop. Pull in soon.'];log('status','Fatigue reminder: 2 h without a break');toast('2 hours without a break. Plan a stop.');render()};
+$('#rArr').onclick=()=>{if(sim.mode!=='ride')return toast('Start a ride first');sim.banner=['Arrived safely','Asha and Dad were texted that you reached Nandi Hills'];log('ok','Arrived at Nandi Hills: family told');toast('Family told you arrived safely');render()};
+$('#famCopy').onclick=()=>copyTxt('https://armor.app/live/'+sim.code+'-'+sim.name.toLowerCase(),'Live link copied (example)');
+
 /* ---------- takeover ---------- */
 let takeKey='';
 function ringHtml(f,col,t,cap){
@@ -671,14 +735,14 @@ function renderTake(){
     if(st.k==='verifying')v={col:OR,glow:'255,107,26,.34',ic:'warn',t:'Are you okay?',sub:"You've stopped away from your group.",ring:[(st.dl-sim.t)/DEMO.verify,fmtT(left(st.dl)),'until your group is alerted'],steps:[['Your group is alerted',fmtT(left(st.dl))],['They get a minute to respond','then'],['SOS is texted to your contacts','then']],btns:[['w',"I'm okay",act.ok],['ghost','Send SOS now',act.sos]]};
     else if(st.k==='groupAlerted')v={col:RED,glow:'229,52,47,.38',ic:'bell',t:'Your group has been alerted',sub:'No answer, so we told them.',ring:[(st.dl-sim.t)/DEMO.group,fmtT(left(st.dl)),'until SOS is sent'],steps:[['Waiting for a rider to respond','now'],['SOS is texted to your contacts',fmtT(left(st.dl))]],btns:[['w',"I'm okay",act.ok],['ghost','Send SOS now',act.sos]]};
     else if(st.k==='crash')v={col:RED,glow:'229,52,47,.38',ic:'warn',t:'Crash detected',sub:"We'll send SOS with your location.",ring:[(st.dl-sim.t)/DEMO.crash,fmtT(left(st.dl)),'until SOS is sent'],steps:[['SOS texted with your location',fmtT(left(st.dl))],['Your group is alerted','at once'],['An alarm sounds at full volume','now']],btns:[['w',"I'm okay, cancel",act.ok],['ghost','Send SOS now',act.sos]]};
-    else if(st.k==='sos')v={col:RED,glow:'229,52,47,.38',ic:'check',solid:1,t:'SOS sent',sub:'Your last known location was shared.',body:`<div class="glass steps" style="margin-top:22px">${[['Asha','Sent'],['Dad','Sent'],['Your group','Alerted']].map(([n,s])=>`<div class="li"><div class="av" style="background:var(--s3);width:34px;height:34px;font-size:14px">${n[0]}</div><div class="t"><b>${n}</b></div><span class="s" style="color:var(--ok);font-weight:600">✓ ${s}</span></div>`).join('')}</div><div class="cap" style="margin-top:10px">Demo: no real messages are sent.</div>`,btns:[['w','Call 112',()=>toast('Demo: this would open the dialler')],['g',"I'm okay, cancel SOS",act.ok]]};
+    else if(st.k==='sos')v={col:RED,glow:'229,52,47,.38',ic:'check',solid:1,t:'SOS sent',sub:'Your last known location was shared.',body:`<div class="glass steps" style="margin-top:22px">${[['Asha','Sent'],['Dad','Sent'],['Your group','Alerted']].map(([n,s])=>`<div class="li"><div class="av" style="background:var(--s3);width:34px;height:34px;font-size:14px">${n[0]}</div><div class="t"><b>${n}</b></div><span class="s" style="color:var(--ok);font-weight:600">✓ ${s}</span></div>`).join('')}</div>${medHtml()}<a class="copy" style="display:block;margin-top:10px;text-decoration:none;text-align:center" href="${gPlace(P(sim.me.s))}" target="_blank" rel="noopener">Your location in Google Maps ↗</a><div class="cap" style="margin-top:10px">${sim.silent?'Silent SOS: no siren. ':''}Demo: no real messages are sent.</div>`,btns:[['w','Call 112',()=>toast('Demo: this would open the dialler')],['g',"I'm okay, cancel SOS",act.ok]]};
     else if(ts&&ts.by!=='me'&&!ts.conf.me&&sim.t>=sim.postponed){
       const L=nameOf(ts.by),n=ts.nudged;
       v={col:n?RED:OR,glow:n?'229,52,47,.38':'255,107,26,.34',ic:'stop',t:`${L} called a stop`,sub:n?`${L} is waiting for you. Please stop now.`:`Everyone stops for ${RLABEL[ts.reason].toLowerCase()}. Find a safe place and pull in.`,
         body:`<div class="glass" style="margin-top:22px;padding:6px 16px;text-align:left"><div class="eyebrow" style="color:var(--dim);padding:10px 0 2px">Stopped so far</div>${sim.peers.map(p=>`<div class="tsrow"><span class="dot" style="background:${ts.conf[p.id]?'var(--ok)':'var(--dim)'}"></span><span style="flex:1">${p.name}${p.id===ts.by?' · lead':''}</span><span class="cap">${ts.conf[p.id]?'stopped':'moving'}</span></div>`).join('')}</div>`,
         btns:[['o',"I'm stopping",()=>{confirmStop()}],['g','Need a moment, slowing down',()=>{sim.postponed=sim.t+12;chat('me','Slowing down, will stop in a minute');toast('Lead told you need a moment')}]]};
     }
-    else if(sim.incoming&&!sim.incoming.acked){const d=Math.round(hyp(P(sim.me.s),sim.incoming.at)),dy=sim.incoming.at.y-P(sim.me.s).y;v={col:OR,glow:'255,107,26,.34',ic:'pin',t:sim.incoming.rider+' needs help',sub:sim.incoming.rider+" has stopped and isn't responding.",body:`<div class="glass" style="margin-top:24px;padding:22px 16px"><div style="font:800 54px/1 var(--display);text-transform:none">${fmtD(d)}</div><div class="sub" style="margin-top:6px">${dy<0?'behind':'ahead of'} you</div></div>`,btns:[['o',"I'm going",act.ack],['g','Call 112',()=>toast('Demo: this would open the dialler')],['dis','Dismiss',act.dismiss]]}}
+    else if(sim.incoming&&!sim.incoming.acked){const d=Math.round(hyp(P(sim.me.s),sim.incoming.at)),dy=sim.incoming.at.y-P(sim.me.s).y;v={col:OR,glow:'255,107,26,.34',ic:'pin',t:sim.incoming.rider+' needs help',sub:sim.incoming.rider+" has stopped and isn't responding.",body:`<div class="glass" style="margin-top:24px;padding:22px 16px"><div style="font:800 54px/1 var(--display);text-transform:none">${fmtD(d)}</div><div class="sub" style="margin-top:6px">${dy<0?'behind':'ahead of'} you</div></div><a class="btn g" style="margin-top:14px;text-decoration:none" href="${gDir(sim.incoming.at)}" target="_blank" rel="noopener">Navigate in Google Maps ↗</a>`,btns:[['o',"I'm going",act.ack],['g','Call 112',()=>toast('Demo: this would open the dialler')],['dis','Dismiss',act.dismiss]]}}
   }
   if(!v){take.classList.remove('on');setGlow();takeKey='';return}
   const key=st.k+(sim.incoming?'i':'')+(sim.teamStop?'t'+(sim.teamStop.nudged?'n':''):'')+v.t;
@@ -717,6 +781,8 @@ function drawMap(){
   if(mainPts.length>1){const c0={x:mainPts.reduce((u,q)=>u+q.x,0)/mainPts.length,y:mainPts.reduce((u,q)=>u+q.y,0)/mainPts.length};const r=Math.max(...mainPts.map(q=>hyp(q,c0)))+22/ppm;
     mx.fillStyle='rgba(255,255,255,.07)';mx.strokeStyle='rgba(255,255,255,.4)';mx.lineWidth=1.5;mx.beginPath();mx.arc(X(c0),Y(c0),r*ppm,0,7);mx.fill();mx.stroke()}
   if(sim.trail.length>1){mx.beginPath();sim.trail.forEach((q,i)=>i?mx.lineTo(X(q),Y(q)):mx.moveTo(X(q),Y(q)));mx.lineTo(cxm,cym);mx.strokeStyle='rgba(255,107,26,.22)';mx.lineWidth=13;mx.stroke();mx.strokeStyle=OR;mx.lineWidth=3.5;mx.stroke()}
+  sim.hazards.forEach(hz=>{const q=P(hz.s),x=X(q),y=Y(q);mx.fillStyle='#fff';mx.beginPath();mx.arc(x,y,13,0,7);mx.fill();mx.fillStyle='#FF9F43';mx.beginPath();mx.arc(x,y,11,0,7);mx.fill();mx.fillStyle='#0A0A0B';mx.font='800 14px Inter,sans-serif';mx.textAlign='center';mx.fillText('!',x,y+5)});
+  if(sim.regroup){const q=sim.regroup.at,x=X(q),y=Y(q);mx.fillStyle='#fff';mx.beginPath();mx.arc(x,y,15,0,7);mx.fill();mx.fillStyle=OR;mx.beginPath();mx.arc(x,y,13,0,7);mx.fill();mx.fillStyle='#1A0B00';mx.font='800 13px Inter,sans-serif';mx.textAlign='center';mx.fillText('R',x,y+5)}
   riders.forEach(r=>{const q=P(r.s),x=X(q),y=Y(q),out=a.out(r.id);const lab=r.self?(sim.teamStop?'You · stopped':(sim.me.v<1?'You · stopped':'You'))+(sim.leadId==='me'?' ★':''):tag(r.id);
     if(r.self){mx.fillStyle='rgba(255,107,26,.15)';mx.beginPath();mx.arc(x,y,30,0,7);mx.fill();mx.fillStyle='#fff';mx.beginPath();mx.arc(x,y,13,0,7);mx.fill();mx.fillStyle=OR;mx.beginPath();mx.arc(x,y,10,0,7);mx.fill()}
     else{mx.fillStyle='#fff';mx.beginPath();mx.arc(x,y,17,0,7);mx.fill();mx.fillStyle=COLORS[r.id];mx.beginPath();mx.arc(x,y,14.5,0,7);mx.fill();
@@ -771,11 +837,13 @@ function renderRide(){
   setHtml($('#roleBadge'),isLead()?`<span class="crown" style="padding:3px 9px">${svg('crown','#1A0B00',12)}LEAD</span><b style="letter-spacing:.5px">${esc(sim.name)}</b>`:`<span class="crown rid" style="padding:3px 9px">RIDER</span><b style="letter-spacing:.5px">${esc(nameOf(sim.leadId))} leads</b>`);
   $('#chatBtn').innerHTML='Chat'+(sim.unread?` <span class="crown" style="padding:1px 7px">${sim.unread}</span>`:'');
   setHtml($('#roleCard'),roleCardHtml());
+  setHtml($('#tools'),toolsHtml());
+  $('#gmLink').href=gPlace(P(sim.me.s));
 }
 function renderLists(){
   const a=analyse();
   setHtml($('#gList'),[{id:'me'},...sim.peers].map(r=>{const out=a.out(r.id)&&!sim.teamStop,lead=sim.leadId===r.id,peer=sim.peers.find(p=>p.id===r.id);const v=r.id==='me'?sim.me.v:(peer.stopped?0:peer.v);
-    return `<div class="li"><div class="av" style="background:${COLORS[r.id]}">${esc(nameOf(r.id)[0])}</div><div class="t"><b style="color:${out?'#ff7a75':'inherit'}">${esc(nameOf(r.id))}${r.id==='me'?' (you)':''}</b><span class="s">${Math.round(v*3.6)} km/h${r.id!=='me'?' · '+fmtD(Math.abs(peer.s-sim.me.s)):''}</span></div>${lead?`<span class="crown">${svg('crown','#1A0B00',12)}LEAD</span>`:''}${out?'<span class="s" style="color:#ff7a75">separated</span>':''}</div>`}).join(''));
+    return `<div class="li"><div class="av" style="background:${COLORS[r.id]}">${esc(nameOf(r.id)[0])}</div><div class="t"><b style="color:${out?'#ff7a75':'inherit'}">${esc(nameOf(r.id))}${r.id==='me'?' (you)':''}</b><span class="s">${Math.round(v*3.6)} km/h${r.id!=='me'?' · '+fmtD(Math.abs(peer.s-sim.me.s)):''}</span></div>${lead?`<span class="crown">${svg('crown','#1A0B00',12)}LEAD</span>`:''}${r.id==='isha'?'<span class="crown rid">SWEEP</span>':''}${out?'<span class="s" style="color:#ff7a75">separated</span>':''}<a class="copy" style="padding:5px 9px;font-size:12px;text-decoration:none" href="${gDir(P(r.id==='me'?sim.me.s:peer.s))}" target="_blank" rel="noopener">Maps ↗</a></div>`}).join(''));
   const colr={sos:RED,alert:RED,crash:RED,check:OR,ack:OR,ok:'#EDEDEF',ride:'#EDEDEF',status:OR};
   setHtml($('#logList'),sim.log.length?sim.log.map(e=>`<div class="li" style="align-items:flex-start"><span class="dot" style="background:${colr[e.k]||'#EDEDEF'};margin-top:7px"></span><div class="t"><span class="s" style="color:var(--on)">${esc(e.msg)}</span></div><span class="cap">${fmtT(e.t)}</span></div>`).join(''):'<div class="li"><div class="t sub">Nothing yet. Start a ride.</div></div>');
   $('#gCode').textContent=sim.code;$('#gTitle').textContent=(sim.rideName+' · RIDE CODE').toUpperCase();

@@ -201,3 +201,23 @@ each rider's own slide-to-ride.
 
 A clickable browser prototype of the whole flow is in `docs/prototype/index.html` (open it in a browser). It simulates the
 group and uses shortened timings; it is not the Android app.
+
+## Safety features modelled on real rider apps
+
+Researched against Life360 (crash detection with "are you OK?", silent SOS), EatSleepRIDE CrashLight (crash detection,
+live location to family), REALRIDER / Triumph SOS (group rides, auto-pause against false alarms) and REVER (live friend
+tracking). Added:
+
+- **Hazard reporting** (pothole, oil, accident, animal, police, roadwork) shown to the group on the map, never as a
+  full-screen interruption.
+- **Low-battery warning** to the group once at 15% (cleared when charging): a dead phone means no crash detection.
+- **Regroup point** set by the lead, with a one-tap **Navigate in Google Maps**.
+- **Off the bike** pauses crash detection (walking, cafe stop) and resumes by itself above 6 m/s.
+- **Silent SOS**: texts go out, no siren.
+- **Medical ID** (blood group, allergies, conditions, medications) on the SOS screen and as a second SOS text.
+- **Fatigue reminder** after 2 h of riding without a 10-minute break.
+- **Safe-arrival watch**: contacts get "arrived safely", or "running late" 20 min past the expected time (core and
+  service are done; the Android screen to set a destination is not built yet).
+- **Roadside help** number and button.
+- **Google Maps hand-off**: incoming alerts, hazards and the regroup point open turn-by-turn navigation in the Google
+  Maps app (or the Maps web link if the app is missing).
