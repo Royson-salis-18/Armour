@@ -221,3 +221,24 @@ tracking). Added:
 - **Roadside help** number and button.
 - **Google Maps hand-off**: incoming alerts, hazards and the regroup point open turn-by-turn navigation in the Google
   Maps app (or the Maps web link if the app is missing).
+
+## Web app (live demo build)
+
+`web/` is a phone-browser version of ARMOR that works like the real app: real GPS,
+a live OpenStreetMap map with every rider, ride codes and invite links, lobby
+chat, lead-controlled team stops, "wait for me" catch-up requests, hazards,
+regroup points, destinations with routes, SOS with crash detection, Google Maps
+directions, and hands-free control over a Bluetooth helmet intercom (voice,
+helmet buttons, air gestures). The states, buttons and transitions are
+specified in [docs/ride-flows.md](docs/ride-flows.md).
+
+```bash
+cd web
+npm test          # ride state machine tests
+npm start         # http://localhost:8080
+```
+
+It has no dependencies (Node 20+). Rides are kept in memory, so restarting the
+server clears them. GPS, the microphone and the camera need HTTPS, so test on
+phones through a deployed URL (Render, for example: build command `npm install`,
+start command `node server.js`, root directory `web`).

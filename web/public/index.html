@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#0A0A0B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ARMOR</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<!-- Welcome -->
+<section id="welcome" class="screen">
+  <div class="wel-top">
+    <div class="brand" id="brandBig"></div>
+    <h1 class="display">Ride together.<br><span class="or">Get home together.</span></h1>
+    <p class="mid">Live group map, team stops, chat and SOS for motorcycle rides. Works in your phone's browser.</p>
+  </div>
+  <div class="card wel-card">
+    <label class="lbl" for="nameIn">Your name</label>
+    <input id="nameIn" class="in" maxlength="24" autocomplete="nickname" placeholder="e.g. Royson">
+    <div id="joinBox" class="join-box hidden">
+      <div class="lbl">Joining ride</div>
+      <div class="code-big" id="joinCodeShow"></div>
+    </div>
+    <button id="createBtn" class="btn primary">Create a ride</button>
+    <div class="or-row"><span>or join with a code</span></div>
+    <div class="row gap8">
+      <input id="codeIn" class="in code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="ABC123">
+      <button id="joinBtn" class="btn ghost">Join</button>
+    </div>
+    <p id="welErr" class="err"></p>
+  </div>
+  <button class="link-btn" id="openSettings1">Emergency contact &amp; Medical ID</button>
+</section>
+
+<!-- Lobby -->
+<section id="lobby" class="screen hidden">
+  <header class="top">
+    <button class="icon-btn" id="lobbyLeave" aria-label="Leave ride"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="grow">
+      <div class="eyebrow">Lobby</div>
+      <div class="title" id="lobbyName">Group ride</div>
+    </div>
+    <button class="icon-btn" id="openSettings2" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+  </header>
+  <div class="lobby-body">
+    <div class="card share">
+      <div class="lbl">Ride code</div>
+      <div class="code-big" id="lobbyCode">------</div>
+      <div class="row gap8">
+        <button class="btn primary sm grow" id="shareBtn">Share invite link</button>
+        <button class="btn ghost sm" id="copyBtn">Copy</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row between"><div class="lbl">Riders</div><div class="lbl" id="riderCount"></div></div>
+      <div id="lobbyRiders" class="riders"></div>
+    </div>
+    <div class="card lobby-chat">
+      <div class="lbl">Chat</div>
+      <div class="msgs" id="lobbyMsgs"></div>
+      <form class="row gap8 chat-form" data-chat>
+        <input class="in" maxlength="280" placeholder="Message the group" aria-label="Message">
+        <button class="btn primary sm">Send</button>
+      </form>
+    </div>
+  </div>
+  <div class="lobby-foot">
+    <div id="lobbyGps" class="gps-note">Waiting for location permission...</div>
+    <button class="btn primary big" id="startBtn">Start ride</button>
+    <div class="mid center hidden" id="waitLead">Waiting for the lead to start the ride</div>
+  </div>
+</section>
+
+<!-- Ride -->
+<section id="ride" class="screen hidden">
+  <div id="map"></div>
+  <div class="map-top">
+    <div class="pill glass" id="ridePill">
+      <span class="live-dot"></span><span id="rideTitle">Ride</span><span class="sep"></span><span id="rideRiders">1</span>
+    </div>
+    <div class="col gap8">
+      <button class="fab glass" id="layerBtn" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+      <button class="fab glass" id="fitBtn" aria-label="Show everyone"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="fab glass" id="meBtn" aria-label="Follow me"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+    </div>
+  </div>
+  <div id="banners" class="banners"></div>
+  <div class="hf" id="hf"></div>
+
+  <div class="sheet" id="sheet">
+    <button class="grab" id="grab" aria-label="Show all controls"></button>
+
+    <!-- What state am I in, and the one obvious next action -->
+    <div class="status" id="status"></div>
+
+    <div class="stats">
+      <div><div class="big" id="spd">0</div><div class="lbl">km/h</div></div>
+      <div><div class="big" id="dist">0.0</div><div class="lbl">km ridden</div></div>
+      <div><div class="big" id="dur">0:00</div><div class="lbl">ride time</div></div>
+      <div><div class="big" id="gap">-</div><div class="lbl" id="gapLbl">to lead</div></div>
+    </div>
+
+    <!-- Active plans: each one can be cancelled from here -->
+    <div class="plans" id="plans"></div>
+
+    <div class="quickbar">
+      <button class="act sos" id="sosBtn"><span class="ring"></span><b>SOS</b><small>hold 1.5 s</small></button>
+      <button class="act" id="helpBtn"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg><span>Need a hand</span></button>
+      <button class="act" id="chatBtn"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5z"/></svg><span>Chat</span><i class="badge hidden" id="chatBadge"></i></button>
+      <button class="act" id="expandBtn"><svg viewBox="0 0 24 24" id="expandIc"><path d="M6 15l6-6 6 6"/></svg><span id="expandLbl">All controls</span></button>
+    </div>
+
+    <div class="more-groups">
+      <div class="grp">
+        <div class="grp-h"><span class="lbl">Group</span><span class="grp-note" id="grpNote"></span></div>
+        <div class="tiles">
+          <button class="tile" id="teamBtn"><span class="em">🛑</span><span><b id="teamLbl">Stop the team</b><small id="teamSub">Everyone pulls over</small></span></button>
+          <button class="tile" id="waitBtn"><span class="em">🏃</span><span><b id="waitLbl">Wait for me</b><small id="waitSub">I'm catching up</small></span></button>
+          <button class="tile" id="voiceBtn"><span class="em">🎙️</span><span><b>Voice command</b><small>"Team stop fuel", "say..."</small></span></button>
+          <button class="tile" id="regroupBtn"><span class="em">👥</span><span><b id="regroupLbl">Regroup point</b><small id="regroupSub">Where everyone meets</small></span></button>
+          <button class="tile wide" id="ridersBtn"><span class="em">🏍️</span><span><b>Riders</b><small id="ridersSub">Who is where</small></span></button>
+        </div>
+      </div>
+      <div class="grp">
+        <div class="grp-h"><span class="lbl">Road</span></div>
+        <div class="tiles">
+          <button class="tile" id="navBtn"><span class="em">🧭</span><span><b>Navigate</b><small>Google Maps directions</small></span></button>
+          <button class="tile" id="hazBtn"><span class="em">⚠️</span><span><b>Report hazard</b><small>Warn riders behind</small></span></button>
+          <button class="tile" id="destBtn"><span class="em">🏁</span><span><b id="destLbl">Destination</b><small id="destSub">Not set</small></span></button>
+          <button class="tile" id="nearBtn"><span class="em">⛽</span><span><b>Nearby</b><small>Fuel, hospital, mechanic</small></span></button>
+        </div>
+      </div>
+      <div class="grp">
+        <div class="grp-h"><span class="lbl">Me</span></div>
+        <div class="tiles">
+          <button class="tile" id="offBtn"><span class="em">🚶</span><span><b id="offLbl">Off the bike</b><small>Pauses crash detection</small></span></button>
+          <button class="tile" id="locBtn"><span class="em">📍</span><span><b>Share location</b><small>Send a Maps link</small></span></button>
+          <button class="tile" id="setBtn"><span class="em">🩺</span><span><b>Safety profile</b><small id="setSub">Contact &amp; Medical ID</small></span></button>
+          <button class="tile danger" id="exitBtn"><span class="em">🚪</span><span><b id="exitLbl">Leave ride</b><small id="exitSub">Stop sharing location</small></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Summary -->
+<section id="summary" class="screen hidden">
+  <div class="sum-wrap">
+    <div class="eyebrow or">Ride complete</div>
+    <h1 class="display" id="sumTitle">Group ride</h1>
+    <div class="sum-grid">
+      <div class="card"><div class="big" id="sumDist">0</div><div class="lbl">km</div></div>
+      <div class="card"><div class="big" id="sumDur">0:00</div><div class="lbl">ride time</div></div>
+      <div class="card"><div class="big" id="sumMax">0</div><div class="lbl">top km/h</div></div>
+      <div class="card"><div class="big" id="sumAvg">0</div><div class="lbl">avg km/h</div></div>
+    </div>
+    <div class="card"><div class="lbl">Events</div><div id="sumEvents" class="msgs static"></div></div>
+    <button class="btn primary big" id="newRideBtn">Done</button>
+  </div>
+</section>
+
+<!-- Overlays -->
+<div id="sheetLayer" class="layer hidden"><div class="scrim" data-close></div><div class="panel" id="panel"></div></div>
+
+<div id="critical" class="critical hidden"></div>
+
+<div id="voiceLive" class="voice-live glass hidden"><div class="bars"><i></i><i></i><i></i><i></i></div><span id="voiceTxt">Listening...</span></div>
+<div id="toast" class="toast"></div>
+<audio id="mediaKeepAlive" loop playsinline preload="auto"></audio>
+<video id="gestureCam" playsinline muted style="display:none"></video>
+
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
