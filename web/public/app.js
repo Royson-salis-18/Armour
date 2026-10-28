@@ -511,18 +511,27 @@ const PALETTES = {
   light: { land: '#F1F1F2', block: '#E5E5E8', water: '#D2DBE3', park: '#E2EAE1', road: '#FFFFFF', casing: '#E0E0E4', label: '#6D6F76', halo: '#FFFFFF' },
   dark: { land: '#16171A', block: '#1E1F23', water: '#0F1A23', park: '#1A211B', road: '#2D2E33', casing: '#101113', label: '#9A9CA4', halo: '#16171A' },
 };
+const ESRI_IMAGERY = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LABELS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+const ESRI_ATTR = 'Imagery &copy; Esri, Maxar, Earthstar Geographics';
+const TOPO_ATTR = 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://viewfinderpanoramas.org">SRTM</a> | Style &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)';
+// The ways to look at the map. "imagery" maps are dark underneath, so routes and trails are drawn light on them.
 const TILES = [
-  { name: 'Map', kind: 'vector', scheme: 'light' },
-  { name: 'Night', kind: 'vector', scheme: 'dark' },
-  { name: 'Satellite', kind: 'raster', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics', opts: { maxZoom: 19 } },
+  { id: 'light', name: 'Map', desc: 'Clean and light', kind: 'vector', scheme: 'light' },
+  { id: 'dark', name: 'Night', desc: 'Easy on the eyes', kind: 'vector', scheme: 'dark' },
+  { id: 'streets', name: 'Streets', desc: 'Every road and place name', kind: 'raster', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR, opts: { maxZoom: 19 } },
+  { id: 'terrain', name: 'Terrain', desc: 'Hills, contours and trails', kind: 'raster', url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attribution: TOPO_ATTR, opts: { maxZoom: 17, subdomains: 'abc' } },
+  { id: 'satellite', name: 'Satellite', desc: 'Aerial photos', kind: 'raster', imagery: true, url: ESRI_IMAGERY, attribution: ESRI_ATTR, opts: { maxZoom: 19 } },
+  { id: 'hybrid', name: 'Hybrid', desc: 'Aerial with place names', kind: 'raster', imagery: true, url: ESRI_IMAGERY, attribution: ESRI_ATTR, opts: { maxZoom: 19 }, overlay: { url: ESRI_LABELS, opts: { maxZoom: 19 } } },
 ];
 const RASTER_FALLBACK = {
   light: { kind: 'raster', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR, opts: { maxZoom: 19, className: 'tiles-uber' } },
   dark: { kind: 'raster', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR, opts: { maxZoom: 19, className: 'tiles-dark' } },
 };
 const PREFERS_DARK = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-let tileIdx = store.get('tiles3', PREFERS_DARK ? 1 : 0) % TILES.length, tileLayer = null, tileToken = 0, styleCache = null;
-const mapIsDark = () => TILES[tileIdx].scheme === 'dark';
+const idxOf = (id) => Math.max(0, TILES.findIndex((t) => t.id === id));
+let tileIdx = idxOf(store.get('basemap', PREFERS_DARK ? 'dark' : 'light')), tileLayer = null, tileToken = 0, styleCache = null;
+const mapIsDark = () => TILES[tileIdx].scheme === 'dark' || !!TILES[tileIdx].imagery;
 
 // Recolour a positron-style vector style by layer id/type. Unknown layers keep their stock look.
 function recolor(style, p) {
@@ -553,7 +562,10 @@ function loadVectorStyle() {
   styleCache = styleCache || fetch(VECTOR_STYLE_URL).then((r) => { if (!r.ok) throw new Error('style ' + r.status); return r.json(); }).catch((e) => { styleCache = null; throw e; });
   return styleCache.then((st) => JSON.parse(JSON.stringify(st)));
 }
-function addRaster(t) { tileLayer = L.tileLayer(t.url, { attribution: t.attribution, ...t.opts }).addTo(map); }
+function addRaster(t) {
+  const base = L.tileLayer(t.url, { attribution: t.attribution, ...t.opts });
+  tileLayer = (t.overlay ? L.layerGroup([base, L.tileLayer(t.overlay.url, { ...t.overlay.opts })]) : base).addTo(map);
+}
 
 // The bottom sheet covers part of the map on phones, so centre things in the visible part above it.
 const sheetPad = () => (S.screen === 'ride' && innerWidth < 900 ? ($('#sheet')?.offsetHeight || 0) : 0);
@@ -586,11 +598,11 @@ function initMap() {
   map.on('click', (e) => { if (S.pickRegroup) { S.pickRegroup = false; toast('Regroup point set'); act('regroup', { lat: e.latlng.lat, lon: e.latlng.lng, label: 'Regroup here' }); } });
 }
 async function setTiles(i) {
-  tileIdx = i; store.set('tiles3', i);
+  tileIdx = i; store.set('basemap', TILES[i].id);
   const my = ++tileToken;
   if (tileLayer) { map.removeLayer(tileLayer); tileLayer = null; }
   const t = TILES[i];
-  document.documentElement.dataset.map = t.scheme || 'sat';
+  document.documentElement.dataset.map = t.scheme || t.id;
   if (t.kind === 'raster') addRaster(t);
   else {
     const fallback = () => { if (my !== tileToken) return; if (tileLayer) map.removeLayer(tileLayer); addRaster(RASTER_FALLBACK[t.scheme]); };
@@ -610,7 +622,23 @@ async function setTiles(i) {
   drawTrail();
   const ls = $('#layerSub'); if (ls) ls.textContent = TILES[i].name;
 }
-$('#layerBtn').onclick = () => { setTiles((tileIdx + 1) % TILES.length); toast(`${TILES[tileIdx].name} view`); };
+// A tile near you, so each choice previews the real place. Vector maps get a drawn swatch.
+function previewTile(t) {
+  const z = 12, lat = S.pos?.lat ?? 15.49, lon = S.pos?.lon ?? 73.83, r = lat * Math.PI / 180;
+  const x = Math.floor((lon + 180) / 360 * 2 ** z), y = Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z);
+  return t.url.replace('{s}', 'a').replace('{z}', z).replace('{x}', x).replace('{y}', y);
+}
+function mapStylePanel() {
+  const card = (t, i) => {
+    const bg = t.kind === 'vector' ? '' : `style="background-image:url('${previewTile(t)}')"`;
+    return `<button class="style-card ${i === tileIdx ? 'on' : ''}" data-i="${i}"><span class="pv ${t.kind === 'vector' ? 'pv-' + t.scheme : ''}" ${bg}></span><b>${t.name}</b><small>${t.desc}</small></button>`;
+  };
+  openPanel('mapstyle', `<h2>Map view</h2><div class="grid2">${TILES.map(card).join('')}</div><button class="btn ghost" data-close>Close</button>`, (p) => {
+    $$('.style-card', p).forEach((b) => (b.onclick = () => { setTiles(+b.dataset.i); closePanel(); toast(`${TILES[tileIdx].name} view`); }));
+  });
+}
+$('#layerBtn').onclick = mapStylePanel;
+$('#layerFab').onclick = mapStylePanel;
 $('#meBtn').onclick = () => { S.follow = true; $('#meBtn').classList.add('on'); if (S.pos) focusOn([S.pos.lat, S.pos.lon], Math.max(map.getZoom(), 16)); };
 $('#fitBtn').onclick = () => {
   const pts = S.ride.riders.filter(hasFix).map((r) => [r.lat, r.lon]);

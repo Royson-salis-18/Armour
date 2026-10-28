@@ -238,7 +238,8 @@ npm test          # ride state machine tests
 npm start         # http://localhost:8080
 ```
 
-The base map is OpenFreeMap vector tiles (OpenStreetMap data, no key) recoloured in code into a quiet
+Six map views are available from the layers button: Map, Night, Streets, Terrain (OpenTopoMap contours), Satellite and
+Hybrid (satellite with place names). The Map and Night views are OpenFreeMap vector tiles (OpenStreetMap data, no key) recoloured in code into a quiet
 ride-hailing style: pale land, white roads, a dark route line and a distance label on the destination. If vector
 tiles can't load it falls back to plain OpenStreetMap tiles. The Android app uses the same look through
 `app/src/main/res/raw/map_style_light.json` on Google Maps.
