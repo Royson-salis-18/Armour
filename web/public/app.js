@@ -67,6 +67,7 @@ const ICONS = {
   more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>',
   link: '<path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  headset: '<path d="M3 14v-2a9 9 0 0118 0v2"/><path d="M21 15a2 2 0 01-2 2h-1v-6h1a2 2 0 012 2zM3 15a2 2 0 002 2h1v-6H5a2 2 0 00-2 2zM18 17v1a3 3 0 01-3 3h-2"/>',
 };
 const ic = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.pin}</svg>`;
 
@@ -80,7 +81,7 @@ const store = {
   del(k) { try { localStorage.removeItem('armor.' + k); } catch { /* private mode */ } },
 };
 
-let profile = Object.assign({ name: '', contactName: '', contactPhone: '', emergency: '112', blood: '', allergies: '', conditions: '', meds: '', readAloud: false, crash: true, handsFree: false, air: false, mediaKeys: true }, store.get('profile', {}));
+let profile = Object.assign({ name: '', contactName: '', contactPhone: '', emergency: '112', blood: '', allergies: '', conditions: '', meds: '', readAloud: false, crash: true, assistant: true, air: false, mediaKeys: true }, store.get('profile', {}));
 let session = store.get('session', null); // {code, riderId, token}
 
 // ---- runtime state -------------------------------------------------------
@@ -217,7 +218,7 @@ function show(name) {
 
 // ---- welcome -------------------------------------------------------------
 
-$('#brandBig').innerHTML = LOGO(40) + '<span>ARMOR</span>';
+$('#brandBig').innerHTML = LOGO(40, '#0B0B0C', '#FF8A3D') + '<span>ARMOR</span>';
 const linkCode = (location.pathname.match(/^\/r\/([A-Za-z0-9]{6})/) || [])[1];
 $('#nameIn').value = profile.name;
 if (linkCode) {
@@ -272,6 +273,7 @@ function enterRide(res) {
 }
 
 function leaveLocal() {
+  if (VC.on) { VC.on = false; for (const id of [...VC.peers.keys()]) vcDrop(id); VC.local?.getTracks().forEach((t) => t.stop()); VC.local = null; try { VC.es?.close(); } catch { /* closed */ } VC.es = null; }
   stopPolling();
   session = null; store.del('session');
   S.ride = null; S.trip = null; S.screen = null;
@@ -297,6 +299,8 @@ function copy(text) {
 }
 $('#startBtn').onclick = async () => {
   unlockAudio();
+  // Ask for the microphone now, with a tap, so "Armor" works hands-free once riding.
+  try { if (profile.assistant !== false) (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop()); } catch { /* denied */ }
   await askMotion();
   await act('start').catch(() => {});
 };
@@ -856,6 +860,10 @@ function renderTiles() {
   $('#waitLbl').textContent = L1 ? 'Slow the group' : waiting ? 'Catching up' : 'Wait for me';
   $('#waitSub').textContent = L1 ? 'Tell everyone to ease off' : waiting ? 'Tap when you have caught up' : 'Ask the group to wait up';
   $('#waitBtn').classList.toggle('on', !!waiting);
+  const vn = S.ride.voice.length;
+  $('#vcLbl').textContent = VC.on ? 'Voice chat is live' : vn ? 'Join voice chat' : 'Voice chat';
+  $('#vcSub').textContent = VC.on ? `${vn} connected${VC.muted ? ' · you are muted' : ''}` : vn ? `${vn} talking now` : 'Talk to the whole group';
+  $('#vcBtn').classList.toggle('on', VC.on);
   $('#ridersSub').textContent = `${r.riders.length} on this ride`;
   $('#offLbl').textContent = m?.state === 'OFF_BIKE' ? 'Back on the bike' : 'Off the bike';
   $('#offBtn').classList.toggle('on', m?.state === 'OFF_BIKE');
@@ -872,7 +880,7 @@ function renderRide(fresh = []) {
   $('#rideRiders').textContent = `${r.riders.length} rider${r.riders.length === 1 ? '' : 's'}`;
   if (map) { drawRiders(); drawMe(); }
   updateStats();
-  renderStatus(); renderPlans(); renderTiles(); renderHf();
+  renderStatus(); renderPlans(); renderTiles(); renderHf(); vcSync();
 
   const unread = [...S.messages.values()].filter((m) => !m.system && m.riderId !== session.riderId && m.at > S.seenMsgAt).length;
   $('#chatBadge').textContent = unread; $('#chatBadge').classList.toggle('hidden', !unread || S.panel === 'chat');
@@ -928,6 +936,9 @@ function autoState() {
 
 function renderBanners() {
   const out = [];
+  const vn = S.ride?.voice?.length || 0;
+  if (VC.on) out.push(`<div class="banner glass vc"><span class="bi">${ic('headset')}</span><div class="grow"><b>Voice chat</b> · ${vn} connected${VC.muted ? ' · muted' : ''}</div><button class="btn ghost sm" data-vc="mute">${VC.muted ? 'Unmute' : 'Mute'}</button><button class="btn primary sm" data-vc="leave">Leave</button></div>`);
+  else if (vn) out.push(`<div class="banner glass vc"><span class="bi">${ic('headset')}</span><div class="grow"><b>Voice chat</b> · ${vn} talking</div><button class="btn primary sm" data-vc="join">Join</button></div>`);
   for (const a of openAlerts()) {
     if (a.riderId === session.riderId) continue;
     const d = a.lat != null && S.pos ? ` · ${fmtDist(haversine(S.pos, a))}` : '';
@@ -1107,10 +1118,13 @@ function markRead() {
 }
 
 $('#chatBtn').onclick = () => {
+  const moving = (S.pos?.speed || 0) > 3;
   const q = ['All good', 'Need fuel', 'Break soon?', 'Slow down', 'Waiting at the junction', 'Lost you, where are you?'];
   openPanel('chat', `<div class="row between"><h2>Chat</h2><button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="msgs"></div><div class="quick">${q.map((t) => `<button data-q="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-    <form class="row gap8 chat-form" data-chat><input class="in" maxlength="280" placeholder="Message the group" aria-label="Message"><button class="btn primary sm">Send</button></form>`, (p) => {
+    <div class="msgs"></div><div class="quick ${moving ? 'big' : ''}">${q.map((t) => `<button data-q="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+    ${moving ? `<p class="mid" style="margin:0;font-size:13px">You are moving, so typing is off. Tap a reply or speak.</p><button class="btn primary big" id="chatVoice">${ic('mic')} Reply by voice</button>`
+      : `<form class="row gap8 chat-form" data-chat><input class="in" maxlength="280" placeholder="Message the group" aria-label="Message"><button class="btn primary sm">Send</button></form>`}`, (p) => {
+    $('#chatVoice', p) && ($('#chatVoice', p).onclick = () => { closePanel(); listenOnce(); });
     renderMsgs($('.msgs', p)); markRead();
     $$('[data-q]', p).forEach((b) => (b.onclick = () => sendQuick(b.dataset.q)));
   });
@@ -1304,6 +1318,7 @@ function crashCountdown() {
 //   one wave -> talk to ARMOR,  two waves -> status,  cover 3 s -> SOS countdown.
 
 const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+const VC = { on: false, muted: false, local: null, peers: new Map(), seen: new Set(), es: null, ice: null, announced: false };
 const HF = { rec: null, listening: false, continuous: false, wakeUntil: 0, lastSaid: '', cam: null, media: false };
 
 function say(text, isSystem = false, urgent = false) {
@@ -1344,17 +1359,17 @@ function voiceLive(text, on = true) {
 // One-shot listen (button, helmet button, wave).
 function listenOnce() {
   if (!Speech) { say('Voice commands need Chrome or Safari', false, true); return toast('Voice commands need Chrome or Safari'); }
-  if (HF.continuous) { HF.wakeUntil = Date.now() + 8000; voiceLive('Listening... say a command'); beep(); return; }
+  if (HF.continuous) { wakeStart(); return; }
   if (HF.listening) return;
   try { speechSynthesis.cancel(); } catch { /* none */ }
   const rec = new Speech();
   rec.lang = navigator.language || 'en-US'; rec.interimResults = true; rec.maxAlternatives = 1;
-  HF.listening = true; $('#voiceBtn')?.classList.add('on'); voiceLive('Listening...'); beep();
+  HF.listening = true; $('#micBtn')?.classList.add('on'); voiceLive('Listening...'); beep();
   let final = '';
   rec.onresult = (e) => { const r = e.results[e.results.length - 1]; voiceLive(`"${r[0].transcript}"`); if (r.isFinal) final = r[0].transcript; };
   rec.onerror = (e) => { if (e.error === 'not-allowed') toast('Microphone blocked. Allow it for this site.'); };
   rec.onend = () => {
-    HF.listening = false; $('#voiceBtn')?.classList.remove('on');
+    HF.listening = false; $('#micBtn')?.classList.remove('on');
     if (final) runVoice(final); else { voiceLive('', false); say('Did not catch that', false, true); }
     setTimeout(() => voiceLive('', false), 1400);
   };
@@ -1369,18 +1384,28 @@ function startContinuous() {
   rec.lang = navigator.language || 'en-US'; rec.continuous = true; rec.interimResults = false;
   rec.onresult = (e) => {
     if (HF.speaking) return;
+    HF.fails = 0;
     const text = e.results[e.results.length - 1][0].transcript.trim();
-    const m = text.match(/^(hey |ok |okay )?(armor|armour|amor|army)\b[\s,.]*(.*)$/i);
-    if (m) { if (m[3]) runVoice(m[3]); else { HF.wakeUntil = Date.now() + 8000; voiceLive('Listening... say a command'); beep(); } }
-    else if (Date.now() < HF.wakeUntil) { HF.wakeUntil = 0; runVoice(text); }
+    // "Armor" (or how recognisers often hear it) at the start wakes the assistant; the rest of the sentence is the command.
+    const m = text.match(/^(?:hey |ok |okay |hi )?(?:armou?r|amor|armer|ammar|armour's|armor's|arm or)\b[\s,.:;-]*(.*)$/i);
+    if (m) { if (m[1]) { wakeEnd(); runVoice(m[1]); } else wakeStart(); }
+    else if (Date.now() < HF.wakeUntil) { wakeEnd(); runVoice(text); }
   };
-  rec.onerror = (e) => { if (e.error === 'not-allowed') { stopContinuous(); toast('Microphone blocked'); } };
-  // Browsers stop recognition every so often; keep it going while enabled.
-  rec.onend = () => { if (HF.continuous) setTimeout(() => { try { rec.start(); } catch { /* already */ } }, 300); };
+  rec.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { stopContinuous(); toast('Microphone blocked. Allow it to use "Armor".'); }
+    else if (e.error !== 'no-speech' && e.error !== 'aborted') HF.fails = (HF.fails || 0) + 1;
+  };
+  // Browsers stop recognition every so often; keep it going while enabled, backing off if the speech service is failing.
+  rec.onend = () => { if (HF.continuous) setTimeout(() => { try { rec.start(); } catch { /* already */ } }, Math.min(300 * 2 ** (HF.fails || 0), 10000)); };
   try { rec.start(); } catch { /* already */ }
   HF.rec = rec;
   renderHf();
 }
+function wakeStart() {
+  HF.wakeUntil = Date.now() + 8000; HF.awake = true; $('#micBtn')?.classList.add('on'); voiceLive('Listening... say a command'); beep(); vibrate(40); renderHf();
+  clearTimeout(HF.wakeTimer); HF.wakeTimer = setTimeout(wakeEnd, 8200);
+}
+function wakeEnd() { HF.wakeUntil = 0; HF.awake = false; clearTimeout(HF.wakeTimer); $('#micBtn')?.classList.remove('on'); renderHf(); }
 function stopContinuous() { HF.continuous = false; try { HF.rec?.stop(); } catch { /* none */ } HF.rec = null; renderHf(); }
 
 // Helmet intercom buttons via the media session.
@@ -1460,9 +1485,144 @@ function gestureSos() {
   $('#gsNow').onclick = () => { clearInterval(iv); S.crash = null; HF.cancelCountdown = null; triggerSos('SOS'); };
 }
 
+// ---- group voice chat (WebRTC mesh; signalling over server-sent events) ----
+
+async function vcIce() {
+  if (!VC.ice) { try { VC.ice = (await api('/ice')).iceServers; } catch { VC.ice = [{ urls: 'stun:stun.l.google.com:19302' }]; } }
+  return VC.ice;
+}
+
+function vcSend(to, data) {
+  return fetch(`/api/rides/${session.code}/signal`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ riderId: session.riderId, token: session.token, to, data }) }).catch(() => {});
+}
+
+// Peers are created synchronously (ICE servers are loaded before joining) so two signals for the same rider can never
+// race into two connections.
+function vcPeer(id) {
+  let p = VC.peers.get(id);
+  if (p) return p;
+  const pc = new RTCPeerConnection({ iceServers: VC.ice || [{ urls: 'stun:stun.l.google.com:19302' }] });
+  const audio = new Audio();
+  audio.autoplay = true; audio.playsInline = true;
+  VC.local.getTracks().forEach((t) => pc.addTrack(t, VC.local));
+  p = { pc, audio, pending: [], q: Promise.resolve() };
+  pc.ontrack = (e) => { audio.srcObject = e.streams[0]; audio.play().catch(() => {}); renderHf(); };
+  pc.onicecandidate = (e) => { if (e.candidate) vcSend(id, { k: 'ice', c: e.candidate }); };
+  pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') vcDrop(id); renderHf(); renderBanners(); };
+  VC.peers.set(id, p);
+  return p;
+}
+
+function vcDrop(id) {
+  const p = VC.peers.get(id);
+  if (!p) return;
+  VC.peers.delete(id);
+  try { p.pc.close(); } catch { /* closed */ }
+  p.audio.srcObject = null;
+}
+
+function vcOffer(id) {
+  const p = vcPeer(id);
+  p.q = p.q.then(async () => {
+    const offer = await p.pc.createOffer();
+    await p.pc.setLocalDescription(offer);
+    vcSend(id, { k: 'offer', sdp: p.pc.localDescription });
+  }).catch(() => {});
+}
+
+// Each rider's signals are handled one at a time, in the order they arrive.
+function vcSignal({ from, data }) {
+  if (!VC.on || !data) return;
+  if (data.k === 'bye') return vcDrop(from);
+  const p = vcPeer(from);
+  p.q = p.q.then(async () => {
+    if (data.k === 'offer') {
+      await p.pc.setRemoteDescription(data.sdp);
+      for (const c of p.pending.splice(0)) await p.pc.addIceCandidate(c).catch(() => {});
+      const answer = await p.pc.createAnswer();
+      await p.pc.setLocalDescription(answer);
+      vcSend(from, { k: 'answer', sdp: p.pc.localDescription });
+    } else if (data.k === 'answer') {
+      await p.pc.setRemoteDescription(data.sdp);
+      for (const c of p.pending.splice(0)) await p.pc.addIceCandidate(c).catch(() => {});
+    } else if (data.k === 'ice') {
+      if (p.pc.remoteDescription) await p.pc.addIceCandidate(data.c).catch(() => {});
+      else p.pending.push(data.c);
+    }
+  }).catch(() => { /* a bad signal should not break the call */ });
+}
+
+async function vcJoin() {
+  if (VC.on) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) { say('Voice chat is not supported in this browser', false, true); return toast('Voice chat is not supported in this browser'); }
+  try { VC.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch { say('Microphone blocked', false, true); return toast('Microphone blocked. Allow it for this site.'); }
+  await vcIce();
+  VC.on = true; VC.muted = false; VC.seen.clear();
+  VC.es = new EventSource(`/api/rides/${session.code}/events?riderId=${encodeURIComponent(session.riderId)}&token=${encodeURIComponent(session.token)}`);
+  VC.es.onmessage = (e) => { try { vcSignal(JSON.parse(e.data)); } catch { /* ignore */ } };
+  await new Promise((r) => { VC.es.onopen = r; setTimeout(r, 2500); });
+  await act('voiceJoin').catch(() => {});
+  // I am the newcomer, so I call everyone already in.
+  for (const id of S.ride.voice) if (id !== session.riderId) vcOffer(id);
+  say('Voice chat on. You are live.', false, true); toast('Voice chat on');
+  renderHf(); renderBanners(); renderTiles();
+}
+
+function vcMute(on) {
+  if (!VC.on) return say('You are not in voice chat');
+  VC.muted = on;
+  VC.local.getAudioTracks().forEach((t) => { t.enabled = !on; });
+  say(on ? 'Muted' : 'Mic on', false, true); renderHf(); renderBanners(); renderTiles();
+}
+
+async function vcLeave() {
+  if (!VC.on) return;
+  for (const id of [...VC.peers.keys()]) { vcSend(id, { k: 'bye' }); vcDrop(id); }
+  VC.on = false; VC.muted = false;
+  VC.local?.getTracks().forEach((t) => t.stop()); VC.local = null;
+  try { VC.es?.close(); } catch { /* closed */ } VC.es = null;
+  await act('voiceLeave').catch(() => {});
+  say('Left voice chat', false, true); renderHf(); renderBanners(); renderTiles();
+}
+
+// Keep the call in step with who the server says is in it.
+function vcSync() {
+  if (!S.ride) return;
+  const ids = new Set(S.ride.voice);
+  if (VC.on) {
+    // Only drop riders we have seen in the call and who are now gone: a rider can offer to us a moment before our
+    // next poll shows them in the list.
+    for (const id of ids) VC.seen.add(id);
+    for (const id of [...VC.peers.keys()]) if (VC.seen.has(id) && !ids.has(id)) { VC.seen.delete(id); vcDrop(id); }
+    if (VC.seen.has(session.riderId) && !ids.has(session.riderId)) { vcLeave(); return; }
+  }
+  if (ids.size && !VC.on && !VC.announced) { VC.announced = true; say('Voice chat started. Say voice chat to join.', false, true); beep(); }
+  if (!ids.size) VC.announced = false;
+}
+
+function vcPanel() {
+  const n = S.ride.voice.length;
+  openPanel('vc', `<h2>Voice chat</h2><p class="mid" style="margin:0;font-size:13px">${n} connected. Everyone in the call hears each other. Wear a headset so the phone speaker doesn't echo.</p>
+    <button class="btn primary big" id="vcMute">${VC.muted ? 'Unmute' : 'Mute'}</button><button class="btn ghost" id="vcLeaveBtn">Leave voice chat</button><button class="btn ghost" data-close>Close</button>`, (p) => {
+    $('#vcMute', p).onclick = () => { closePanel(); vcMute(!VC.muted); };
+    $('#vcLeaveBtn', p).onclick = () => { closePanel(); vcLeave(); };
+  });
+}
+
+$('#vcBtn').onclick = () => (VC.on ? vcPanel() : vcJoin());
+$('#micBtn').onclick = () => listenOnce();
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-vc]');
+  if (!b) return;
+  if (b.dataset.vc === 'join') vcJoin();
+  if (b.dataset.vc === 'leave') vcLeave();
+  if (b.dataset.vc === 'mute') vcMute(!VC.muted);
+});
+
 function applyHandsFree() {
   if (S.screen !== 'ride') { stopContinuous(); stopGestures(); return; }
-  profile.handsFree ? startContinuous() : stopContinuous();
+  profile.assistant !== false ? startContinuous() : stopContinuous();
   profile.air ? startGestures() : stopGestures();
   if (profile.mediaKeys !== false) startMediaKeys();
 }
@@ -1470,7 +1630,8 @@ function applyHandsFree() {
 function renderHf() {
   const chips = [];
   if (HF.media) chips.push('<span class="glass"><i class="on-dot"></i>Helmet button</span>');
-  if (HF.continuous) chips.push(`<span class="glass ${HF.listening ? 'listening' : ''}"><i class="on-dot"></i>"Armor..."</span>`);
+  if (HF.continuous) chips.push(`<span class="glass ${HF.awake ? 'listening' : ''}"><i class="on-dot"></i>${HF.awake ? 'Listening' : 'Say "Armor"'}</span>`);
+  if (VC.on) chips.push(`<span class="glass"><i class="on-dot"></i>Voice chat${VC.muted ? ' · muted' : ''}</span>`);
   if (HF.cam) chips.push('<span class="glass"><i class="on-dot"></i>Air gestures</span>');
   $('#hf') && ($('#hf').innerHTML = chips.join(''));
 }
@@ -1480,11 +1641,13 @@ $('#voiceBtn').onclick = () => voicePanel();
 function voicePanel() {
   openPanel('voice', `<h2>Hands-free</h2><p class="mid" style="margin:0;font-size:13px">Pair your helmet intercom (Cardo, Sena, any Bluetooth headset) with this phone. ARMOR talks through it and listens on its mic.</p>
     <button class="btn primary big" id="vNow">${ic('mic')} Talk now</button>
-    <label class="switch"><input type="checkbox" id="vHf" ${profile.handsFree ? 'checked' : ''}><span><b>Wake word "Armor"</b><small>Always listening. Say "Armor, team stop fuel"</small></span></label>
+    <label class="switch"><input type="checkbox" id="vHf" ${profile.assistant !== false ? 'checked' : ''}><span><b>Voice assistant</b><small>Say "Armor", then a command. Or in one go: "Armor, lets stop for a while"</small></span></label>
     <label class="switch"><input type="checkbox" id="vKeys" ${profile.mediaKeys !== false ? 'checked' : ''}><span><b>Helmet button</b><small>Play/pause: talk · Next: status · Previous: repeat</small></span></label>
     <label class="switch"><input type="checkbox" id="vAir" ${profile.air ? 'checked' : ''}><span><b>Air gestures</b><small>Wave over the phone: talk · Two waves: status · Cover 3 s: SOS countdown</small></span></label>
     <label class="switch"><input type="checkbox" id="vRead" ${profile.readAloud ? 'checked' : ''}><span><b>Read everything aloud</b><small>Chat, group events, hazards. Emergencies are always spoken.</small></span></label>
     <div class="card help-list"><div class="lbl" style="margin-bottom:4px">Things you can say</div>
+      <div><b>"Armor, lets stop for a while nearby"</b> · asks the group to stop and tells them</div>
+      <div><b>"Armor, voice chat"</b> · join the group call · <b>"leave voice chat"</b> · <b>"mute"</b></div>
       <div><b>"Stop"</b> / <b>"Stopping for fuel"</b> · just you</div>
       <div><b>"Riding"</b> / <b>"Let's go"</b> · start moving again</div>
       <div><b>"Team stop food"</b> · lead stops everyone; riders ask the lead</div>
@@ -1504,7 +1667,7 @@ function voicePanel() {
     <button class="btn ghost" data-close>Close</button>`, (p) => {
     $('#vNow', p).onclick = () => { closePanel(); listenOnce(); };
     const bind = (id, key, fn) => ($('#' + id, p).onchange = (e) => { profile[key] = e.target.checked; saveProfile(); fn && fn(); });
-    bind('vHf', 'handsFree', applyHandsFree);
+    bind('vHf', 'assistant', applyHandsFree);
     bind('vKeys', 'mediaKeys', () => (profile.mediaKeys ? startMediaKeys() : stopMediaKeys()));
     bind('vAir', 'air', applyHandsFree);
     bind('vRead', 'readAloud');
@@ -1515,10 +1678,15 @@ function voicePanel() {
 function parseVoice(raw) {
   const t = ' ' + raw.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
   const has = (...w) => w.some((x) => t.includes(' ' + x + ' '));
-  const reason = has('fuel', 'petrol', 'gas', 'diesel') ? 'Fuel' : has('food', 'lunch', 'eat', 'dinner', 'breakfast') ? 'Food' : has('photo', 'picture', 'pic') ? 'Photo' : has('chai', 'tea', 'coffee', 'break', 'rest') ? 'Break' : has('bike issue', 'problem', 'issue') ? 'Bike issue' : '';
+  const reason = has('fuel', 'petrol', 'gas', 'diesel') ? 'Fuel' : has('food', 'lunch', 'eat', 'dinner', 'breakfast', 'hungry') ? 'Food' : has('photo', 'picture', 'pic') ? 'Photo' : has('chai', 'tea', 'coffee', 'break', 'rest') ? 'Break' : has('bike issue', 'problem', 'issue') ? 'Bike issue' : '';
   const sayM = raw.match(/^\s*(say|tell (the )?(group|everyone)|message|send)\s+(.+)/i);
   if (sayM) return { k: 'say', text: sayM[4] };
   if (has('cancel', 'abort', 'never mind', 'nevermind')) return { k: 'cancel' };
+  // group voice chat
+  if (has('leave voice chat', 'end voice chat', 'stop voice chat', 'close voice chat', 'leave the call', 'hang up', 'disconnect voice')) return { k: 'vcleave' };
+  if (has('voice chat', 'voice call', 'join voice', 'join the call', 'group call', 'open the mic', 'talk to everyone', 'talk to the group', 'start voice', 'open voice')) return { k: 'vc' };
+  if (VC.on && has('unmute', 'mic on', 'unmute me')) return { k: 'unmute' };
+  if (VC.on && has('mute', 'mute me', 'mic off', 'mute mic')) return { k: 'mute' };
   if (has('sos', 'emergency', 'mayday')) return { k: 'sos' };
   if (has('status', 'where am i', 'update')) return { k: 'status' };
   if (has('read messages', 'read message', 'read chat', 'messages', 'any messages')) return { k: 'read' };
@@ -1526,6 +1694,8 @@ function parseVoice(raw) {
   if (has('caught up', 'i caught up', 'with you now', 'im back with you')) return { k: 'caughtup' };
   if (has('wait for me', 'wait up', 'wait guys', 'catching up', 'im catching up', 'hold up', 'im behind', 'fell behind', 'slow down for me')) return { k: 'catchup' };
   if (has('team stop', 'stop everyone', 'everyone stop', 'all stop', 'group stop', 'stop the team', 'stop team')) return { k: 'team', reason: reason || 'Break' };
+  // Everyday ways of asking for a stop. For the lead this stops the team; for riders it asks the lead. The sentence is relayed too.
+  if (has('lets stop', 'let us stop', 'stop for a while', 'stop for some time', 'stop for a bit', 'stop for a minute', 'stop for a moment', 'stop nearby', 'stop somewhere', 'stop here', 'stop at the next', 'stop at next', 'take a break', 'take break', 'need a break', 'break nearby', 'want a break', 'pull over nearby', 'find a place to stop', 'chai break', 'tea break', 'coffee break', 'fuel stop', 'need fuel', 'need petrol', 'low on fuel', 'low on petrol', 'running low on fuel', 'need to eat', 'im hungry', 'hungry', 'lunch break', 'can we stop', 'should we stop', 'shall we stop', 'wanna stop', 'want to stop', 'need to stop')) return { k: 'team', reason: reason || 'Break', relay: true };
   if (has('resume', 'rolling', 'lets go', 'lets roll', 'moving again', 'riding', 'start riding', 'go go', 'back on')) return { k: 'resume' };
   if (has('stopped', 'i have stopped', 'ive stopped', 'pulled over')) return { k: 'stopped' };
   if (has('im ok', 'im okay', 'i am ok', 'i am okay', 'all good', 'im fine')) return { k: 'ok' };
@@ -1542,6 +1712,9 @@ function parseVoice(raw) {
 function runVoice(raw) {
   voiceLive(`"${raw}"`); setTimeout(() => voiceLive('', false), 1600);
   const i = parseVoice(raw), st = myState(), L1 = isLead();
+  if (i.k === 'vc') return VC.on ? say('You are already in voice chat') : vcJoin();
+  if (i.k === 'vcleave') return VC.on ? vcLeave() : say('You are not in voice chat');
+  if (i.k === 'mute' || i.k === 'unmute') return vcMute(i.k === 'mute');
   if (i.k === 'cancel') {
     if (HF.cancelCountdown) return HF.cancelCountdown();
     if (S.crash && S.crashCancel) return S.crashCancel();
@@ -1566,9 +1739,13 @@ function runVoice(raw) {
     return act('ack', { alertId: a.id }).then(() => { say(`${a.name} knows you are coming. Opening directions.`); if (a.lat != null) window.open(directions(a.lat, a.lon), '_blank'); });
   }
   if (i.k === 'team') {
-    if (L1) return act('teamStop', { reason: i.reason }).then(() => say(`Team stop called. ${i.reason}`));
-    if (myAlert('STOP_REQUEST')) return say('You already asked the lead');
-    return act('alert', { kind: 'STOP_REQUEST', detail: i.reason }).then(() => say(`Asked ${lead()?.name || 'the lead'} to stop for ${i.reason}`));
+    const cap = raw.trim().replace(/^./, (c) => c.toUpperCase());
+    let done;
+    if (L1) done = act('teamStop', { reason: i.reason }).then(() => say(`Team stop called. ${i.reason}`));
+    else if (myAlert('STOP_REQUEST')) done = Promise.resolve(say('You already asked the lead'));
+    else done = act('alert', { kind: 'STOP_REQUEST', detail: i.reason }).then(() => say(`Asked ${lead()?.name || 'the lead'} to stop for ${i.reason}`));
+    // Natural sentences ("lets stop for a while nearby") are passed on to the group as well as acted on.
+    return done.then(() => (i.relay ? sendQuick(cap) : null));
   }
   if (i.k === 'stopped') {
     if (st === 'CONFIRM') return doState.confirm();

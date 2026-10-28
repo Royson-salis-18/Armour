@@ -22,7 +22,7 @@ async function ride() {
   const bob = (await call(`/rides/${code}/join`, { riderName: 'Bob' })).data;
   const cy = (await call(`/rides/${code}/join`, { riderName: 'Cy' })).data;
   const as = (who) => (action, extra = {}) => call(`/rides/${code}/${action}`, { riderId: who.riderId, token: who.token, ...extra });
-  return { code, lead: as(lead), bob: as(bob), cy: as(cy), ids: { lead: lead.riderId, bob: bob.riderId, cy: cy.riderId } };
+  return { code, lead: as(lead), bob: as(bob), cy: as(cy), ids: { lead: lead.riderId, bob: bob.riderId, cy: cy.riderId }, creds: { lead, bob, cy } };
 }
 const rider = (snap, id) => snap.riders.find((r) => r.id === id);
 
@@ -143,4 +143,37 @@ test('stop & wait for a catching-up rider exempts that rider from the stop', asy
   assert.ok(s.teamStop.confirmed.includes(r.ids.bob));
   assert.equal(rider(s, r.ids.bob).state, 'OK', 'Bob keeps riding');
   assert.ok(!s.teamStop.confirmed.includes(r.ids.cy), 'Cy still has to stop');
+});
+
+test('voice chat: membership, ICE config and signalling between two riders', async () => {
+  const r = await ride();
+  await r.lead('start');
+  assert.ok((await call('/ice')).data.iceServers[0].urls.length > 0);
+  let s = (await r.lead('voiceJoin')).data;
+  assert.deepEqual(s.voice, [r.ids.lead]);
+  s = (await r.bob('voiceJoin')).data;
+  assert.equal(s.voice.length, 2);
+  assert.ok(s.messages.some((m) => /Bob joined voice chat/.test(m.text)));
+
+  // Cy is not in the voice channel, so cannot signal Bob.
+  assert.equal((await r.cy('signal', { to: r.ids.bob, data: { k: 'offer' } })).status, 409);
+
+  // Bob listens for signals; the lead sends one.
+  const ctrl = new AbortController();
+  const bobCreds = r.creds.bob;
+  const res = await fetch(`${base}/api/rides/${r.code}/events?riderId=${bobCreds.riderId}&token=${bobCreds.token}`, { signal: ctrl.signal });
+  assert.equal(res.headers.get('content-type').split(';')[0], 'text/event-stream');
+  const reader = res.body.getReader();
+  await reader.read(); // ": connected"
+  assert.equal((await r.lead('signal', { to: r.ids.bob, data: { k: 'offer', sdp: 'x' } })).status, 200);
+  const { value } = await reader.read();
+  const msg = JSON.parse(new TextDecoder().decode(value).replace(/^data: /, '').trim());
+  assert.equal(msg.from, r.ids.lead);
+  assert.equal(msg.data.k, 'offer');
+  ctrl.abort();
+
+  s = (await r.bob('voiceLeave')).data;
+  assert.deepEqual(s.voice, [r.ids.lead]);
+  s = (await r.lead('end')).data;
+  assert.deepEqual(s.voice, []);
 });

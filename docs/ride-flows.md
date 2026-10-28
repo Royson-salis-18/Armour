@@ -101,6 +101,25 @@ Voice commands, and what they do in each state:
 | "Say …" | Sends a chat message | | | Anything unrecognised is also sent as a message |
 | "SOS" | Asks to confirm, then SOS | | | Never fires on one word alone |
 
+### Voice assistant and voice chat
+
+Say **"Armor"** and then a command, in one go ("Armor, lets stop for a while nearby") or as two steps (the mic button lights
+up for 8 seconds after the wake word). The assistant is on by default while riding and can be switched off under
+More > Assistant and helmet.
+
+| You say | What happens |
+|---|---|
+| "lets stop for a while nearby", "need a break", "I'm hungry", "need fuel", "can we stop somewhere" | Lead: team stop with the matching reason. Rider: stop request to the lead. Either way the sentence is also sent to the group chat |
+| "voice chat" / "join voice chat" | Joins the group call. Everyone else gets a spoken prompt and a Join banner |
+| "mute" / "unmute" | Mutes your mic in the call |
+| "leave voice chat" / "hang up" | Leaves the call |
+
+Voice chat is a WebRTC mesh between the riders in the call (comfortable up to about 6 riders). The server only passes
+signalling messages. It uses Google's public STUN servers; riders behind strict carrier NAT may need a TURN relay, which
+the server picks up from `TURN_URLS`, `TURN_USERNAME` and `TURN_CREDENTIAL` environment variables.
+
+While the bike is moving above about 11 km/h, chat hides the keyboard and offers big quick replies and "Reply by voice".
+
 ## 6. Alerts and how loudly they arrive
 
 | Event | Screen | Sound / vibration | Spoken |

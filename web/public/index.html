@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/app.css?v=6">
+<link rel="stylesheet" href="/app.css?v=7">
 </head>
 <body>
 
@@ -98,40 +98,42 @@
     </div>
   </div>
   <div id="banners" class="banners"></div>
+  <div class="speedo glass" id="speedo"><b id="spd">0</b><small>km/h</small></div>
   <div class="hf" id="hf"></div>
 
   <div class="sheet" id="sheet">
     <button class="grab" id="grab" aria-label="Show all controls"></button>
 
-    <!-- What state am I in, and the one obvious next action -->
+    <!-- What is happening now, and the one thing to tap -->
     <div class="status" id="status"></div>
 
-    <div class="stats">
-      <div><div class="big" id="spd">0</div><div class="lbl">km/h</div></div>
-      <div><div class="big" id="dist">0.0</div><div class="lbl">km ridden</div></div>
-      <div><div class="big" id="dur">0:00</div><div class="lbl">ride time</div></div>
-      <div><div class="big" id="gap">-</div><div class="lbl" id="gapLbl">to lead</div></div>
-    </div>
-
-    <!-- Active plans: each one can be cancelled from here -->
+    <!-- Active plans: each one can be answered or cancelled from here -->
     <div class="plans" id="plans"></div>
 
+    <!-- Thumb row: everything needed while riding is one tap away -->
     <div class="quickbar">
-      <button class="act sos" id="sosBtn"><span class="dot"><span class="ring"></span><b>SOS</b></span><span class="lb">Hold to send</span></button>
-      <button class="act" id="helpBtn"><span class="dot" data-ic="hand"></span><span class="lb">Need a hand</span></button>
+      <button class="act sos" id="sosBtn"><span class="dot"><span class="ring"></span><b>SOS</b></span><span class="lb">Hold</span></button>
+      <button class="act" id="helpBtn"><span class="dot" data-ic="hand"></span><span class="lb">Need help</span></button>
+      <button class="act mic" id="micBtn"><span class="dot" data-ic="mic"></span><span class="lb">Say "Armor"</span></button>
       <button class="act" id="chatBtn"><span class="dot" data-ic="message"></span><span class="lb">Chat</span><i class="badge hidden" id="chatBadge"></i></button>
       <button class="act" id="expandBtn"><span class="dot" id="expandIc" data-ic="more"></span><span class="lb" id="expandLbl">More</span></button>
     </div>
 
     <div class="more-groups">
+      <div class="stats">
+        <div><div class="big" id="dist">0.0</div><div class="lbl">km ridden</div></div>
+        <div><div class="big" id="dur">0:00</div><div class="lbl">ride time</div></div>
+        <div><div class="big" id="gap">-</div><div class="lbl" id="gapLbl">to lead</div></div>
+      </div>
       <div class="grp">
         <div class="grp-h"><span class="lbl">Group</span><span class="grp-note" id="grpNote"></span></div>
         <div class="tiles">
           <button class="tile" id="teamBtn"><span class="em" data-ic="stop"></span><span><b id="teamLbl">Stop the team</b><small id="teamSub">Everyone pulls over</small></span></button>
           <button class="tile" id="waitBtn"><span class="em" data-ic="timer"></span><span><b id="waitLbl">Wait for me</b><small id="waitSub">I'm catching up</small></span></button>
-          <button class="tile" id="voiceBtn"><span class="em" data-ic="mic"></span><span><b>Voice command</b><small>"Team stop fuel", "say..."</small></span></button>
+          <button class="tile" id="vcBtn"><span class="em" data-ic="headset"></span><span><b id="vcLbl">Voice chat</b><small id="vcSub">Talk to the whole group</small></span></button>
           <button class="tile" id="regroupBtn"><span class="em" data-ic="group"></span><span><b id="regroupLbl">Regroup point</b><small id="regroupSub">Where everyone meets</small></span></button>
           <button class="tile" id="ridersBtn"><span class="em" data-ic="bike"></span><span><b>Riders</b><small id="ridersSub">Who is where</small></span></button>
+          <button class="tile" id="voiceBtn"><span class="em" data-ic="mic"></span><span><b>Assistant and helmet</b><small>Voice commands, buttons, gestures</small></span></button>
         </div>
       </div>
       <div class="grp">
@@ -185,6 +187,6 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/vendor/maplibre/maplibre-gl.js"></script>
 <script src="/vendor/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="/app.js?v=6"></script>
+<script src="/app.js?v=7"></script>
 </body>
 </html>

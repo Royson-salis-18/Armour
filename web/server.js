@@ -114,6 +114,7 @@ function snapshot(ride, since) {
     hazards: ride.hazards.filter((h) => now() - h.at < 3 * 60 * 60 * 1000),
     messages: since ? ride.messages.filter((m) => m.at > since) : ride.messages.slice(-80),
     teamStop: ride.teamStop,
+    voice: [...ride.voice],
     regroup: ride.regroup,
     destination: ride.destination,
   };
@@ -271,9 +272,25 @@ const actions = {
     ride.status = 'ended';
     ride.endedAt = now();
     ride.teamStop = null;
+    ride.voice.clear();
     for (const a of ride.alerts) if (!a.resolvedAt && a.kind !== 'SOS' && a.kind !== 'CRASH') a.resolvedAt = now();
     systemMessage(ride, `${rider.name} ended the ride`);
     touch(ride);
+  },
+
+  voiceJoin(ride, rider) {
+    if (!ride.voice.has(rider.id)) {
+      ride.voice.add(rider.id);
+      systemMessage(ride, `${rider.name} joined voice chat`);
+      touch(ride);
+    }
+  },
+
+  voiceLeave(ride, rider) {
+    if (ride.voice.delete(rider.id)) {
+      systemMessage(ride, `${rider.name} left voice chat`);
+      touch(ride);
+    }
   },
 
   teamStop(ride, rider, b) {
@@ -383,6 +400,7 @@ const actions = {
 
   leave(ride, rider) {
     rider.state = 'LEFT';
+    ride.voice.delete(rider.id);
     if (ride.teamStop) ride.teamStop.confirmed = ride.teamStop.confirmed.filter((id) => id !== rider.id);
     for (const a of ride.alerts) if (a.riderId === rider.id && !a.resolvedAt && a.kind !== 'SOS' && a.kind !== 'CRASH') a.resolvedAt = now();
     systemMessage(ride, `${rider.name} left the ride`);
@@ -399,8 +417,37 @@ const actions = {
 
 // ---- routing --------------------------------------------------------------
 
+// STUN is enough for most networks. Set TURN_URLS (comma separated), TURN_USERNAME and TURN_CREDENTIAL to add a relay
+// for phones behind strict carrier NAT.
+function iceServers() {
+  const list = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  const urls = (process.env.TURN_URLS || '').split(',').map((u) => u.trim()).filter(Boolean);
+  if (urls.length) list.push({ urls, username: process.env.TURN_USERNAME || '', credential: process.env.TURN_CREDENTIAL || '' });
+  return list;
+}
+
+// Server-sent events carry voice-chat signalling (WebRTC offers, answers, ICE) to one rider at a time.
+function openEvents(req, res, ride, rider) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-store, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.write(': connected\n\n');
+  const old = ride.sse.get(rider.id);
+  if (old) old.end();
+  ride.sse.set(rider.id, res);
+  const ping = setInterval(() => res.write(': ping\n\n'), 20000);
+  req.on('close', () => {
+    clearInterval(ping);
+    if (ride.sse.get(rider.id) === res) ride.sse.delete(rider.id);
+  });
+}
+
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean); // ['api','rides',code?,action?]
+  if (parts[1] === 'ice' && parts.length === 2) return send(res, 200, { iceServers: iceServers() });
   if (parts[1] !== 'rides') throw fail(404, 'Not found');
 
   if (parts.length === 2 && req.method === 'POST') {
@@ -412,7 +459,7 @@ async function api(req, res, url) {
       status: 'lobby',
       createdAt: now(), updatedAt: now(), startedAt: null, endedAt: null,
       version: 1,
-      riders: new Map(), alerts: [], hazards: [], messages: [],
+      riders: new Map(), alerts: [], hazards: [], messages: [], voice: new Set(), sse: new Map(),
       teamStop: null, regroup: null, destination: null,
       leadId: null,
     };
@@ -428,6 +475,21 @@ async function api(req, res, url) {
   if (parts.length === 3 && req.method === 'GET') {
     const since = Number(url.searchParams.get('since')) || 0;
     return send(res, 200, snapshot(ride, since));
+  }
+
+  if (parts.length === 4 && parts[3] === 'events' && req.method === 'GET') {
+    const rider = auth(ride, { riderId: url.searchParams.get('riderId'), token: url.searchParams.get('token') });
+    return openEvents(req, res, ride, rider);
+  }
+
+  if (parts.length === 4 && parts[3] === 'signal' && req.method === 'POST') {
+    const b = await readBody(req);
+    const rider = auth(ride, b);
+    if (!ride.voice.has(rider.id) || !ride.voice.has(String(b.to))) throw fail(409, 'Both riders must be in voice chat');
+    const target = ride.sse.get(String(b.to));
+    if (!target) throw fail(409, 'That rider is not connected yet');
+    target.write(`data: ${JSON.stringify({ from: rider.id, data: b.data })}\n\n`);
+    return send(res, 200, { ok: true });
   }
 
   if (parts.length === 4 && parts[3] === 'join' && req.method === 'POST') {
@@ -490,7 +552,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   // OpenStreetMap's tile servers want a Referer, so send the origin only.
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), accelerometer=(self)');
+  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(self), accelerometer=(self)');
   try {
     if (url.pathname === '/healthz') return send(res, 200, { ok: true, rides: rides.size });
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
