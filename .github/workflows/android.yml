@@ -32,6 +32,13 @@ jobs:
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Check the APK
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          ls -l "$APK"
+          "$BT/aapt2" dump badging "$APK" | grep -E "^package|^sdkVersion|^targetSdkVersion|^native-code|^application-label:|uses-permission: name='android.permission.(CALL_PHONE|SEND_SMS|RECEIVE_BOOT_COMPLETED)'"
+          "$BT/apksigner" verify --verbose --print-certs "$APK" | head -8
       - uses: actions/upload-artifact@v4
         with:
           name: armor-debug-apk
