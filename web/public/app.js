@@ -73,7 +73,8 @@ const ICONS = {
 };
 const ic = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.pin}</svg>`;
 
-const LOGO = (h, c = '#FF6B1A', face = 'var(--bg)') => `<svg style="width:${h * 24 / 28}px;height:${h}px;stroke:none" viewBox="0 0 24 28"><path d="M12 1C6.2 1 2 5.3 2 10.8 2 17.5 12 27 12 27s10-9.5 10-16.2C22 5.3 17.8 1 12 1z" fill="${c}"/><circle cx="12" cy="10.8" r="7.8" style="fill:${face}"/><circle cx="12" cy="10.8" r="6.7" fill="none" stroke="${c}" stroke-width="1.9"/><path d="M12 10.8L18.18 12.46M12 10.8L13.66 16.98M12 10.8L7.47 15.33M12 10.8L5.82 9.14M12 10.8L10.34 4.62M12 10.8L16.53 6.27" stroke="#6A6C72" stroke-width=".6" stroke-linecap="round"/><path d="M8.6 15.9L12 4.6 15.4 15.9M9.6 12.6H14.4" style="stroke:var(--ink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+// The ARMOR mark: a location pin carrying an open wheel rim; the A's legs run out of the rim's ends toward the point.
+const LOGO = (h, c, face = 'var(--bg)') => `<svg style="width:${h * 68 / 91}px;height:${h}px;stroke:none" viewBox="16 6 68 91" role="img" aria-label="ARMOR"><defs><linearGradient id="lg" x1="16" y1="6" x2="84" y2="97" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFA55E"/><stop offset=".5" stop-color="#FF6B1A"/><stop offset="1" stop-color="#F24E00"/></linearGradient></defs><path d="M50 97 C50 97 16 64 16 40 A34 34 0 1 1 84 40 C84 64 50 97 50 97 Z" fill="${c || 'url(#lg)'}"/><g fill="none" style="stroke:${face}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M59.4 60.2 A22 22 0 1 0 40.6 60.2"/><path d="M59.4 60.2 L50 25 L40.6 60.2 M44.4 47 L55.6 47"/></g></svg>`;
 
 // ---- storage -------------------------------------------------------------
 
@@ -220,7 +221,7 @@ function show(name) {
 
 // ---- welcome -------------------------------------------------------------
 
-$('#brandBig').innerHTML = LOGO(34) + '<span>ARMOR</span>';
+$('#brandBig').innerHTML = LOGO(36) + '<span>ARMOR</span>';
 const linkCode = (location.pathname.match(/^\/r\/([A-Za-z0-9]{6})/) || [])[1];
 $('#nameIn').value = profile.name;
 if (linkCode) {

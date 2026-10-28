@@ -6,11 +6,9 @@ package com.armor.app.ui
  * the app draw the same shape.
  */
 object Art {
-    const val LOGO_PIN = "M12 1 C6.2 1 2 5.3 2 10.8 C2 17.5 12 27 12 27 C12 27 22 17.5 22 10.8 C22 5.3 17.8 1 12 1 Z"
-    const val LOGO_CX = 12f
-    const val LOGO_CY = 10.8f
-    const val LOGO_FACE_R = 7.8f
-    const val LOGO_TYRE_R = 7.0f
-    const val LOGO_SPOKES = "M12 10.8 L18.18 12.46 M12 10.8 L13.66 16.98 M12 10.8 L7.47 15.33 M12 10.8 L5.82 9.14 M12 10.8 L10.34 4.62 M12 10.8 L16.53 6.27"
-    const val LOGO_A = "M8.6 15.9 L12 4.6 L15.4 15.9 M9.6 12.6 L14.4 12.6"
+    /** The mark lives in a 68 x 91 box whose top-left is (16, 6): a pin, an open rim, and an A whose legs run out of the rim. */
+    const val LOGO_PIN = "M50 97 C50 97 16 64 16 40 A34 34 0 1 1 84 40 C84 64 50 97 50 97 Z"
+    const val LOGO_RIM = "M59.4 60.2 A22 22 0 1 0 40.6 60.2"
+    const val LOGO_A = "M59.4 60.2 L50 25 L40.6 60.2 M44.4 47 L55.6 47"
+    const val LOGO_STROKE = 5f
 }

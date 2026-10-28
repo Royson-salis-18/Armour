@@ -126,6 +126,7 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
     val smsOk = granted(Manifest.permission.SEND_SMS)
     Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Wordmark()
+        Txt("Advanced Rider Monitoring & Orientation Reasoning System", Type.Caption, ArmorColors.Dim, Modifier.padding(top = 6.dp))
         LogoHero(Modifier.fillMaxWidth().height(250.dp))
         Txt("RIDE TOGETHER.", Type.Hero)
         Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)

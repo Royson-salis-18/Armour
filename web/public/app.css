@@ -70,7 +70,10 @@ svg.i{width:22px;height:22px;flex:none}
 .wel-top{display:flex;flex-direction:column;justify-content:flex-end;gap:12px;min-height:40vh;padding:calc(28px + var(--safe-t)) 2px 12px}
 .wel-top .display .or{color:var(--or)}
 .wel-top p.mid{color:var(--mid);margin:0}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:auto}
+.brandblock{margin-bottom:auto}
+.brand{display:flex;align-items:center;gap:10px}
+.fullform{margin:12px 0 0;max-width:300px;text-wrap:balance;font-size:12px;line-height:1.55;letter-spacing:.02em;color:var(--mid)}
+.fullform b{color:var(--or);font-weight:700}
 .brand span{font:700 18px var(--font);letter-spacing:.2em}
 .wel-card{display:flex;flex-direction:column;gap:12px;background:none;padding:0}
 .or-row{display:flex;align-items:center;gap:12px;color:var(--dim);font-size:13px}

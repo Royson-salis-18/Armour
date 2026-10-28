@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -72,21 +73,28 @@ import kotlinx.coroutines.launch
 
 private fun svgPath(d: String): Path = PathParser().parsePathString(d).toPath()
 
-/** The ARMOR mark: a wheel inside a location pin, with two of its spokes lit up as the letter A. */
+/**
+ * The ARMOR mark: a location pin carrying an open wheel rim. The A's legs run out of the rim's ends toward the pin's
+ * point. [color] fills the pin flat; without it the pin is the orange gradient. [face] is the colour of the rim and A.
+ */
 @Composable
-fun ArmorLogo(height: Dp, color: Color = ArmorColors.Orange, face: Color = ArmorColors.Bg, highlight: Color = Color.White) {
+fun ArmorLogo(height: Dp, color: Color? = null, face: Color = ArmorColors.Bg) {
     val pin = remember { svgPath(Art.LOGO_PIN) }
-    val spokes = remember { svgPath(Art.LOGO_SPOKES) }
+    val rim = remember { svgPath(Art.LOGO_RIM) }
     val a = remember { svgPath(Art.LOGO_A) }
-    Canvas(Modifier.size(height * 24f / 28f, height)) {
-        val s = size.height / 28f
-        val c = Offset(Art.LOGO_CX, Art.LOGO_CY)
+    val fill = remember(color) {
+        if (color != null) SolidColor(color)
+        else Brush.linearGradient(listOf(Color(0xFFFFA55E), Color(0xFFFF6B1A), Color(0xFFF24E00)), start = Offset(16f, 6f), end = Offset(84f, 97f))
+    }
+    Canvas(Modifier.size(height * 68f / 91f, height)) {
+        val s = size.height / 91f
+        val stroke = Stroke(Art.LOGO_STROKE, cap = StrokeCap.Round, join = StrokeJoin.Round)
         scale(s, s, Offset.Zero) {
-            drawPath(pin, color)
-            drawCircle(face, Art.LOGO_FACE_R, c)
-            drawCircle(color, Art.LOGO_TYRE_R - 0.3f, c, style = Stroke(1.9f))
-            drawPath(spokes, Color(0xFF6A6C72), style = Stroke(0.6f, cap = StrokeCap.Round))
-            drawPath(a, highlight, style = Stroke(1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            translate(-16f, -6f) {
+                drawPath(pin, fill)
+                drawPath(rim, face, style = stroke)
+                drawPath(a, face, style = stroke)
+            }
         }
     }
 }
