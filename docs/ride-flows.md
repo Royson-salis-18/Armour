@@ -135,3 +135,22 @@ While the bike is moving above about 11 km/h, chat hides the keyboard and offers
 | Help request | Banner | | When read-aloud is on |
 | Chat | Toast + badge | | With helmet mode or read-aloud |
 | Group events (joined, stopped…) | Chat log | | When read-aloud is on |
+
+## 7. Phone-app behaviour
+
+| Behaviour | Web (installed or in the browser) | Android app |
+|---|---|---|
+| Tap feedback | A light tick on every button and row | Light tick on buttons, firmer click on the main action |
+| SOS hold | Click at the start, click at 0.5 s, thud at 1 s, long alarm buzz when it fires | Same rhythm, thirds of the hold |
+| Team stop called | Long triple buzz with the full-screen alert | Long triple buzz |
+| Message from the group | Double tick | Double tick |
+| Hazard ahead / help request / catch-up | Distinct warning patterns | Distinct patterns |
+| Action confirmed (stop confirmed, resume, voice chat joined) | Rising double pulse | Rising double pulse |
+| Vibration switch | Assistant and helmet > Vibration | Settings > Vibration feedback |
+| Back button / edge swipe | Closes the open panel or menu first; on the ride screen the first Back warns, a second within 2.5 s leaves | System back |
+| Install | "Install ARMOR on your phone" on the home screen and in Menu (iPhone: Share > Add to Home Screen) | APK |
+| Offline | Chip and buzz when the connection drops; position resumes when it returns | Offline map, SOS queue |
+| Keep screen on | Wake lock while riding | Setting |
+
+iPhone Safari cannot vibrate from a web page and the browser stops running when the screen is off, so for background
+alerts and vibration on every device use the Android app.

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.armor.app.alert.Haptics
 import com.armor.app.ArmorApp
 import com.armor.app.data.ContactEntity
 import com.armor.app.data.Sensitivity
@@ -128,6 +129,7 @@ fun SettingsScreen(settings: Settings) {
             SectionTitle("Monitoring")
             ToggleRow("Check on me when riding solo", "Ask \"are you OK?\" after a long stop when no group is in range.", settings.soloMonitoring) { v -> app.prefs.update { it.copy(soloMonitoring = v) } }
             ToggleRow("Keep screen on while riding", "Uses more battery.", settings.keepScreenOn) { v -> app.prefs.update { it.copy(keepScreenOn = v) } }
+            ToggleRow("Vibration feedback", "A buzz for taps, messages, hazards and team stops.", settings.haptics) { v -> app.prefs.update { it.copy(haptics = v) }; if (v) Haptics.success() }
         }
 
         Card2 {

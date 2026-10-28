@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.armor.app.alert.Haptics
 
 /** Cards are a barely-there vertical gradient, which reads as depth without any glow. */
 val CARD_FILL = Brush.verticalGradient(listOf(Color(0xFF1E1F23), Color(0xFF121315)))
@@ -146,7 +147,7 @@ fun Divider1(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().height
 @Composable
 fun PrimaryButton(text: String, modifier: Modifier = Modifier, color: Color = Color.White, contentColor: Color = ArmorColors.Bg, arrow: Boolean = false, onClick: () -> Unit) {
     Box(
-        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(color).clickable(onClick = onClick),
+        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(color).clickable { Haptics.click(); onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)
@@ -160,7 +161,7 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, color: Color = Co
 @Composable
 fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
-        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(ArmorColors.S2).border(1.dp, ArmorColors.Line, RoundedCornerShape(28.dp)).clickable(onClick = onClick),
+        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(ArmorColors.S2).border(1.dp, ArmorColors.Line, RoundedCornerShape(28.dp)).clickable { Haptics.tick(); onClick() },
         contentAlignment = Alignment.Center,
     ) { Text(text, color = ArmorColors.OnBg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
 }
@@ -194,10 +195,14 @@ fun HoldToSosButton(
                 detectTapGestures(
                     onPress = {
                         val start = System.nanoTime()
+                        Haptics.tick()
                         val job = scope.launch {
+                            var nextTick = 0.34f
                             while (progress < 1f) {
                                 progress = ((System.nanoTime() - start) / 1_000_000f / holdMs).coerceAtMost(1f)
-                                if (progress >= 1f) { onTrigger(); break }
+                                // A tick at a third and two thirds, so you can feel how long is left without looking.
+                                if (progress >= nextTick && progress < 1f) { Haptics.click(); nextTick += 0.33f }
+                                if (progress >= 1f) { Haptics.heavy(); onTrigger(); break }
                                 delay(16)
                             }
                         }

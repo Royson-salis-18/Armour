@@ -38,6 +38,8 @@ data class Settings(
     val roadsideNumber: String = "",
     /** Which Google map view the ride screen shows: MAP, NIGHT, TERRAIN, SATELLITE or HYBRID. */
     val mapView: String = "MAP",
+    /** Vibrate for taps, confirmations and group events. */
+    val haptics: Boolean = true,
 ) {
     val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
 
@@ -81,6 +83,7 @@ class Prefs(context: Context) {
             .putString("medications", next.medications)
             .putString("roadsideNumber", next.roadsideNumber)
             .putString("mapView", next.mapView)
+            .putBoolean("haptics", next.haptics)
             .apply()
         _settings.value = next
     }
@@ -112,6 +115,7 @@ class Prefs(context: Context) {
             medications = sp.getString("medications", "") ?: "",
             roadsideNumber = sp.getString("roadsideNumber", "") ?: "",
             mapView = sp.getString("mapView", "MAP") ?: "MAP",
+            haptics = sp.getBoolean("haptics", true),
         )
     }
 }

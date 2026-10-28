@@ -69,6 +69,7 @@ const ICONS = {
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
   headset: '<path d="M3 14v-2a9 9 0 0118 0v2"/><path d="M21 15a2 2 0 01-2 2h-1v-6h1a2 2 0 012 2zM3 15a2 2 0 002 2h1v-6H5a2 2 0 00-2 2zM18 17v1a3 3 0 01-3 3h-2"/>',
 };
 const ic = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.pin}</svg>`;
@@ -84,7 +85,7 @@ const store = {
   del(k) { try { localStorage.removeItem('armor.' + k); } catch { /* private mode */ } },
 };
 
-let profile = Object.assign({ name: '', contactName: '', contactPhone: '', emergency: '112', blood: '', allergies: '', conditions: '', meds: '', readAloud: false, crash: true, assistant: true, air: false, mediaKeys: true }, store.get('profile', {}));
+let profile = Object.assign({ name: '', contactName: '', contactPhone: '', emergency: '112', blood: '', allergies: '', conditions: '', meds: '', readAloud: false, crash: true, haptics: true, assistant: true, air: false, mediaKeys: true }, store.get('profile', {}));
 let session = store.get('session', null); // {code, riderId, token}
 
 // ---- runtime state -------------------------------------------------------
@@ -129,6 +130,7 @@ async function act(action, extra = {}) {
   try {
     const snap = await api(`/rides/${session.code}/${action}`, { riderId: session.riderId, token: session.token, since: S.lastMsgAt, ...extra });
     apply(snap);
+    if (['confirmStop', 'resume', 'teamStop', 'start', 'end', 'voiceJoin', 'regroup', 'destination', 'lead', 'ack'].includes(action)) haptic('success');
     return snap;
   } catch (e) {
     toast(e.message);
@@ -176,7 +178,16 @@ function unlockAudio() {
 }
 document.addEventListener('pointerdown', unlockAudio, { once: true });
 
-function vibrate(p) { try { navigator.vibrate && navigator.vibrate(p); } catch { /* unsupported */ } }
+// Vibration patterns, in ms. Short for taps, long for things that need you to stop. Android browsers vibrate; iPhone Safari cannot.
+const HAPTIC = { tick: 8, click: 14, heavy: 40, success: [15, 50, 25], warning: [100, 80, 100], error: [200, 100, 200], message: [20, 60, 20], hazard: [160, 100, 160], stop: [400, 150, 400, 150, 400], sos: [600, 200, 600, 200, 600] };
+function vibrate(p) { if (profile.haptics === false) return; try { navigator.vibrate && navigator.vibrate(p); } catch { /* unsupported */ } }
+function haptic(kind = 'tick') { vibrate(HAPTIC[kind] ?? kind); }
+// A light tick under every tap, like a native app. SOS has its own pulses while you hold it.
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button, a.btn, .tile, .nav, .opt, .list-btn, .style-card, label.switch');
+  if (!t || t.disabled || t.id === 'sosBtn') return;
+  haptic(t.matches('.btn.primary, .nav.mic') ? 'click' : 'tick');
+}, true);
 
 let audioCtx = null;
 function beep(kind = 'alert') {
@@ -215,6 +226,7 @@ function show(name) {
   if (S.screen === name) return;
   S.screen = name;
   for (const id of ['welcome', 'lobby', 'ride', 'summary']) $('#' + id).classList.toggle('hidden', id !== name);
+  if ((name === 'ride' || name === 'lobby') && !S.guarded) { S.guarded = true; histPush('guard'); }
   if (name === 'ride') { initMap(); setTimeout(() => map.invalidateSize(), 50); requestWake(); setTimeout(applyHandsFree, 300); }
   else { releaseWake(); stopContinuous(); stopGestures(); }
 }
@@ -418,7 +430,8 @@ function apply(snap) {
     if (prevStatus === 'riding' || S.screen !== 'summary') renderSummary();
     show('summary');
   }
-  if (prevStatus === 'lobby' && snap.status === 'riding') { toast('Ride started. Stay safe.', true); vibrate(200); }
+  if (prevStatus === 'lobby' && snap.status === 'riding') { toast('Ride started. Stay safe.', true); haptic('success'); }
+  if (fresh.some((m) => m.riderId && m.riderId !== session.riderId && m.at > S.seenMsgAt)) haptic('message');
 }
 
 
@@ -913,6 +926,13 @@ function renderRide(fresh = []) {
   if (map) { drawRiders(); drawMe(); }
   updateStats();
   renderStatus(); renderPlans(); renderTiles(); renderHf(); vcSync();
+  // A buzz the first time each request from someone else shows up.
+  S.hapSeen = S.hapSeen || new Set();
+  for (const a of openAlerts()) {
+    if (a.riderId === session.riderId || S.hapSeen.has(a.id)) continue;
+    S.hapSeen.add(a.id);
+    if (['HELP', 'CATCH_UP', 'LOW_BATTERY'].includes(a.kind) || (a.kind === 'STOP_REQUEST' && isLead())) haptic('warning');
+  }
 
   const unread = [...S.messages.values()].filter((m) => !m.system && m.riderId !== session.riderId && m.at > S.seenMsgAt).length;
   $('#chatBadge').textContent = unread; $('#chatBadge').classList.toggle('hidden', !unread || S.panel === 'chat');
@@ -1058,14 +1078,41 @@ function syncNav() {
 }
 $('#ridersNav').onclick = () => $('#ridersBtn').click();
 
+// The phone's Back button (or edge swipe) should close what is open, not throw the rider out of the ride.
+// history.back() is asynchronous, so a push that arrives while a pop is still in flight waits for it.
+let ignorePops = 0;
+const pendingPush = [];
+const doPush = (tag) => { try { history.pushState({ armor: tag }, ''); } catch { /* sandboxed */ } };
+const histPush = (tag) => { if (ignorePops > 0) pendingPush.push(tag); else doPush(tag); };
+const histPop = () => {
+  if (pendingPush.length) { pendingPush.pop(); return; }   // never pushed yet, so nothing to undo
+  if (history.state && history.state.armor) { ignorePops++; history.back(); }
+};
+const stillOpen = (tag) => (tag === 'panel' ? !!S.panel : tag === 'sheet' ? !!$('#sheet')?.classList.contains('open') : true);
+window.addEventListener('popstate', () => {
+  if (ignorePops > 0) {
+    ignorePops--;
+    if (ignorePops === 0) for (const t of pendingPush.splice(0)) if (stillOpen(t)) doPush(t);
+    return;
+  }
+  if (S.panel) { S.fromPop = true; closePanel(); S.fromPop = false; return; }
+  if ($('#sheet')?.classList.contains('open')) { S.fromPop = true; toggleSheet(); S.fromPop = false; return; }
+  if (S.screen === 'ride' || S.screen === 'lobby') {
+    const now = Date.now();
+    if (now - (S.lastBack || 0) < 2500) { S.lastBack = 0; S.guarded = false; history.back(); return; }  // second press: really leave
+    S.lastBack = now; toast('Press back again to leave'); haptic('warning'); histPush('guard');
+  }
+});
+
 function openPanel(kind, html, after) {
+  if (!S.panel) histPush('panel');
   S.panel = kind; syncNav();
   $('#panel').className = 'panel ' + kind + '-panel';
   $('#panel').innerHTML = html;
   $('#sheetLayer').classList.remove('hidden');
   after && after($('#panel'));
 }
-function closePanel() { S.panel = null; syncNav(); $('#sheetLayer').classList.add('hidden'); if (S.screen === 'ride' && S.ride?.status === 'riding') renderRide(); }
+function closePanel() { const had = S.panel; S.panel = null; syncNav(); if (had && !S.fromPop) histPop(); $('#sheetLayer').classList.add('hidden'); if (S.screen === 'ride' && S.ride?.status === 'riding') renderRide(); }
 $('#sheetLayer').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closePanel(); });
 
 function confirmPanel(title, body, okText, ok) {
@@ -1147,7 +1194,7 @@ function checkHazards() {
     if (d < HAZARD_WARN_M) {
       S.warnedHazards.add(h.id);
       const [em, label] = HAZARD_TYPES[h.type] || HAZARD_TYPES.OTHER;
-      toast(`${label} ahead · ${fmtDist(d)}`, true); beep(); vibrate([200, 100, 200]); say(`Caution. ${label} ahead, ${Math.round(d / 10) * 10} metres`, false, true);
+      toast(`${label} ahead · ${fmtDist(d)}`, true); beep(); haptic('hazard'); say(`Caution. ${label} ahead, ${Math.round(d / 10) * 10} metres`, false, true);
     }
   }
 }
@@ -1257,7 +1304,7 @@ async function shareLocation() {
   location.href = `sms:?&body=${encodeURIComponent(text)}`;
 }
 
-const toggleSheet = () => { const o = $('#sheet').classList.toggle('open'); $('#expandLbl').textContent = o ? 'Close' : 'Menu'; $('#expandIc').innerHTML = ic(o ? 'close' : 'menu'); syncNav(); setTimeout(() => document.documentElement.style.setProperty('--sheet-h', $('#sheet').offsetHeight + 'px'), 420); };
+const toggleSheet = () => { const o = $('#sheet').classList.toggle('open'); if (o) histPush('sheet'); else if (!S.fromPop) histPop(); $('#expandLbl').textContent = o ? 'Close' : 'Menu'; $('#expandIc').innerHTML = ic(o ? 'close' : 'menu'); syncNav(); setTimeout(() => document.documentElement.style.setProperty('--sheet-h', $('#sheet').offsetHeight + 'px'), 420); };
 $('#grab').onclick = toggleSheet;
 $('#expandBtn').onclick = toggleSheet;
 
@@ -1265,8 +1312,14 @@ $('#expandBtn').onclick = toggleSheet;
 
 let sosTimer = null;
 const sosBtn = $('#sosBtn');
-const sosStart = (e) => { e.preventDefault(); sosBtn.classList.add('holding'); vibrate(30); sosTimer = setTimeout(() => { sosBtn.classList.remove('holding'); triggerSos('SOS'); }, 1500); };
-const sosEnd = () => { clearTimeout(sosTimer); sosBtn.classList.remove('holding'); };
+let sosPulses = [];
+const sosStart = (e) => {
+  e.preventDefault(); sosBtn.classList.add('holding'); haptic('click');
+  // Two pulses on the way up, so you can feel how long is left without looking.
+  sosPulses = [setTimeout(() => haptic('click'), 500), setTimeout(() => haptic('heavy'), 1000)];
+  sosTimer = setTimeout(() => { sosBtn.classList.remove('holding'); triggerSos('SOS'); }, 1500);
+};
+const sosEnd = () => { clearTimeout(sosTimer); sosPulses.forEach(clearTimeout); sosPulses = []; sosBtn.classList.remove('holding'); };
 sosBtn.addEventListener('pointerdown', sosStart);
 ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => sosBtn.addEventListener(ev, sosEnd));
 sosBtn.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -1672,6 +1725,7 @@ function renderHf() {
   // Quiet by default: a chip appears only while the assistant is listening or you are in a call.
   const chips = [];
   if (HF.awake) chips.push('<span class="glass listening"><i class="on-dot"></i>Listening</span>');
+  if (!navigator.onLine) chips.push('<span class="glass"><i class="on-dot" style="background:var(--red)"></i>Offline</span>');
   if (VC.on) chips.push(`<span class="glass"><i class="on-dot"></i>Voice chat${VC.muted ? ' · muted' : ''}</span>`);
   $('#hf') && ($('#hf').innerHTML = chips.join(''));
 }
@@ -1684,6 +1738,7 @@ function voicePanel() {
     <label class="switch"><input type="checkbox" id="vHf" ${profile.assistant !== false ? 'checked' : ''}><span><b>Voice assistant</b><small>Say "Armor", then a command. Or in one go: "Armor, lets stop for a while"</small></span></label>
     <label class="switch"><input type="checkbox" id="vKeys" ${profile.mediaKeys !== false ? 'checked' : ''}><span><b>Helmet button</b><small>Play/pause: talk · Next: status · Previous: repeat</small></span></label>
     <label class="switch"><input type="checkbox" id="vAir" ${profile.air ? 'checked' : ''}><span><b>Air gestures</b><small>Wave over the phone: talk · Two waves: status · Cover 3 s: SOS countdown</small></span></label>
+    <label class="switch"><input type="checkbox" id="vHap" ${profile.haptics !== false ? 'checked' : ''}><span><b>Vibration</b><small>${navigator.vibrate ? 'A buzz for taps, messages, hazards and stops' : 'This browser cannot vibrate. The Android app can.'}</small></span></label>
     <label class="switch"><input type="checkbox" id="vRead" ${profile.readAloud ? 'checked' : ''}><span><b>Read everything aloud</b><small>Chat, group events, hazards. Emergencies are always spoken.</small></span></label>
     <div class="card help-list"><div class="lbl" style="margin-bottom:4px">Things you can say</div>
       <div><b>"Armor, lets stop for a while nearby"</b> · asks the group to stop and tells them</div>
@@ -1711,6 +1766,7 @@ function voicePanel() {
     bind('vKeys', 'mediaKeys', () => (profile.mediaKeys ? startMediaKeys() : stopMediaKeys()));
     bind('vAir', 'air', applyHandsFree);
     bind('vRead', 'readAloud');
+    bind('vHap', 'haptics', () => haptic('success'));
   });
 }
 
@@ -1750,6 +1806,7 @@ function parseVoice(raw) {
 }
 
 function runVoice(raw) {
+  haptic('click');
   voiceLive(`"${raw}"`); setTimeout(() => voiceLive('', false), 1600);
   const i = parseVoice(raw), st = myState(), L1 = isLead();
   if (i.k === 'vc') return VC.on ? say('You are already in voice chat') : vcJoin();
@@ -1880,6 +1937,33 @@ $('#openSettings1').onclick = settingsPanel;
 $('#openSettings2').onclick = settingsPanel;
 
 $$('[data-ic]').forEach((el) => { el.innerHTML = ic(el.dataset.ic); });
+
+// ---- install as an app --------------------------------------------------
+
+let deferredInstall = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+function syncInstall() {
+  const can = !isStandalone() && (!!deferredInstall || isIos);
+  $('#installBtn')?.classList.toggle('hidden', !can);
+  $('#installTile')?.classList.toggle('hidden', !can);
+}
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; syncInstall(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; syncInstall(); haptic('success'); toast('ARMOR is on your home screen'); });
+async function installApp() {
+  if (deferredInstall) { deferredInstall.prompt(); await deferredInstall.userChoice.catch(() => {}); deferredInstall = null; syncInstall(); return; }
+  openPanel('install', `<h2>Install ARMOR</h2><p class="mid" style="margin:0">Add ARMOR to your home screen so it opens full screen like an app.</p>
+    <div class="help-list"><div><b>1.</b> Tap the Share button in Safari</div><div><b>2.</b> Choose <b>Add to Home Screen</b></div><div><b>3.</b> Tap <b>Add</b></div></div><button class="btn ghost" data-close>Got it</button>`);
+}
+$('#installBtn').onclick = installApp;
+$('#installTile').onclick = () => { closeMenuThen(installApp); };
+function closeMenuThen(fn) { if ($('#sheet').classList.contains('open')) toggleSheet(); setTimeout(fn, 60); }
+syncInstall();
+
+// ---- connection ----------------------------------------------------------
+
+window.addEventListener('offline', () => { haptic('warning'); toast('You are offline. Your position is sent when you are back.', true); renderHf(); });
+window.addEventListener('online', () => { haptic('success'); toast('Back online', true); renderHf(); if (session) startPolling(); });
 
 // ---- boot ----------------------------------------------------------------
 

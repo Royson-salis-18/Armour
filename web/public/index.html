@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -11,12 +11,15 @@
 <title>ARMOR</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ARMOR">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/app.css?v=11">
+<link rel="stylesheet" href="/app.css?v=12">
 </head>
 <body>
 
@@ -46,6 +49,7 @@
     <p id="welErr" class="err"></p>
   </div>
   <button class="link-btn" id="openSettings1">Emergency contact &amp; Medical ID</button>
+  <button class="link-btn hidden" id="installBtn">Install ARMOR on your phone</button>
 </section>
 
 <!-- Lobby -->
@@ -145,6 +149,7 @@
         <div class="grp-h"><span class="lbl">Me</span></div>
         <div class="tiles">
           <button class="tile" id="offBtn"><span class="em" data-ic="walk"></span><span><b id="offLbl">Off the bike</b><small>Pauses crash detection</small></span></button>
+          <button class="tile hidden" id="installTile"><span class="em" data-ic="phone"></span><span><b>Install app</b><small>Add ARMOR to your home screen</small></span></button>
           <button class="tile" id="locBtn"><span class="em" data-ic="pin"></span><span><b>Share location</b><small>Send a Maps link</small></span></button>
           <button class="tile" id="setBtn"><span class="em" data-ic="pulse"></span><span><b>Safety profile</b><small id="setSub">Contact &amp; Medical ID</small></span></button>
           <button class="tile danger" id="exitBtn"><span class="em" data-ic="exit"></span><span><b id="exitLbl">Leave ride</b><small id="exitSub">Stop sharing location</small></span></button>
@@ -191,6 +196,6 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/vendor/maplibre/maplibre-gl.js"></script>
 <script src="/vendor/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="/app.js?v=11"></script>
+<script src="/app.js?v=12"></script>
 </body>
 </html>

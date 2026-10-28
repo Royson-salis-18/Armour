@@ -46,6 +46,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
+import com.armor.app.alert.Haptics
+import com.armor.core.model.AlertKind
 
 /**
  * Keeps the ride alive in the foreground and wires the platform to the pure-Kotlin [RideEngine]: GPS, motion
@@ -444,7 +446,27 @@ class RideService : Service() {
 
     // ---- notifications ----------------------------------------------------------------------
 
+    private var hapTeamStop: String? = null
+    private var hapMessages = 0
+    private val hapHazards = HashSet<String>()
+    private val hapHelp = HashSet<String>()
+
+    /** Buzz the phone for what just happened in the group: a team stop, a message, a hazard, someone asking for a hand. */
+    private fun hapticsFor(s: RideSnapshot) {
+        val ts = s.teamStop
+        if (ts != null && !ts.calledByMe && ts.alertId != hapTeamStop) Haptics.teamStop()
+        hapTeamStop = ts?.alertId
+
+        val theirs = s.messages.count { it.riderId != settings.riderId }
+        if (theirs > hapMessages) Haptics.message()
+        hapMessages = theirs
+
+        if (s.hazards.filter { it.riderId != settings.riderId && hapHazards.add(it.id) }.isNotEmpty()) Haptics.hazard()
+        if (s.incomingAlerts.filter { it.alert.kind == AlertKind.HELP && hapHelp.add(it.alert.id) }.isNotEmpty()) Haptics.warning()
+    }
+
     private fun updateNotifications(s: RideSnapshot) {
+        hapticsFor(s)
         val nm = requireService<NotificationManager>()
 
         val text = when {
