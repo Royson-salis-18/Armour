@@ -10,6 +10,9 @@ on:
     branches: [ccr-4c516141-nuieuw]
     paths: ['app/**', 'core/**', 'gradle/**', '*.kts', '.github/workflows/android.yml']
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -44,3 +47,13 @@ jobs:
           name: armor-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+      - name: Publish ARMOR.apk (direct download)
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk ARMOR.apk
+          gh release delete latest-apk --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true
+          gh release create latest-apk ARMOR.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "ARMOR (latest Android build)" \
+            --notes "Open this page on your phone, tap ARMOR.apk, then Install. Allow 'Install unknown apps' for your browser if asked."
