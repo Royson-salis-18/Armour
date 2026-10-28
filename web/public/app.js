@@ -15,13 +15,62 @@ const CRASH_COUNTDOWN_S = 30;
 const LOW_BATTERY = 15;
 
 const HAZARD_TYPES = {
-  POTHOLE: ['🕳️', 'Pothole'], GRAVEL: ['🪨', 'Gravel'], OIL: ['🛢️', 'Oil / slick'], WATER: ['💧', 'Water'],
-  ANIMAL: ['🐄', 'Animal'], POLICE: ['🚓', 'Police'], ACCIDENT: ['💥', 'Accident'], ROADWORK: ['🚧', 'Roadwork'], OTHER: ['⚠️', 'Other'],
+  POTHOLE: ['pothole', 'Pothole'], GRAVEL: ['gravel', 'Gravel'], OIL: ['oil', 'Oil / slick'], WATER: ['water', 'Water'],
+  ANIMAL: ['animal', 'Animal'], POLICE: ['police', 'Police'], ACCIDENT: ['accident', 'Accident'], ROADWORK: ['roadwork', 'Roadwork'], OTHER: ['alert', 'Other'],
 };
-const STOP_REASONS = [['⛽', 'Fuel'], ['☕', 'Break'], ['🍽️', 'Food'], ['👥', 'Regroup'], ['📸', 'Photo'], ['🔧', 'Bike issue']];
+const STOP_REASONS = [['fuel', 'Fuel'], ['coffee', 'Break'], ['food', 'Food'], ['group', 'Regroup'], ['camera', 'Photo'], ['wrench', 'Bike issue']];
 const COLORS = ['#FF6B1A', '#4FC3F7', '#7BD88F', '#F06292', '#FFD54F', '#BA68C8', '#4DB6AC', '#FF8A65', '#90A4AE', '#AED581'];
 
-const LOGO = (h, c = '#FF6B1A', face = '#0A0A0B') => `<svg style="width:${h * 24 / 28}px;height:${h}px;stroke:none" viewBox="0 0 24 28"><path d="M12 1C6.2 1 2 5.3 2 10.8 2 17.5 12 27 12 27s10-9.5 10-16.2C22 5.3 17.8 1 12 1z" fill="${c}"/><circle cx="12" cy="10.8" r="7.8" fill="${face}"/><circle cx="12" cy="10.8" r="6.7" fill="none" stroke="${c}" stroke-width="1.9"/><path d="M12 10.8L18.18 12.46M12 10.8L13.66 16.98M12 10.8L7.47 15.33M12 10.8L5.82 9.14M12 10.8L10.34 4.62M12 10.8L16.53 6.27" stroke="#6A6C72" stroke-width=".6" stroke-linecap="round"/><path d="M8.6 15.9L12 4.6 15.4 15.9M9.6 12.6H14.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+// ---- icons (stroke, 24x24) -----------------------------------------------
+const ICONS = {
+  fuel: '<path d="M14 22V4a2 2 0 00-2-2H6a2 2 0 00-2 2v18M3 22h12M4 9h10M14 13h2a2 2 0 012 2v2a2 2 0 002 2 2 2 0 002-2V9.8a2 2 0 00-.6-1.4L18 5"/>',
+  coffee: '<path d="M17 8h1a4 4 0 010 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 2v2M10 2v2M14 2v2"/>',
+  food: '<path d="M3 2v7a2 2 0 002 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6a2 2 0 002 2h3zm0 0v7"/>',
+  group: '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>',
+  camera: '<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2zM12 17a4 4 0 100-8 4 4 0 000 8z"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.8-3.8a6 6 0 01-7.9 7.9l-6.9 6.9a2.1 2.1 0 01-3-3l6.9-6.9a6 6 0 017.9-7.9z"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
+  pin: '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/>',
+  bike: '<circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>',
+  hospital: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>',
+  atm: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  tyre: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/>',
+  compass: '<circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2 6.3-6.4 2.1 2-6.3z"/>',
+  pulse: '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0016.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4 3 5.5l7 7z"/><path d="M3.2 12h4l2-3 3 6 2-3h4.6"/>',
+  hand: '<path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-5.9-2.4L3.4 16a2 2 0 013-2.8L8 15"/>',
+  stop: '<path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9z"/><path d="M9 9h6v6H9z"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/>',
+  walk: '<circle cx="12" cy="5" r="1.5"/><path d="M9 20l3-6 3 6M6 8l6 2 6-2M12 10v4"/>',
+  exit: '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
+  pause: '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>',
+  play: '<path d="M6 4l14 8-14 8z"/>',
+  close: '<path d="M18 6L6 18M6 6l12 12"/>',
+  siren: '<circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5h.01"/>',
+  battery: '<rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2M6 11v2"/>',
+  route: '<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 000-7h-11a3.5 3.5 0 010-7H15"/>',
+  alert: '<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01"/>',
+  pothole: '<ellipse cx="12" cy="14" rx="9" ry="5"/><ellipse cx="12" cy="14" rx="4" ry="1.8"/><path d="M12 3v4"/>',
+  gravel: '<circle cx="7" cy="16" r="2.5"/><circle cx="16" cy="17" r="3"/><circle cx="11" cy="8" r="3"/><circle cx="18.5" cy="8" r="1.5"/>',
+  oil: '<path d="M12 2.7l5.7 5.7a8 8 0 11-11.4 0z"/>',
+  water: '<path d="M2 8c2 0 2 2 5 2s3-2 5-2 3 2 5 2 3-2 5-2M2 14c2 0 2 2 5 2s3-2 5-2 3 2 5 2 3-2 5-2"/>',
+  animal: '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 015 5v3.5a3.5 3.5 0 01-6.8 1Q6.5 17.5 4.5 16.8A3.5 3.5 0 015.5 10z"/>',
+  police: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  accident: '<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
+  roadwork: '<path d="M12 3l6 17H6zM8.5 13h7M7 17h10M5 21h14"/>',
+  nav: '<path d="M3 11l19-9-9 19-2-8-8-2z"/>',
+  message: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  chevron: '<path d="M9 18l6-6-6-6"/>',
+  more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>',
+  link: '<path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+};
+const ic = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.pin}</svg>`;
+
+const LOGO = (h, c = '#FF6B1A', face = 'var(--bg)') => `<svg style="width:${h * 24 / 28}px;height:${h}px;stroke:none" viewBox="0 0 24 28"><path d="M12 1C6.2 1 2 5.3 2 10.8 2 17.5 12 27 12 27s10-9.5 10-16.2C22 5.3 17.8 1 12 1z" fill="${c}"/><circle cx="12" cy="10.8" r="7.8" style="fill:${face}"/><circle cx="12" cy="10.8" r="6.7" fill="none" stroke="${c}" stroke-width="1.9"/><path d="M12 10.8L18.18 12.46M12 10.8L13.66 16.98M12 10.8L7.47 15.33M12 10.8L5.82 9.14M12 10.8L10.34 4.62M12 10.8L16.53 6.27" stroke="#6A6C72" stroke-width=".6" stroke-linecap="round"/><path d="M8.6 15.9L12 4.6 15.4 15.9M9.6 12.6H14.4" style="stroke:var(--ink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 
 // ---- storage -------------------------------------------------------------
 
@@ -274,7 +323,7 @@ function riderRow(x, lobby) {
   if (openAlerts().some((a) => a.riderId === x.id && a.kind === 'CATCH_UP')) tags.push('<span class="tag lead">Catching up</span>');
   if (openAlerts().some((a) => a.riderId === x.id && (a.kind === 'SOS' || a.kind === 'CRASH'))) tags.push('<span class="tag bad">SOS</span>');
   const stale = !hasFix(x) ? 'No GPS yet' : Date.now() - x.fixAt > STALE_MS ? `Last seen ${ago(x.fixAt)}` : x.speed != null ? `${Math.round(x.speed * 3.6)} km/h` : 'Live';
-  const sub = [mine ? 'You' : null, d, stale, x.battery != null ? `🔋 ${Math.round(x.battery)}%` : null].filter(Boolean).join(' · ');
+  const sub = [mine ? 'You' : null, d, stale, x.battery != null ? `${Math.round(x.battery)}% battery` : null].filter(Boolean).join(' · ');
   const btn = isLead() && !mine ? `<button class="mini" data-lead="${x.id}">Make lead</button>`
     : !lobby && !mine && hasFix(x) ? `<a class="mini" href="${directions(x.lat, x.lon)}" target="_blank" rel="noopener">Navigate</a>` : '';
   return `<div class="rider" data-focus="${x.id}"><div class="av" style="background:${colorOf(x.id)}">${esc(initials(x.name))}</div>
@@ -453,7 +502,8 @@ const TILES = [
   ['Streets', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', OSM_ATTR, { maxZoom: 19 }],
   ['Satellite', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Imagery &copy; Esri, Maxar, Earthstar Geographics', { maxZoom: 19 }],
 ];
-let tileIdx = store.get('tiles', 0) % TILES.length, tileLayer = null;
+const PREFERS_DARK = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+let tileIdx = store.get('tiles2', PREFERS_DARK ? 0 : 1) % TILES.length, tileLayer = null;
 
 function initMap() {
   if (map) return;
@@ -465,7 +515,7 @@ function initMap() {
   map.on('click', (e) => { if (S.pickRegroup) { S.pickRegroup = false; toast('Regroup point set'); act('regroup', { lat: e.latlng.lat, lon: e.latlng.lng, label: 'Regroup here' }); } });
 }
 function setTiles(i) {
-  tileIdx = i; store.set('tiles', i);
+  tileIdx = i; store.set('tiles2', i);
   if (tileLayer) map.removeLayer(tileLayer);
   const [, url, attribution, o] = TILES[i];
   tileLayer = L.tileLayer(url, { attribution, ...o }).addTo(map);
@@ -525,7 +575,7 @@ function drawRiders() {
     hz.add(h.id);
     if (hazardMarkers.has(h.id)) continue;
     const [em, label] = HAZARD_TYPES[h.type] || HAZARD_TYPES.OTHER;
-    hazardMarkers.set(h.id, L.marker([h.lat, h.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pin-ic">${em}</div>` }) })
+    hazardMarkers.set(h.id, L.marker([h.lat, h.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pin-ic">${ic(em)}</div>` }) })
       .addTo(map).bindPopup(`<b>${label}</b><br>Reported by ${esc(h.by)} · ${ago(h.at)}`));
   }
   for (const [id, m] of hazardMarkers) if (!hz.has(id)) { map.removeLayer(m); hazardMarkers.delete(id); }
@@ -533,14 +583,14 @@ function drawRiders() {
   const rg = S.ride.regroup;
   if (rg) {
     const pop = `<b>${esc(rg.label)}</b><br>Set by ${esc(rg.by)}<br><a href="${directions(rg.lat, rg.lon)}" target="_blank" rel="noopener">Navigate in Google Maps</a>`;
-    if (!regroupMarker) regroupMarker = L.marker([rg.lat, rg.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: '<div class="pin-ic rg">👥</div>' }) }).addTo(map).bindPopup(pop);
+    if (!regroupMarker) regroupMarker = L.marker([rg.lat, rg.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pin-ic rg">${ic('group')}</div>` }) }).addTo(map).bindPopup(pop);
     else regroupMarker.setLatLng([rg.lat, rg.lon]).getPopup().setContent(pop);
   } else if (regroupMarker) { map.removeLayer(regroupMarker); regroupMarker = null; }
 
   const ds = S.ride.destination;
   if (ds) {
     const pop = `<b>${esc(ds.label)}</b><br><a href="${directions(ds.lat, ds.lon)}" target="_blank" rel="noopener">Navigate in Google Maps</a>`;
-    if (!destMarker) destMarker = L.marker([ds.lat, ds.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: '<div class="pin-ic dest">🏁</div>' }) }).addTo(map).bindPopup(pop);
+    if (!destMarker) destMarker = L.marker([ds.lat, ds.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pin-ic dest">${ic('flag')}</div>` }) }).addTo(map).bindPopup(pop);
     else destMarker.setLatLng([ds.lat, ds.lon]).getPopup().setContent(pop);
     drawRoute(ds);
   } else {
@@ -613,23 +663,23 @@ function statusModel() {
   const r = S.ride, m = me(), ts = r.teamStop, sp = S.pos ? Math.round(S.pos.speed * 3.6) : 0;
   const since = m?.stateAt ? ` · ${fmtDur(Date.now() - m.stateAt).replace(/^0:/, '')} min` : '';
   switch (myState()) {
-    case 'SOS': return { cls: 'sos', ic: '🚨', t: 'SOS active', s: `Group alerted · ${openAlerts().find((a) => a.riderId === session.riderId && (a.kind === 'SOS' || a.kind === 'CRASH')).acks.length} responding`,
+    case 'SOS': return { cls: 'sos', ic: 'siren', t: 'SOS active', s: `Group alerted · ${openAlerts().find((a) => a.riderId === session.riderId && (a.kind === 'SOS' || a.kind === 'CRASH')).acks.length} responding`,
       a: ['I\'m OK', 'imok', 'go'], b: [`Call ${profile.emergency || '112'}`, 'call'] };
-    case 'CONFIRM': return { cls: 'team', ic: '🛑', t: 'Team stop', s: `${ts.by}: ${ts.reason}. Pull over.`, a: ['I\'ve stopped', 'confirm', 'primary'] };
+    case 'CONFIRM': return { cls: 'team', ic: 'stop', t: 'Team stop', s: `${ts.by}: ${ts.reason}. Pull over.`, a: ['I\'ve stopped', 'confirm', 'primary'] };
     case 'TEAM': {
       const n = ts.confirmed.length, total = r.riders.length;
-      if (isLead()) return { cls: 'team', ic: '🛑', t: `Team stop · ${ts.reason}`, s: `${n}/${total} stopped · ${ago(ts.at).replace(' ago', '')}`, a: ['Resume all', 'resume', 'go'], b: ['Cancel stop', 'cancelstop'] };
-      return { cls: 'team', ic: '🛑', t: `Team stop · ${ts.reason}`, s: `Waiting for ${ts.by} to resume · ${n}/${total} stopped`, a: ['Ride on anyway', 'rideon', 'ghost'] };
+      if (isLead()) return { cls: 'team', ic: 'stop', t: `Team stop · ${ts.reason}`, s: `${n}/${total} stopped · ${ago(ts.at).replace(' ago', '')}`, a: ['Resume all', 'resume', 'go'], b: ['Cancel stop', 'cancelstop'] };
+      return { cls: 'team', ic: 'stop', t: `Team stop · ${ts.reason}`, s: `Waiting for ${ts.by} to resume · ${n}/${total} stopped`, a: ['Ride on anyway', 'rideon', 'ghost'] };
     }
-    case 'OFF_BIKE': return { cls: 'stopped', ic: '🚶', t: 'Off the bike', s: 'Crash detection paused' + since, a: ['Back on bike', 'ride', 'go'] };
+    case 'OFF_BIKE': return { cls: 'stopped', ic: 'walk', t: 'Off the bike', s: 'Crash detection paused' + since, a: ['Back on bike', 'ride', 'go'] };
     case 'STOPPED': return { cls: 'stopped', ic: '⏸️', t: m.stopReason ? `Stopped · ${m.stopReason}` : 'Stopped', s: 'Group can see you have pulled over' + since,
       a: ['Start riding', 'ride', 'go'], b: ['Change reason', 'stopme'] };
     case 'CATCHUP': {
       const g = gapToGroup();
       const waiting = S.ride.teamStop?.waitForId === session.riderId;
-      return { cls: 'team', ic: '🏃', t: waiting ? 'Group is waiting' : 'Catching up', s: `${g != null ? fmtDist(g) + ' to the group · ' : ''}${waiting ? 'they have stopped for you' : 'group told to wait'}`, a: ['I\'ve caught up', 'caughtup', 'go'], b: ['Cancel', 'cancelcatch'] };
+      return { cls: 'team', ic: 'timer', t: waiting ? 'Group is waiting' : 'Catching up', s: `${g != null ? fmtDist(g) + ' to the group · ' : ''}${waiting ? 'they have stopped for you' : 'group told to wait'}`, a: ['I\'ve caught up', 'caughtup', 'go'], b: ['Cancel', 'cancelcatch'] };
     }
-    default: return { cls: 'riding', ic: '🏍️', t: 'Riding', s: sp > 2 ? `${sp} km/h · sharing live location` : 'Sharing live location', a: ['Stop', 'stop', 'primary'],
+    default: return { cls: 'riding', ic: 'bike', t: 'Riding', s: sp > 2 ? `${sp} km/h · sharing live location` : 'Sharing live location', a: ['Stop', 'stop', 'primary'],
       b: isLead() ? ['Stop team', 'teamstop'] : ['Wait for me', 'catchup'] };
   }
 }
@@ -637,7 +687,7 @@ function statusModel() {
 function renderStatus() {
   const st = statusModel();
   $('#status').className = 'status ' + st.cls;
-  $('#status').innerHTML = `<div class="st-ic">${st.ic}</div><div class="grow"><div class="st-t">${esc(st.t)}</div><div class="st-s">${esc(st.s)}</div></div>
+  $('#status').innerHTML = `<div class="st-ic">${ic(st.ic)}</div><div class="grow"><div class="st-t">${esc(st.t)}</div><div class="st-s">${esc(st.s)}</div></div>
     <div class="st-btns"><button class="btn ${st.a[2]}" data-st="${st.a[1]}">${esc(st.a[0])}</button>${st.b ? `<button class="btn ghost sm" data-st="${st.b[1]}">${esc(st.b[0])}</button>` : ''}</div>`;
 }
 
@@ -669,23 +719,23 @@ function renderPlans() {
   for (const a of openAlerts().filter((x) => x.kind === 'CATCH_UP' && x.riderId !== session.riderId)) {
     const g = riderGap(a.riderId);
     if (!S.spokenCatch?.has(a.id)) { (S.spokenCatch ||= new Set()).add(a.id); say(`${a.name} is catching up. ${isLead() ? 'Slow down or stop and wait.' : 'Ease off.'}`, false, true); vibrate([200, 100, 200]); }
-    out.push(`<div class="plan ask"><span class="em">🏃</span><div class="grow"><b>${esc(a.name)}</b> is catching up<small>${g != null ? fmtDist(g) + ' behind the group' : 'Waiting for their GPS'} · ${ago(a.at)}</small></div>
+    out.push(`<div class="plan ask"><span class="em">${ic('timer')}</span><div class="grow"><b>${esc(a.name)}</b> is catching up<small>${g != null ? fmtDist(g) + ' behind the group' : 'Waiting for their GPS'} · ${ago(a.at)}</small></div>
       ${isLead() ? `<button class="btn ghost sm" data-slow="${esc(a.name)}">Slow down</button><button class="btn primary sm" data-wait="${esc(a.name)}" data-wait-id="${a.riderId}">Stop &amp; wait</button>` : `<button class="btn ghost sm" data-slow="${esc(a.name)}">Easing off</button>`}</div>`);
   }
-  if (S.behindHint && !myAlert('CATCH_UP') && myState() === 'RIDING') out.push(`<div class="plan ask"><span class="em">📏</span><div class="grow">Falling behind?<small>${fmtDist(gapToGroup() || 0)} from the group</small></div><button class="btn primary sm" data-st="catchup">Ask them to wait</button><button class="btn ghost sm" data-do="nohint">I'm fine</button></div>`);
+  if (S.behindHint && !myAlert('CATCH_UP') && myState() === 'RIDING') out.push(`<div class="plan ask"><span class="em">${ic('route')}</span><div class="grow">Falling behind?<small>${fmtDist(gapToGroup() || 0)} from the group</small></div><button class="btn primary sm" data-st="catchup">Ask them to wait</button><button class="btn ghost sm" data-do="nohint">I'm fine</button></div>`);
   for (const a of openAlerts().filter((x) => x.kind === 'STOP_REQUEST')) {
-    if (a.riderId === session.riderId) out.push(`<div class="plan ask"><span class="em">✋</span><div class="grow">You asked for a stop: ${esc(a.detail || 'Stop')}<small>Waiting for ${esc(lead()?.name || 'the lead')}</small></div><button class="btn ghost sm" data-resolve="${a.id}">Cancel</button></div>`);
-    else if (isLead()) out.push(`<div class="plan ask"><span class="em">✋</span><div class="grow"><b>${esc(a.name)}</b> asks to stop: ${esc(a.detail || 'Stop')}<small>${ago(a.at)}</small></div><button class="btn primary sm" data-accept="${a.id}">Stop team</button><button class="btn ghost sm" data-resolve="${a.id}">Decline</button></div>`);
+    if (a.riderId === session.riderId) out.push(`<div class="plan ask"><span class="em">${ic('hand')}</span><div class="grow">You asked for a stop: ${esc(a.detail || 'Stop')}<small>Waiting for ${esc(lead()?.name || 'the lead')}</small></div><button class="btn ghost sm" data-resolve="${a.id}">Cancel</button></div>`);
+    else if (isLead()) out.push(`<div class="plan ask"><span class="em">${ic('hand')}</span><div class="grow"><b>${esc(a.name)}</b> asks to stop: ${esc(a.detail || 'Stop')}<small>${ago(a.at)}</small></div><button class="btn primary sm" data-accept="${a.id}">Stop team</button><button class="btn ghost sm" data-resolve="${a.id}">Decline</button></div>`);
   }
   const help = myAlert('HELP');
-  if (help) out.push(`<div class="plan ask"><span class="em">🙋</span><div class="grow">You asked for a hand: ${esc(help.detail || '')}<small>${help.acks.length ? esc(help.acks.map((x) => x.name).join(', ')) + ' coming' : 'Waiting for someone'}</small></div><button class="btn ghost sm" data-resolve="${help.id}">Cancel</button></div>`);
+  if (help) out.push(`<div class="plan ask"><span class="em">${ic('hand')}</span><div class="grow">You asked for a hand: ${esc(help.detail || '')}<small>${help.acks.length ? esc(help.acks.map((x) => x.name).join(', ')) + ' coming' : 'Waiting for someone'}</small></div><button class="btn ghost sm" data-resolve="${help.id}">Cancel</button></div>`);
   if (r.regroup) {
     const d = S.pos ? fmtDist(haversine(S.pos, r.regroup)) : '';
-    out.push(`<div class="plan"><span class="em">👥</span><div class="grow">${esc(r.regroup.label)}<small>${d}${d ? ' · ' : ''}set by ${esc(r.regroup.by)}</small></div><a class="btn ghost sm" href="${directions(r.regroup.lat, r.regroup.lon)}" target="_blank" rel="noopener">Go</a>${isLead() ? '<button class="btn ghost sm" data-do="clearregroup">Cancel</button>' : ''}</div>`);
+    out.push(`<div class="plan"><span class="em">${ic('group')}</span><div class="grow">${esc(r.regroup.label)}<small>${d}${d ? ' · ' : ''}set by ${esc(r.regroup.by)}</small></div><a class="btn ghost sm" href="${directions(r.regroup.lat, r.regroup.lon)}" target="_blank" rel="noopener">Go</a>${isLead() ? '<button class="btn ghost sm" data-do="clearregroup">Cancel</button>' : ''}</div>`);
   }
   if (r.destination) {
     const ri = S.routeInfo ? `${fmtDist(S.routeInfo.dist)} · ~${Math.round(S.routeInfo.dur / 60)} min` : S.pos ? fmtDist(haversine(S.pos, r.destination)) : '';
-    out.push(`<div class="plan"><span class="em">🏁</span><div class="grow">${esc(r.destination.label)}<small>${ri}</small></div><a class="btn ghost sm" href="${directions(r.destination.lat, r.destination.lon)}" target="_blank" rel="noopener">Go</a>${isLead() ? '<button class="btn ghost sm" data-do="cleardest">Cancel</button>' : ''}</div>`);
+    out.push(`<div class="plan"><span class="em">${ic('flag')}</span><div class="grow">${esc(r.destination.label)}<small>${ri}</small></div><a class="btn ghost sm" href="${directions(r.destination.lat, r.destination.lon)}" target="_blank" rel="noopener">Go</a>${isLead() ? '<button class="btn ghost sm" data-do="cleardest">Cancel</button>' : ''}</div>`);
   }
   $('#plans').innerHTML = out.join('');
 }
@@ -783,18 +833,18 @@ function renderBanners() {
     if (a.riderId === session.riderId) continue;
     const d = a.lat != null && S.pos ? ` · ${fmtDist(haversine(S.pos, a))}` : '';
     const nav = a.lat != null ? `<a class="btn primary sm" href="${directions(a.lat, a.lon)}" target="_blank" rel="noopener">Go</a>` : '';
-    if (a.kind === 'HELP') out.push(`<div class="banner glass warn"><span>🙋</span><div class="grow"><b>${esc(a.name)} needs a hand</b> ${esc(a.detail || '')}${d}</div>${nav}${a.acks.some((x) => x.riderId === session.riderId) ? '' : `<button class="btn ghost sm" data-ack="${a.id}">On it</button>`}</div>`);
-    if (a.kind === 'LOW_BATTERY') out.push(`<div class="banner glass"><span>🪫</span><div class="grow"><b>${esc(a.name)}</b> is on low battery (${esc(a.detail)}). Keep them close.</div></div>`);
-    if ((a.kind === 'SOS' || a.kind === 'CRASH') && S.handled.has(a.id)) out.push(`<div class="banner glass bad"><span>🚨</span><div class="grow"><b>${esc(a.name)}: ${a.kind === 'SOS' ? 'SOS' : 'possible crash'}</b>${d}${a.acks.length ? '<br>Responding: ' + esc(a.acks.map((x) => x.name).join(', ')) : ''}</div>${nav}${isLead() ? `<button class="btn ghost sm" data-resolve="${a.id}">Clear</button>` : ''}</div>`);
+    if (a.kind === 'HELP') out.push(`<div class="banner glass warn"><span class="bi">${ic('hand')}</span><div class="grow"><b>${esc(a.name)} needs a hand</b> ${esc(a.detail || '')}${d}</div>${nav}${a.acks.some((x) => x.riderId === session.riderId) ? '' : `<button class="btn ghost sm" data-ack="${a.id}">On it</button>`}</div>`);
+    if (a.kind === 'LOW_BATTERY') out.push(`<div class="banner glass"><span class="bi">${ic('battery')}</span><div class="grow"><b>${esc(a.name)}</b> is on low battery (${esc(a.detail)}). Keep them close.</div></div>`);
+    if ((a.kind === 'SOS' || a.kind === 'CRASH') && S.handled.has(a.id)) out.push(`<div class="banner glass bad"><span class="bi">${ic('siren')}</span><div class="grow"><b>${esc(a.name)}: ${a.kind === 'SOS' ? 'SOS' : 'possible crash'}</b>${d}${a.acks.length ? '<br>Responding: ' + esc(a.acks.map((x) => x.name).join(', ')) : ''}</div>${nav}${isLead() ? `<button class="btn ghost sm" data-resolve="${a.id}">Clear</button>` : ''}</div>`);
   }
-  if (S.pickRegroup) out.push('<div class="banner glass warn"><span>👆</span><div class="grow">Tap the map to place the regroup point</div><button class="btn ghost sm" data-do="cancelpick">Cancel</button></div>');
+  if (S.pickRegroup) out.push(`<div class="banner glass warn"><span class="bi">${ic('pin')}</span><div class="grow">Tap the map to place the regroup point</div><button class="btn ghost sm" data-do="cancelpick">Cancel</button></div>`);
   $('#banners').innerHTML = out.join('');
 }
 
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-do],[data-ack],[data-resolve],[data-accept],[data-slow],[data-wait]');
   if (!t) return;
-  if (t.dataset.slow) sendQuick(isLead() ? `🐢 Slowing down for ${t.dataset.slow}` : `🐢 Easing off for ${t.dataset.slow}`);
+  if (t.dataset.slow) sendQuick(isLead() ? `Slowing down for ${t.dataset.slow}` : `Easing off for ${t.dataset.slow}`);
   if (t.dataset.wait) act('teamStop', { reason: `Waiting for ${t.dataset.wait}`.slice(0, 40), waitForId: t.dataset.waitId });
   if (t.dataset.do === 'nohint') { S.behindHint = false; S.behindSnooze = Date.now(); renderPlans(); }
   if (t.dataset.ack) act('ack', { alertId: t.dataset.ack }).then(() => say('They know you are coming'));
@@ -872,14 +922,14 @@ function confirmPanel(title, body, okText, ok) {
     (p) => { $('#okBtn', p).onclick = () => { closePanel(); ok(); }; });
 }
 
-const reasonGrid = (id) => `<div class="grid3" id="${id}">${STOP_REASONS.map(([em, t]) => `<button class="opt" data-r="${t}"><span class="em">${em}</span>${t}</button>`).join('')}</div>`;
+const reasonGrid = (id) => `<div class="grid3" id="${id}">${STOP_REASONS.map(([em, t]) => `<button class="opt" data-r="${t}"><span class="em">${ic(em)}</span>${t}</button>`).join('')}</div>`;
 
 // "Stop" from the status card: who is stopping, then why.
 function stopChooser() {
   if (!isLead()) return stopMePanel();
   openPanel('stop', `<h2>Who is stopping?</h2>
-    <button class="list-btn" id="chTeam"><span class="ic">🛑</span><span><b>The whole team</b><small>Every rider gets a full-screen alert and must confirm</small></span></button>
-    <button class="list-btn" id="chMe"><span class="ic">✋</span><span><b>Just me</b><small>The group keeps riding and sees you have pulled over</small></span></button>
+    <button class="list-btn" id="chTeam"><span class="ic">${ic('stop')}</span><span><b>The whole team</b><small>Every rider gets a full-screen alert and must confirm</small></span></button>
+    <button class="list-btn" id="chMe"><span class="ic">${ic('hand')}</span><span><b>Just me</b><small>The group keeps riding and sees you have pulled over</small></span></button>
     <button class="btn ghost" data-close>Keep riding</button>`, (p) => {
     $('#chTeam', p).onclick = teamStopPanel;
     $('#chMe', p).onclick = stopMePanel;
@@ -919,7 +969,7 @@ $('#helpBtn').onclick = () => {
   const mineHelp = myAlert('HELP');
   if (mineHelp) return confirmPanel('Cancel your help request?', 'The group is told you are sorted.', 'Cancel request', () => act('resolve', { alertId: mineHelp.id }));
   openPanel('help', `<h2>Need a hand</h2><p class="mid" style="margin:0;font-size:13px">Not an emergency. The group sees where you are and someone can come back for you. For danger, hold SOS instead.</p>
-    <div class="grid2" id="helpR">${['🔧 Breakdown', '🛞 Flat tyre', '⛽ Out of fuel', '🧭 Lost the group', '🤕 Feeling unwell', '🙋 Other'].map((t) => `<button class="opt" data-h="${t.slice(t.indexOf(' ') + 1)}"><span class="em">${t.split(' ')[0]}</span>${t.slice(t.indexOf(' ') + 1)}</button>`).join('')}</div>
+    <div class="grid2" id="helpR">${[['wrench', 'Breakdown'], ['tyre', 'Flat tyre'], ['fuel', 'Out of fuel'], ['compass', 'Lost the group'], ['pulse', 'Feeling unwell'], ['hand', 'Other']].map(([i, t]) => `<button class="opt" data-h="${t}"><span class="em">${ic(i)}</span>${t}</button>`).join('')}</div>
     <button class="btn ghost" data-close>Cancel</button>`, (p) => {
     $$('#helpR .opt', p).forEach((b) => (b.onclick = () => { closePanel(); requestHelp(b.dataset.h); }));
   });
@@ -929,7 +979,7 @@ function requestHelp(detail) { return act('alert', { kind: 'HELP', detail, lat: 
 $('#hazBtn').onclick = () => {
   if (!S.pos) return toast('Waiting for GPS');
   openPanel('haz', `<h2>Report hazard</h2><p class="mid" style="margin:0;font-size:13px">Drops a marker where you are. Riders behind you get a warning as they get close.</p>
-    <div class="grid3" id="hazR">${Object.entries(HAZARD_TYPES).map(([k, [em, t]]) => `<button class="opt" data-k="${k}"><span class="em">${em}</span>${t}</button>`).join('')}</div><button class="btn ghost" data-close>Cancel</button>`, (p) => {
+    <div class="grid3" id="hazR">${Object.entries(HAZARD_TYPES).map(([k, [em, t]]) => `<button class="opt" data-k="${k}"><span class="em">${ic(em)}</span>${t}</button>`).join('')}</div><button class="btn ghost" data-close>Cancel</button>`, (p) => {
     $$('#hazR .opt', p).forEach((b) => (b.onclick = () => { closePanel(); reportHazard(b.dataset.k); }));
   });
 };
@@ -946,7 +996,7 @@ function checkHazards() {
     if (d < HAZARD_WARN_M) {
       S.warnedHazards.add(h.id);
       const [em, label] = HAZARD_TYPES[h.type] || HAZARD_TYPES.OTHER;
-      toast(`${em} ${label} ahead · ${fmtDist(d)}`, true); beep(); vibrate([200, 100, 200]); say(`Caution. ${label} ahead, ${Math.round(d / 10) * 10} metres`, false, true);
+      toast(`${label} ahead · ${fmtDist(d)}`, true); beep(); vibrate([200, 100, 200]); say(`Caution. ${label} ahead, ${Math.round(d / 10) * 10} metres`, false, true);
     }
   }
 }
@@ -958,7 +1008,7 @@ function markRead() {
 }
 
 $('#chatBtn').onclick = () => {
-  const q = ['👍 All good', '⛽ Need fuel', '☕ Break soon?', '🐢 Slow down', '📍 Waiting at the junction', '🔙 Lost you, where are you?'];
+  const q = ['All good', 'Need fuel', 'Break soon?', 'Slow down', 'Waiting at the junction', 'Lost you, where are you?'];
   openPanel('chat', `<div class="row between"><h2>Chat</h2><button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="msgs"></div><div class="quick">${q.map((t) => `<button data-q="${esc(t)}">${esc(t)}</button>`).join('')}</div>
     <form class="row gap8 chat-form" data-chat><input class="in" maxlength="280" placeholder="Message the group" aria-label="Message"><button class="btn primary sm">Send</button></form>`, (p) => {
@@ -968,7 +1018,7 @@ $('#chatBtn').onclick = () => {
 };
 
 $('#waitBtn').onclick = () => {
-  if (isLead()) return sendQuick('🐢 Ease off, let the group close up');
+  if (isLead()) return sendQuick('Ease off, let the group close up');
   return myAlert('CATCH_UP') ? doState.caughtup() : askWait();
 };
 
@@ -981,9 +1031,9 @@ $('#regroupBtn').onclick = () => {
   const r = S.ride;
   if (!isLead()) return r.regroup ? window.open(directions(r.regroup.lat, r.regroup.lon), '_blank') : toast(`${lead()?.name || 'The lead'} sets the regroup point`);
   openPanel('regroup', `<h2>Regroup point</h2><p class="mid" style="margin:0;font-size:13px">Everyone sees it on the map and gets one-tap directions.</p>
-    <button class="list-btn" id="rgHere"><span class="ic">📍</span><span><b>Here, where I am</b><small>Uses your GPS position</small></span></button>
-    <button class="list-btn" id="rgTap"><span class="ic">👆</span><span><b>Pick on the map</b><small>Tap anywhere on the map</small></span></button>
-    ${r.regroup ? '<button class="list-btn" id="rgClr"><span class="ic">✖️</span><span><b>Cancel regroup point</b><small>' + esc(r.regroup.label) + '</small></span></button>' : ''}<button class="btn ghost" data-close>Close</button>`, (p) => {
+    <button class="list-btn" id="rgHere"><span class="ic">${ic('pin')}</span><span><b>Here, where I am</b><small>Uses your GPS position</small></span></button>
+    <button class="list-btn" id="rgTap"><span class="ic">${ic('pin')}</span><span><b>Pick on the map</b><small>Tap anywhere on the map</small></span></button>
+    ${r.regroup ? `<button class="list-btn" id="rgClr"><span class="ic">${ic('close')}</span><span><b>Cancel regroup point</b><small>${esc(r.regroup.label)}</small></span></button>` : ''}<button class="btn ghost" data-close>Close</button>`, (p) => {
     $('#rgHere', p).onclick = () => { closePanel(); regroupHere(); };
     $('#rgTap', p).onclick = () => { closePanel(); S.pickRegroup = true; $('#sheet').classList.remove('open'); renderBanners(); };
     $('#rgClr', p) && ($('#rgClr', p).onclick = () => { closePanel(); act('regroup', { clear: true }); });
@@ -1006,19 +1056,19 @@ $('#exitBtn').onclick = () => isLead()
 
 $('#navBtn').onclick = () => {
   const r = S.ride, items = [];
-  if (r.destination) items.push([r.destination, '🏁', r.destination.label, S.routeInfo ? `${fmtDist(S.routeInfo.dist)} · about ${Math.round(S.routeInfo.dur / 60)} min` : 'Destination']);
-  if (r.regroup) items.push([r.regroup, '👥', r.regroup.label, `Set by ${r.regroup.by}`]);
+  if (r.destination) items.push([r.destination, 'flag', r.destination.label, S.routeInfo ? `${fmtDist(S.routeInfo.dist)} · about ${Math.round(S.routeInfo.dur / 60)} min` : 'Destination']);
+  if (r.regroup) items.push([r.regroup, 'group', r.regroup.label, `Set by ${r.regroup.by}`]);
   const l = lead();
-  if (l && l.id !== session.riderId && hasFix(l)) items.push([l, '🏍️', `${l.name} (lead)`, S.pos ? fmtDist(haversine(S.pos, l)) : '']);
-  for (const x of r.riders) if (x.id !== session.riderId && x.id !== l?.id && hasFix(x)) items.push([x, '🏍️', x.name, S.pos ? fmtDist(haversine(S.pos, x)) : '']);
+  if (l && l.id !== session.riderId && hasFix(l)) items.push([l, 'bike', `${l.name} (lead)`, S.pos ? fmtDist(haversine(S.pos, l)) : '']);
+  for (const x of r.riders) if (x.id !== session.riderId && x.id !== l?.id && hasFix(x)) items.push([x, 'bike', x.name, S.pos ? fmtDist(haversine(S.pos, x)) : '']);
   openPanel('nav', `<h2>Navigate</h2><p class="mid" style="margin:0;font-size:13px">Opens turn-by-turn directions in Google Maps. ARMOR keeps sharing your location.</p><div class="results">${items.map(([p, em, t, s]) =>
-    `<a class="list-btn" href="${directions(p.lat, p.lon)}" target="_blank" rel="noopener"><span class="ic">${em}</span><span>${esc(t)}<small>${esc(s)}</small></span></a>`).join('') || '<p class="mid">No destination or riders with GPS yet.</p>'}</div><button class="btn ghost" data-close>Close</button>`);
+    `<a class="list-btn" href="${directions(p.lat, p.lon)}" target="_blank" rel="noopener"><span class="ic">${ic(em)}</span><span>${esc(t)}<small>${esc(s)}</small></span></a>`).join('') || '<p class="mid">No destination or riders with GPS yet.</p>'}</div><button class="btn ghost" data-close>Close</button>`);
 };
 
 function nearbyPanel() {
-  const opts = [['⛽', 'Fuel', 'petrol pump'], ['🏥', 'Hospital', 'hospital'], ['🔧', 'Mechanic', 'motorcycle repair'], ['🍽️', 'Food', 'restaurant'], ['🏧', 'ATM', 'atm'], ['🚓', 'Police', 'police station']];
+  const opts = [['fuel', 'Fuel', 'petrol pump'], ['hospital', 'Hospital', 'hospital'], ['wrench', 'Mechanic', 'motorcycle repair'], ['food', 'Food', 'restaurant'], ['atm', 'ATM', 'atm'], ['police', 'Police', 'police station']];
   const at = S.pos ? `/@${S.pos.lat.toFixed(5)},${S.pos.lon.toFixed(5)},14z` : '';
-  openPanel('nearby', `<h2>Nearby</h2><div class="grid3">${opts.map(([em, t, q]) => `<a class="opt" target="_blank" rel="noopener" href="https://www.google.com/maps/search/${encodeURIComponent(q)}${at}"><span class="em">${em}</span>${t}</a>`).join('')}</div><button class="btn ghost" data-close>Close</button>`);
+  openPanel('nearby', `<h2>Nearby</h2><div class="grid3">${opts.map(([em, t, q]) => `<a class="opt" target="_blank" rel="noopener" href="https://www.google.com/maps/search/${encodeURIComponent(q)}${at}"><span class="em">${ic(em)}</span>${t}</a>`).join('')}</div><button class="btn ghost" data-close>Close</button>`);
 }
 
 function destPanel() {
@@ -1034,7 +1084,7 @@ function destPanel() {
         const near = S.pos ? `&viewbox=${S.pos.lon - 2},${S.pos.lat + 2},${S.pos.lon + 2},${S.pos.lat - 2}` : '';
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=${encodeURIComponent(q)}${near}`, { headers: { 'Accept-Language': navigator.language } });
         const list = await res.json();
-        $('#destRes', p).innerHTML = list.map((x, i) => `<button class="list-btn" data-i="${i}"><span class="ic">📍</span><span>${esc(x.name || x.display_name.split(',')[0])}<small>${esc(x.display_name)}</small></span></button>`).join('') || '<p class="mid">Nothing found.</p>';
+        $('#destRes', p).innerHTML = list.map((x, i) => `<button class="list-btn" data-i="${i}"><span class="ic">${ic('pin')}</span><span>${esc(x.name || x.display_name.split(',')[0])}<small>${esc(x.display_name)}</small></span></button>`).join('') || '<p class="mid">Nothing found.</p>';
         $$('[data-i]', p).forEach((b) => (b.onclick = () => {
           const x = list[b.dataset.i];
           closePanel();
@@ -1053,7 +1103,7 @@ async function shareLocation() {
   location.href = `sms:?&body=${encodeURIComponent(text)}`;
 }
 
-const toggleSheet = () => { const o = $('#sheet').classList.toggle('open'); $('#expandLbl').textContent = o ? 'Less' : 'All controls'; $('#expandIc').innerHTML = o ? '<path d="M6 9l6 6 6-6"/>' : '<path d="M6 15l6-6 6 6"/>'; setTimeout(() => document.documentElement.style.setProperty('--sheet-h', $('#sheet').offsetHeight + 'px'), 420); };
+const toggleSheet = () => { const o = $('#sheet').classList.toggle('open'); $('#expandLbl').textContent = o ? 'Less' : 'More'; $('#expandIc').innerHTML = ic(o ? 'close' : 'more'); setTimeout(() => document.documentElement.style.setProperty('--sheet-h', $('#sheet').offsetHeight + 'px'), 420); };
 $('#grab').onclick = toggleSheet;
 $('#expandBtn').onclick = toggleSheet;
 
@@ -1089,7 +1139,7 @@ async function triggerSos(kind) {
   box.className = 'critical';
   box.innerHTML = `<div class="top-txt"><div class="eyebrow" style="color:#FF9A96">${kind === 'CRASH' ? 'Crash detected' : 'SOS sent'} · ${clock(Date.now())}</div><h1>Help is on the way</h1>
     <p>Your group can see your location and has been alerted.${phone ? '' : ' Add an emergency contact in settings so you can text them in one tap.'}</p>
-    ${medicalLine() ? `<div class="med"><b>Medical ID</b><br>${esc(medicalLine())}</div>` : ''}${S.pos ? `<div class="med">📍 ${S.pos.lat.toFixed(5)}, ${S.pos.lon.toFixed(5)} · ±${Math.round(S.pos.acc)} m</div>` : ''}</div>
+    ${medicalLine() ? `<div class="med"><b>Medical ID</b><br>${esc(medicalLine())}</div>` : ''}${S.pos ? `<div class="med">Location ${S.pos.lat.toFixed(5)}, ${S.pos.lon.toFixed(5)} · ±${Math.round(S.pos.acc)} m</div>` : ''}</div>
     <div class="btns"><a class="btn danger big" href="tel:${esc(profile.emergency || '112')}">Call ${esc(profile.emergency || '112')}</a>
     ${phone ? `<a class="btn primary" href="${sms}">Text ${esc(profile.contactName || profile.contactPhone)}</a>` : `<a class="btn primary" href="sms:?body=${encodeURIComponent(sosText(kind))}">Text someone my location</a>`}
     <button class="btn ghost" id="imOk">I'm OK, cancel the alert</button></div>`;
@@ -1330,7 +1380,7 @@ $('#voiceBtn').onclick = () => voicePanel();
 
 function voicePanel() {
   openPanel('voice', `<h2>Hands-free</h2><p class="mid" style="margin:0;font-size:13px">Pair your helmet intercom (Cardo, Sena, any Bluetooth headset) with this phone. ARMOR talks through it and listens on its mic.</p>
-    <button class="btn primary big" id="vNow">🎙️ Talk now</button>
+    <button class="btn primary big" id="vNow">${ic('mic')} Talk now</button>
     <label class="switch"><input type="checkbox" id="vHf" ${profile.handsFree ? 'checked' : ''}><span><b>Wake word "Armor"</b><small>Always listening. Say "Armor, team stop fuel"</small></span></label>
     <label class="switch"><input type="checkbox" id="vKeys" ${profile.mediaKeys !== false ? 'checked' : ''}><span><b>Helmet button</b><small>Play/pause: talk · Next: status · Previous: repeat</small></span></label>
     <label class="switch"><input type="checkbox" id="vAir" ${profile.air ? 'checked' : ''}><span><b>Air gestures</b><small>Wave over the phone: talk · Two waves: status · Cover 3 s: SOS countdown</small></span></label>
@@ -1437,7 +1487,7 @@ function runVoice(raw) {
     if (st === 'SOS') return cancelMySos();
     return say('Good to hear');
   }
-  if (i.k === 'catchup') return isLead() ? sendQuick('🐢 Ease off, let the group close up').then(() => say('Told the group to ease off')) : askWait();
+  if (i.k === 'catchup') return isLead() ? sendQuick('Ease off, let the group close up').then(() => say('Told the group to ease off')) : askWait();
   if (i.k === 'caughtup') return myAlert('CATCH_UP') ? doState.caughtup() : say('Good. You are with the group.');
   if (i.k === 'regroup') return L1 ? regroupHere() : say(`Only ${lead()?.name || 'the lead'} can set the regroup point`);
   if (i.k === 'hazard') return reportHazard(i.hazard);
@@ -1512,6 +1562,8 @@ function settingsPanel() {
 }
 $('#openSettings1').onclick = settingsPanel;
 $('#openSettings2').onclick = settingsPanel;
+
+$$('[data-ic]').forEach((el) => { el.innerHTML = ic(el.dataset.ic); });
 
 // ---- boot ----------------------------------------------------------------
 

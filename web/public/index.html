@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#0A0A0B">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>ARMOR</title>
@@ -11,9 +13,9 @@
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/app.css?v=3">
+<link rel="stylesheet" href="/app.css?v=5">
 </head>
 <body>
 
@@ -114,39 +116,39 @@
     <div class="plans" id="plans"></div>
 
     <div class="quickbar">
-      <button class="act sos" id="sosBtn"><span class="ring"></span><b>SOS</b><small>hold 1.5 s</small></button>
-      <button class="act" id="helpBtn"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg><span>Need a hand</span></button>
-      <button class="act" id="chatBtn"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5z"/></svg><span>Chat</span><i class="badge hidden" id="chatBadge"></i></button>
-      <button class="act" id="expandBtn"><svg viewBox="0 0 24 24" id="expandIc"><path d="M6 15l6-6 6 6"/></svg><span id="expandLbl">All controls</span></button>
+      <button class="act sos" id="sosBtn"><span class="dot"><span class="ring"></span><b>SOS</b></span><span class="lb">Hold to send</span></button>
+      <button class="act" id="helpBtn"><span class="dot" data-ic="hand"></span><span class="lb">Need a hand</span></button>
+      <button class="act" id="chatBtn"><span class="dot" data-ic="message"></span><span class="lb">Chat</span><i class="badge hidden" id="chatBadge"></i></button>
+      <button class="act" id="expandBtn"><span class="dot" id="expandIc" data-ic="more"></span><span class="lb" id="expandLbl">More</span></button>
     </div>
 
     <div class="more-groups">
       <div class="grp">
         <div class="grp-h"><span class="lbl">Group</span><span class="grp-note" id="grpNote"></span></div>
         <div class="tiles">
-          <button class="tile" id="teamBtn"><span class="em">🛑</span><span><b id="teamLbl">Stop the team</b><small id="teamSub">Everyone pulls over</small></span></button>
-          <button class="tile" id="waitBtn"><span class="em">🏃</span><span><b id="waitLbl">Wait for me</b><small id="waitSub">I'm catching up</small></span></button>
-          <button class="tile" id="voiceBtn"><span class="em">🎙️</span><span><b>Voice command</b><small>"Team stop fuel", "say..."</small></span></button>
-          <button class="tile" id="regroupBtn"><span class="em">👥</span><span><b id="regroupLbl">Regroup point</b><small id="regroupSub">Where everyone meets</small></span></button>
-          <button class="tile wide" id="ridersBtn"><span class="em">🏍️</span><span><b>Riders</b><small id="ridersSub">Who is where</small></span></button>
+          <button class="tile" id="teamBtn"><span class="em" data-ic="stop"></span><span><b id="teamLbl">Stop the team</b><small id="teamSub">Everyone pulls over</small></span></button>
+          <button class="tile" id="waitBtn"><span class="em" data-ic="timer"></span><span><b id="waitLbl">Wait for me</b><small id="waitSub">I'm catching up</small></span></button>
+          <button class="tile" id="voiceBtn"><span class="em" data-ic="mic"></span><span><b>Voice command</b><small>"Team stop fuel", "say..."</small></span></button>
+          <button class="tile" id="regroupBtn"><span class="em" data-ic="group"></span><span><b id="regroupLbl">Regroup point</b><small id="regroupSub">Where everyone meets</small></span></button>
+          <button class="tile" id="ridersBtn"><span class="em" data-ic="bike"></span><span><b>Riders</b><small id="ridersSub">Who is where</small></span></button>
         </div>
       </div>
       <div class="grp">
         <div class="grp-h"><span class="lbl">Road</span></div>
         <div class="tiles">
-          <button class="tile" id="navBtn"><span class="em">🧭</span><span><b>Navigate</b><small>Google Maps directions</small></span></button>
-          <button class="tile" id="hazBtn"><span class="em">⚠️</span><span><b>Report hazard</b><small>Warn riders behind</small></span></button>
-          <button class="tile" id="destBtn"><span class="em">🏁</span><span><b id="destLbl">Destination</b><small id="destSub">Not set</small></span></button>
-          <button class="tile" id="nearBtn"><span class="em">⛽</span><span><b>Nearby</b><small>Fuel, hospital, mechanic</small></span></button>
+          <button class="tile" id="navBtn"><span class="em" data-ic="nav"></span><span><b>Navigate</b><small>Google Maps directions</small></span></button>
+          <button class="tile" id="hazBtn"><span class="em" data-ic="alert"></span><span><b>Report hazard</b><small>Warn riders behind</small></span></button>
+          <button class="tile" id="destBtn"><span class="em" data-ic="flag"></span><span><b id="destLbl">Destination</b><small id="destSub">Not set</small></span></button>
+          <button class="tile" id="nearBtn"><span class="em" data-ic="fuel"></span><span><b>Nearby</b><small>Fuel, hospital, mechanic</small></span></button>
         </div>
       </div>
       <div class="grp">
         <div class="grp-h"><span class="lbl">Me</span></div>
         <div class="tiles">
-          <button class="tile" id="offBtn"><span class="em">🚶</span><span><b id="offLbl">Off the bike</b><small>Pauses crash detection</small></span></button>
-          <button class="tile" id="locBtn"><span class="em">📍</span><span><b>Share location</b><small>Send a Maps link</small></span></button>
-          <button class="tile" id="setBtn"><span class="em">🩺</span><span><b>Safety profile</b><small id="setSub">Contact &amp; Medical ID</small></span></button>
-          <button class="tile danger" id="exitBtn"><span class="em">🚪</span><span><b id="exitLbl">Leave ride</b><small id="exitSub">Stop sharing location</small></span></button>
+          <button class="tile" id="offBtn"><span class="em" data-ic="walk"></span><span><b id="offLbl">Off the bike</b><small>Pauses crash detection</small></span></button>
+          <button class="tile" id="locBtn"><span class="em" data-ic="pin"></span><span><b>Share location</b><small>Send a Maps link</small></span></button>
+          <button class="tile" id="setBtn"><span class="em" data-ic="pulse"></span><span><b>Safety profile</b><small id="setSub">Contact &amp; Medical ID</small></span></button>
+          <button class="tile danger" id="exitBtn"><span class="em" data-ic="exit"></span><span><b id="exitLbl">Leave ride</b><small id="exitSub">Stop sharing location</small></span></button>
         </div>
       </div>
     </div>
@@ -180,6 +182,6 @@
 <video id="gestureCam" playsinline muted style="display:none"></video>
 
 <script src="/vendor/leaflet/leaflet.js"></script>
-<script src="/app.js?v=3"></script>
+<script src="/app.js?v=4"></script>
 </body>
 </html>
