@@ -341,7 +341,7 @@ document.addEventListener('click', (e) => {
   const f = e.target.closest('[data-focus]');
   if (f && S.screen === 'ride' && !e.target.closest('a,button')) {
     const r = S.ride.riders.find((x) => x.id === f.dataset.focus);
-    if (hasFix(r)) { S.follow = false; $('#meBtn').classList.remove('on'); map.flyTo([r.lat, r.lon], 16, { duration: 0.8 }); }
+    if (hasFix(r)) { S.follow = false; $('#meBtn').classList.remove('on'); focusOn([r.lat, r.lon], 16); }
   }
 });
 
@@ -484,51 +484,133 @@ function trackTrip(pos, prev) {
   if (!last || haversine({ lat: last[0], lon: last[1] }, pos) > 25) {
     t.track.push([+pos.lat.toFixed(6), +pos.lon.toFixed(6)]);
     if (t.track.length > 4000) t.track.splice(0, t.track.length - 4000);
-    trackLine?.setLatLngs(t.track);
+    trackLine?.setLatLngs(t.track); trackCase?.setLatLngs(t.track);
   }
   store.set('trip', t);
 }
 
 // ---- map -----------------------------------------------------------------
 
-let map = null, trackLine = null, meMarker = null, accCircle = null, routeLine = null;
+let map = null, trackLine = null, trackCase = null, meMarker = null, accCircle = null, routeLine = null;
 const markers = new Map();
 const hazardMarkers = new Map();
 let regroupMarker = null, destMarker = null, routeFor = null;
-// No-key tile sources. "Dark" is OpenStreetMap restyled by CSS (see .tiles-dark).
+// Base maps need no key. The two road maps are vector tiles (OpenFreeMap, OpenStreetMap data) that we recolour here
+// into a quiet Uber-like palette: pale land, white roads, grey blocks. If vectors can't load we fall back to raster tiles.
 const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const VEC_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+const VECTOR_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+const PALETTES = {
+  light: { land: '#F1F1F2', block: '#E5E5E8', water: '#D2DBE3', park: '#E2EAE1', road: '#FFFFFF', casing: '#E0E0E4', label: '#6D6F76', halo: '#FFFFFF' },
+  dark: { land: '#16171A', block: '#1E1F23', water: '#0F1A23', park: '#1A211B', road: '#2D2E33', casing: '#101113', label: '#9A9CA4', halo: '#16171A' },
+};
 const TILES = [
-  ['Dark', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', OSM_ATTR, { maxZoom: 19, className: 'tiles-dark' }],
-  ['Streets', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', OSM_ATTR, { maxZoom: 19 }],
-  ['Satellite', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 'Imagery &copy; Esri, Maxar, Earthstar Geographics', { maxZoom: 19 }],
+  { name: 'Map', kind: 'vector', scheme: 'light' },
+  { name: 'Night', kind: 'vector', scheme: 'dark' },
+  { name: 'Satellite', kind: 'raster', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics', opts: { maxZoom: 19 } },
 ];
+const RASTER_FALLBACK = {
+  light: { kind: 'raster', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR, opts: { maxZoom: 19, className: 'tiles-uber' } },
+  dark: { kind: 'raster', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR, opts: { maxZoom: 19, className: 'tiles-dark' } },
+};
 const PREFERS_DARK = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-let tileIdx = store.get('tiles2', PREFERS_DARK ? 0 : 1) % TILES.length, tileLayer = null;
+let tileIdx = store.get('tiles3', PREFERS_DARK ? 1 : 0) % TILES.length, tileLayer = null, tileToken = 0, styleCache = null;
+const mapIsDark = () => TILES[tileIdx].scheme === 'dark';
+
+// Recolour a positron-style vector style by layer id/type. Unknown layers keep their stock look.
+function recolor(style, p) {
+  const road = /road|highway|street|motorway|trunk|primary|secondary|tertiary|minor|service|link|bridge|tunnel|path|track|pedestrian|transit/i;
+  for (const l of style.layers) {
+    l.paint = l.paint || {};
+    const id = l.id || '';
+    if (l.type === 'background') l.paint['background-color'] = p.land;
+    else if (l.type === 'fill') {
+      if (/water/i.test(id)) l.paint['fill-color'] = p.water;
+      else if (/park|wood|forest|grass|green|landcover|cemetery|pitch|garden|golf|nature/i.test(id)) l.paint['fill-color'] = p.park;
+      else if (/building/i.test(id)) { l.paint['fill-color'] = p.block; l.paint['fill-outline-color'] = p.block; l.paint['fill-opacity'] = 1; }
+      else if (/landuse|residential|industrial|commercial|aeroway|area|land/i.test(id)) l.paint['fill-color'] = p.land;
+    } else if (l.type === 'line') {
+      if (/boundary|admin/i.test(id)) { l.layout = Object.assign({}, l.layout, { visibility: 'none' }); }
+      else if (/waterway|river|stream|canal/i.test(id)) l.paint['line-color'] = p.water;
+      else if (/rail/i.test(id)) l.paint['line-color'] = p.casing;
+      else if (/casing/i.test(id)) l.paint['line-color'] = p.casing;
+      else if (road.test(id)) l.paint['line-color'] = p.road;
+    } else if (l.type === 'symbol') {
+      l.paint['text-color'] = p.label; l.paint['text-halo-color'] = p.halo; l.paint['text-halo-width'] = 1.5;
+      l.paint['icon-opacity'] = 0.6;
+    }
+  }
+  return style;
+}
+function loadVectorStyle() {
+  styleCache = styleCache || fetch(VECTOR_STYLE_URL).then((r) => { if (!r.ok) throw new Error('style ' + r.status); return r.json(); }).catch((e) => { styleCache = null; throw e; });
+  return styleCache.then((st) => JSON.parse(JSON.stringify(st)));
+}
+function addRaster(t) { tileLayer = L.tileLayer(t.url, { attribution: t.attribution, ...t.opts }).addTo(map); }
+
+// The bottom sheet covers part of the map on phones, so centre things in the visible part above it.
+const sheetPad = () => (S.screen === 'ride' && innerWidth < 900 ? ($('#sheet')?.offsetHeight || 0) : 0);
+function focusOn(ll, zoom, animate = true, pan = false) {
+  const z = zoom ?? map.getZoom();
+  const c = map.unproject(map.project(ll, z).add([0, sheetPad() / 2]), z);
+  if (!animate) map.setView(c, z, { animate: false });
+  else if (pan) map.panTo(c, { animate: true, duration: 0.5 });
+  else map.flyTo(c, z, { duration: 0.7 });
+}
+
+// Your trail: orange with a thin halo, like a route line on a ride-hailing map.
+function drawTrail() {
+  if (!map) return;
+  const pts = S.trip?.track || (trackLine ? trackLine.getLatLngs() : []);
+  if (trackCase) map.removeLayer(trackCase);
+  if (trackLine) map.removeLayer(trackLine);
+  const halo = mapIsDark() ? '#16171A' : '#FFFFFF';
+  trackCase = L.polyline(pts, { color: halo, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
+  trackLine = L.polyline(pts, { color: '#FF6B1A', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
+}
 
 function initMap() {
   if (map) return;
   map = L.map('map', { zoomControl: false, attributionControl: true, worldCopyJump: true }).setView(S.pos ? [S.pos.lat, S.pos.lon] : [20.6, 78.9], S.pos ? 16 : 5);
   setTiles(tileIdx);
-  trackLine = L.polyline(S.trip?.track || [], { color: '#FF6B1A', weight: 5, opacity: 0.75, lineCap: 'round' }).addTo(map);
+  drawTrail();
   map.on('dragstart', () => { S.follow = false; $('#meBtn').classList.remove('on'); });
   $('#meBtn').classList.add('on');
   map.on('click', (e) => { if (S.pickRegroup) { S.pickRegroup = false; toast('Regroup point set'); act('regroup', { lat: e.latlng.lat, lon: e.latlng.lng, label: 'Regroup here' }); } });
 }
-function setTiles(i) {
-  tileIdx = i; store.set('tiles2', i);
-  if (tileLayer) map.removeLayer(tileLayer);
-  const [, url, attribution, o] = TILES[i];
-  tileLayer = L.tileLayer(url, { attribution, ...o }).addTo(map);
+async function setTiles(i) {
+  tileIdx = i; store.set('tiles3', i);
+  const my = ++tileToken;
+  if (tileLayer) { map.removeLayer(tileLayer); tileLayer = null; }
+  const t = TILES[i];
+  document.documentElement.dataset.map = t.scheme || 'sat';
+  if (t.kind === 'raster') addRaster(t);
+  else {
+    const fallback = () => { if (my !== tileToken) return; if (tileLayer) map.removeLayer(tileLayer); addRaster(RASTER_FALLBACK[t.scheme]); };
+    try {
+      if (!window.maplibregl || !L.maplibreGL || (maplibregl.supported && !maplibregl.supported())) throw new Error('no webgl');
+      const style = recolor(await loadVectorStyle(), PALETTES[t.scheme]);
+      if (my !== tileToken) return;
+      tileLayer = L.maplibreGL({ style, attribution: VEC_ATTR }).addTo(map);
+      let ready = false;
+      const gl = tileLayer.getMaplibreMap();
+      gl.once('load', () => { ready = true; });
+      gl.on('error', (e) => { if (!ready && e && e.error && /style|Failed to fetch|sprite|glyph/i.test(String(e.error.message))) fallback(); });
+      setTimeout(() => { if (!ready) fallback(); }, 12000);
+    } catch { fallback(); }
+  }
+  if (S.ride?.destination) { routeFor = null; drawRoute(S.ride.destination); }
+  drawTrail();
 }
-$('#layerBtn').onclick = () => { setTiles((tileIdx + 1) % TILES.length); toast(`${TILES[tileIdx][0]} map`); };
-$('#meBtn').onclick = () => { S.follow = true; $('#meBtn').classList.add('on'); if (S.pos) map.flyTo([S.pos.lat, S.pos.lon], Math.max(map.getZoom(), 16), { duration: 0.6 }); };
+$('#layerBtn').onclick = () => { setTiles((tileIdx + 1) % TILES.length); toast(`${TILES[tileIdx].name} view`); };
+$('#meBtn').onclick = () => { S.follow = true; $('#meBtn').classList.add('on'); if (S.pos) focusOn([S.pos.lat, S.pos.lon], Math.max(map.getZoom(), 16)); };
 $('#fitBtn').onclick = () => {
   const pts = S.ride.riders.filter(hasFix).map((r) => [r.lat, r.lon]);
   if (S.pos) pts.push([S.pos.lat, S.pos.lon]);
   if (S.ride.regroup) pts.push([S.ride.regroup.lat, S.ride.regroup.lon]);
   if (!pts.length) return toast('No one has a GPS fix yet');
   S.follow = false; $('#meBtn').classList.remove('on');
-  map.flyToBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 16, duration: 0.8 });
+  map.flyToBounds(L.latLngBounds(pts), { paddingTopLeft: [40, 90], paddingBottomRight: [40, sheetPad() + 40], maxZoom: 16, duration: 0.8 });
 };
 
 function riderIcon(r, mine) {
@@ -549,12 +631,12 @@ function drawMe() {
   if (!meMarker) {
     accCircle = L.circle(ll, { radius: S.pos.acc, color: '#FF6B1A', weight: 1, opacity: 0.4, fillOpacity: 0.08, interactive: false }).addTo(map);
     meMarker = L.marker(ll, { icon: riderIcon(r, true), zIndexOffset: 1000 }).addTo(map);
-    map.setView(ll, 16);
+    focusOn(ll, 16, false);
   } else {
     meMarker.setLatLng(ll).setIcon(riderIcon(r, true));
     accCircle.setLatLng(ll).setRadius(S.pos.acc);
   }
-  if (S.follow) map.panTo(ll, { animate: true, duration: 0.5 });
+  if (S.follow) focusOn(ll, map.getZoom(), true, true);
 }
 
 function drawRiders() {
@@ -593,10 +675,21 @@ function drawRiders() {
     if (!destMarker) destMarker = L.marker([ds.lat, ds.lon], { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="pin-ic dest">${ic('flag')}</div>` }) }).addTo(map).bindPopup(pop);
     else destMarker.setLatLng([ds.lat, ds.lon]).getPopup().setContent(pop);
     drawRoute(ds);
+    destTip();
   } else {
     if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
     if (routeLine) { map.removeLayer(routeLine); routeLine = null; routeFor = null; }
   }
+}
+
+// Distance pill on the destination, like the "4.5 miles" label on a ride-hailing route.
+function destTip() {
+  const ds = S.ride?.destination;
+  if (!destMarker || !ds) return;
+  const text = S.routeInfo ? `${fmtDist(S.routeInfo.dist)} · ${Math.max(1, Math.round(S.routeInfo.dur / 60))} min` : S.pos ? fmtDist(haversine(S.pos, ds)) : '';
+  if (!text || destMarker._tipText === text) return;
+  destMarker._tipText = text;
+  destMarker.unbindTooltip().bindTooltip(esc(text), { permanent: true, direction: 'top', offset: [0, -20], className: 'route-tip' });
 }
 
 // Road route to the destination from the public OSRM server; best effort.
@@ -610,8 +703,14 @@ async function drawRoute(ds) {
     const route = data.routes?.[0];
     if (!route) return;
     if (routeLine) map.removeLayer(routeLine);
-    routeLine = L.polyline(route.geometry.coordinates.map(([x, y]) => [y, x]), { color: '#FFFFFF', weight: 4, opacity: 0.55, dashArray: '2 8' }).addTo(map);
+    const pts = route.geometry.coordinates.map(([x, y]) => [y, x]);
+    const dark = mapIsDark();
+    routeLine = L.layerGroup([
+      L.polyline(pts, { color: dark ? '#16171A' : '#FFFFFF', weight: 10, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }),
+      L.polyline(pts, { color: dark ? '#ECECEE' : '#2B2B2E', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }),
+    ]).addTo(map);
     S.routeInfo = { dist: route.distance, dur: route.duration };
+    destTip();
   } catch { routeFor = null; }
 }
 

@@ -39,14 +39,15 @@ import com.google.maps.android.compose.rememberMarkerState
 private fun LatLon.g() = LatLng(lat, lon)
 
 /**
- * The ride on a real Google map: ARMOR's dark style, a bright orange route, you as an orange dot and each other rider as
- * an avatar. It frames everyone and re-frames as the group moves. Needs a Maps API key and a connection; without them
+ * The ride on a real Google map in a quiet ride-hailing style (pale land, white roads, grey blocks, see map_style_light.json),
+ * an orange trail with a white halo, you as an orange dot and each other rider as an avatar. [R.raw.map_style_dark] is kept
+ * for a night mode. It frames everyone and re-frames as the group moves. Needs a Maps API key and a connection; without them
  * [RiderMap] (the offline map) is used instead, so the safety features never depend on tiles loading.
  */
 @Composable
 fun GoogleRiderMap(snapshot: RideSnapshot, trail: List<LatLon>, modifier: Modifier = Modifier, bottomInset: Dp = 0.dp) {
     val context = LocalContext.current
-    val style = remember { runCatching { MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark) }.getOrNull() }
+    val style = remember { runCatching { MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_light) }.getOrNull() }
     val camera = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(LatLng(20.0, 78.0), 4f) }
 
     // Re-frame when anyone has moved noticeably (≈ 25 m), not on every GPS tick, so the map doesn't jitter.
@@ -71,7 +72,7 @@ fun GoogleRiderMap(snapshot: RideSnapshot, trail: List<LatLon>, modifier: Modifi
         ),
     ) {
         if (trail.size > 1) {
-            Polyline(points = trail.map { it.g() }, color = ArmorColors.Orange.copy(alpha = 0.35f), width = 22f)
+            Polyline(points = trail.map { it.g() }, color = Color.White, width = 17f)
             Polyline(points = trail.map { it.g() }, color = ArmorColors.Orange, width = 9f)
         }
         snapshot.hazards.forEach { h ->

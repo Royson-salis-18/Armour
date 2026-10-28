@@ -1,7 +1,7 @@
 // Minimal service worker: makes ARMOR installable, caches the app shell and
 // lets the page raise notifications while it is in the background.
-const SHELL = 'armor-shell-v4';
-const FILES = ['/', '/app.css', '/app.js', '/icon.svg', '/manifest.webmanifest', '/vendor/leaflet/leaflet.js', '/vendor/leaflet/leaflet.css'];
+const SHELL = 'armor-shell-v6';
+const FILES = ['/', '/app.css', '/app.js', '/icon.svg', '/manifest.webmanifest', '/vendor/leaflet/leaflet.js', '/vendor/leaflet/leaflet.css', '/vendor/maplibre/maplibre-gl.js', '/vendor/maplibre/maplibre-gl.css', '/vendor/maplibre/leaflet-maplibre-gl.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
