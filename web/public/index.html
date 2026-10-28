@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/app.css?v=7">
+<link rel="stylesheet" href="/app.css?v=8">
 </head>
 <body>
 
@@ -25,7 +25,7 @@
   <div class="wel-top">
     <div class="brand" id="brandBig"></div>
     <h1 class="display">Ride together.<br><span class="or">Get home together.</span></h1>
-    <p class="mid">Live group map, team stops, chat and SOS for motorcycle rides. Works in your phone's browser.</p>
+    <p class="mid">Live group rides. Stops, chat and SOS in one place.</p>
   </div>
   <div class="card wel-card">
     <label class="lbl" for="nameIn">Your name</label>
@@ -60,7 +60,7 @@
       <div class="lbl">Ride code</div>
       <div class="code-big" id="lobbyCode">------</div>
       <div class="row gap8">
-        <button class="btn primary sm grow" id="shareBtn">Share invite link</button>
+        <button class="btn ghost sm grow" id="shareBtn">Share invite link</button>
         <button class="btn ghost sm" id="copyBtn">Copy</button>
       </div>
     </div>
@@ -92,7 +92,6 @@
       <span class="live-dot"></span><span id="rideTitle">Ride</span><span class="sep"></span><span id="rideRiders">1</span>
     </div>
     <div class="col gap8">
-      <button class="fab glass" id="layerBtn" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
       <button class="fab glass" id="fitBtn" aria-label="Show everyone"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <button class="fab glass" id="meBtn" aria-label="Follow me"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
     </div>
@@ -112,9 +111,8 @@
 
     <!-- Thumb row: everything needed while riding is one tap away -->
     <div class="quickbar">
-      <button class="act sos" id="sosBtn"><span class="dot"><span class="ring"></span><b>SOS</b></span><span class="lb">Hold</span></button>
-      <button class="act" id="helpBtn"><span class="dot" data-ic="hand"></span><span class="lb">Need help</span></button>
-      <button class="act mic" id="micBtn"><span class="dot" data-ic="mic"></span><span class="lb">Say "Armor"</span></button>
+      <button class="act sos" id="sosBtn"><span class="dot"><span class="ring"></span><b>SOS</b></span><span class="lb">SOS</span></button>
+      <button class="act mic" id="micBtn"><span class="dot" data-ic="mic"></span><span class="lb">Armor</span></button>
       <button class="act" id="chatBtn"><span class="dot" data-ic="message"></span><span class="lb">Chat</span><i class="badge hidden" id="chatBadge"></i></button>
       <button class="act" id="expandBtn"><span class="dot" id="expandIc" data-ic="more"></span><span class="lb" id="expandLbl">More</span></button>
     </div>
@@ -131,6 +129,7 @@
           <button class="tile" id="teamBtn"><span class="em" data-ic="stop"></span><span><b id="teamLbl">Stop the team</b><small id="teamSub">Everyone pulls over</small></span></button>
           <button class="tile" id="waitBtn"><span class="em" data-ic="timer"></span><span><b id="waitLbl">Wait for me</b><small id="waitSub">I'm catching up</small></span></button>
           <button class="tile" id="vcBtn"><span class="em" data-ic="headset"></span><span><b id="vcLbl">Voice chat</b><small id="vcSub">Talk to the whole group</small></span></button>
+          <button class="tile" id="helpBtn"><span class="em" data-ic="hand"></span><span><b>Need a hand</b><small>Ask the group to come back for you</small></span></button>
           <button class="tile" id="regroupBtn"><span class="em" data-ic="group"></span><span><b id="regroupLbl">Regroup point</b><small id="regroupSub">Where everyone meets</small></span></button>
           <button class="tile" id="ridersBtn"><span class="em" data-ic="bike"></span><span><b>Riders</b><small id="ridersSub">Who is where</small></span></button>
           <button class="tile" id="voiceBtn"><span class="em" data-ic="mic"></span><span><b>Assistant and helmet</b><small>Voice commands, buttons, gestures</small></span></button>
@@ -142,6 +141,7 @@
           <button class="tile" id="navBtn"><span class="em" data-ic="nav"></span><span><b>Navigate</b><small>Google Maps directions</small></span></button>
           <button class="tile" id="hazBtn"><span class="em" data-ic="alert"></span><span><b>Report hazard</b><small>Warn riders behind</small></span></button>
           <button class="tile" id="destBtn"><span class="em" data-ic="flag"></span><span><b id="destLbl">Destination</b><small id="destSub">Not set</small></span></button>
+          <button class="tile" id="layerBtn"><span class="em" data-ic="layers"></span><span><b>Map style</b><small id="layerSub">Map</small></span></button>
           <button class="tile" id="nearBtn"><span class="em" data-ic="fuel"></span><span><b>Nearby</b><small>Fuel, hospital, mechanic</small></span></button>
         </div>
       </div>
@@ -187,6 +187,6 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/vendor/maplibre/maplibre-gl.js"></script>
 <script src="/vendor/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="/app.js?v=7"></script>
+<script src="/app.js?v=8"></script>
 </body>
 </html>

@@ -67,6 +67,7 @@ const ICONS = {
   more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>',
   link: '<path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
   headset: '<path d="M3 14v-2a9 9 0 0118 0v2"/><path d="M21 15a2 2 0 01-2 2h-1v-6h1a2 2 0 012 2zM3 15a2 2 0 002 2h1v-6H5a2 2 0 00-2 2zM18 17v1a3 3 0 01-3 3h-2"/>',
 };
 const ic = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.pin}</svg>`;
@@ -218,7 +219,7 @@ function show(name) {
 
 // ---- welcome -------------------------------------------------------------
 
-$('#brandBig').innerHTML = LOGO(40, '#0B0B0C', '#FF8A3D') + '<span>ARMOR</span>';
+$('#brandBig').innerHTML = LOGO(34) + '<span>ARMOR</span>';
 const linkCode = (location.pathname.match(/^\/r\/([A-Za-z0-9]{6})/) || [])[1];
 $('#nameIn').value = profile.name;
 if (linkCode) {
@@ -605,6 +606,7 @@ async function setTiles(i) {
   }
   if (S.ride?.destination) { routeFor = null; drawRoute(S.ride.destination); }
   drawTrail();
+  const ls = $('#layerSub'); if (ls) ls.textContent = TILES[i].name;
 }
 $('#layerBtn').onclick = () => { setTiles((tileIdx + 1) % TILES.length); toast(`${TILES[tileIdx].name} view`); };
 $('#meBtn').onclick = () => { S.follow = true; $('#meBtn').classList.add('on'); if (S.pos) focusOn([S.pos.lat, S.pos.lon], Math.max(map.getZoom(), 16)); };
@@ -1628,11 +1630,10 @@ function applyHandsFree() {
 }
 
 function renderHf() {
+  // Quiet by default: a chip appears only while the assistant is listening or you are in a call.
   const chips = [];
-  if (HF.media) chips.push('<span class="glass"><i class="on-dot"></i>Helmet button</span>');
-  if (HF.continuous) chips.push(`<span class="glass ${HF.awake ? 'listening' : ''}"><i class="on-dot"></i>${HF.awake ? 'Listening' : 'Say "Armor"'}</span>`);
+  if (HF.awake) chips.push('<span class="glass listening"><i class="on-dot"></i>Listening</span>');
   if (VC.on) chips.push(`<span class="glass"><i class="on-dot"></i>Voice chat${VC.muted ? ' · muted' : ''}</span>`);
-  if (HF.cam) chips.push('<span class="glass"><i class="on-dot"></i>Air gestures</span>');
   $('#hf') && ($('#hf').innerHTML = chips.join(''));
 }
 
