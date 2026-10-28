@@ -5,6 +5,8 @@
     <!-- Core safety loop -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- "Allow all the time": lets the service keep tracking after boot or with the screen off -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -12,8 +14,14 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Offline SOS: SMS works with no internet, only cell coverage -->
+    <!-- Offline SOS: SMS and calls work with no internet, only cell coverage -->
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Ring the emergency contacts after an SOS without anyone touching the phone -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- Start protecting after a reboot or an app update, and ask to be exempt from battery limits -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Optional online group sync -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -60,5 +68,14 @@
         <receiver
             android:name=".service.ActionReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

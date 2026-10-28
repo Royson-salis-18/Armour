@@ -102,12 +102,15 @@ private fun PreRideHost(settings: Settings, starting: Boolean) {
 internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
     val context = LocalContext.current
     var denied by remember { mutableStateOf(false) }
+    var showSetup by remember { mutableStateOf(false) }
 
     val needed = remember {
         buildList {
             add(Manifest.permission.ACCESS_FINE_LOCATION)
             add(Manifest.permission.ACCESS_COARSE_LOCATION)
             add(Manifest.permission.SEND_SMS)
+            add(Manifest.permission.CALL_PHONE)
+            add(Manifest.permission.READ_PHONE_STATE)
             if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
         }.toTypedArray()
     }
@@ -137,6 +140,10 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
             ReadyChip("SOS text", smsOk, Modifier.weight(1f))
             ReadyChip(if (contactCount > 0) "$contactCount contacts" else "Contacts", contactCount > 0, Modifier.weight(1f))
         }
+        // Setup is done once here, not mid-ride. This card disappears when everything is ready.
+        val (ready, total) = protectionReady(context)
+        if (ready < total) { Gap(12.dp); SetupCard(ready, total) { showSetup = true } }
+        if (showSetup) ProtectionSetupDialog { showSetup = false }
         if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red, Modifier.padding(top = 12.dp))
         if (settings.syncConfigured) Txt("Group ${settings.groupCode}", Type.Label, ArmorColors.Muted, Modifier.padding(top = 12.dp))
 

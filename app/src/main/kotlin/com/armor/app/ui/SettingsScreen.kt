@@ -34,6 +34,7 @@ import com.armor.app.data.Sensitivity
 import com.armor.app.data.Settings
 import com.armor.app.sensors.BluetoothAudioMonitor
 import kotlinx.coroutines.launch
+import com.armor.app.service.RideService
 
 @Composable
 fun SettingsScreen(settings: Settings) {
@@ -48,6 +49,28 @@ fun SettingsScreen(settings: Settings) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenTitle("Settings")
+
+        Card2 {
+            SectionTitle("Always-on safety")
+            var setup by remember { mutableStateOf(false) }
+            val (ready, total) = protectionReady(context)
+            Text(if (ready == total) "Everything ARMOR needs is allowed." else "$ready of $total permissions ready.", color = if (ready == total) ArmorColors.Green else ArmorColors.Amber, fontSize = 13.sp)
+            SecondaryButton(if (ready == total) "Review permissions" else "Set up permissions") { setup = true }
+            if (setup) ProtectionSetupDialog { setup = false }
+            ToggleRow("Keep protecting me in the background", "Starts by itself after a restart and keeps running with the screen off.", settings.alwaysOn) { v ->
+                app.prefs.update { it.copy(alwaysOn = v) }
+                if (v) { RideService.start(context, demo = false); if (ready < total) setup = true }
+            }
+            ToggleRow("Call after an SOS", "Texts everyone, then rings the nearest rider and your emergency contacts one by one until someone answers.", settings.autoCall) { v -> app.prefs.update { it.copy(autoCall = v) } }
+            ToggleRow("Keep calling after someone answers", "Ring everyone on the list, not just until the first answer.", settings.callAll) { v -> app.prefs.update { it.copy(callAll = v) } }
+            ToggleRow("Also call emergency services", "After your contacts, dial " + settings.emergencyNumber.ifBlank { "112" } + ". Leave off unless you want that: a false alarm ties up the line.", settings.callEmergency) { v -> app.prefs.update { it.copy(callEmergency = v) } }
+            OutlinedTextField(
+                value = settings.phone, onValueChange = { v -> app.prefs.update { it.copy(phone = v.filter { c -> c.isDigit() || c == '+' }.take(16)) } },
+                label = { Text("Your phone number") }, singleLine = true,
+                supportingText = { Text("Shared with the riders in your ride, so they can text and call you if you go down.") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         Card2 {
             SectionTitle("Emergency contacts")

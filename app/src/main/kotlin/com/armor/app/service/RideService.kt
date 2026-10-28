@@ -17,6 +17,7 @@ import com.armor.app.requireService
 import com.armor.app.alert.AlertController
 import com.armor.app.alert.Notifications
 import com.armor.app.alert.SmsSender
+import com.armor.app.alert.SosCaller
 import com.armor.app.data.ContactEntity
 import com.armor.app.data.EventRecorder
 import com.armor.app.data.Settings
@@ -75,6 +76,9 @@ class RideService : Service() {
     private lateinit var alerts: AlertController
     private lateinit var recorder: EventRecorder
     private lateinit var sms: SmsSender
+    private lateinit var caller: SosCaller
+    private var callLine = ""
+    private var lastSnap: RideSnapshot? = null
 
     private var started = false
     private var demo: DemoRide? = null
@@ -110,7 +114,7 @@ class RideService : Service() {
             ACTION_START -> if (!started) begin(demoRequested = intent.getBooleanExtra(EXTRA_DEMO, false), resumed = false)
             // Android restarted us after killing the process: carry on if a real ride was in progress.
             null -> if (!started) {
-                if (app.prefs.rideActive && hasLocationPermission()) begin(demoRequested = false, resumed = true) else stopSelf()
+                if ((app.prefs.rideActive || app.prefs.current.alwaysOn) && hasLocationPermission()) begin(demoRequested = false, resumed = true) else stopSelf()
             }
         }
         return START_STICKY
@@ -150,6 +154,11 @@ class RideService : Service() {
     private fun initOnHandlerThread(demoRequested: Boolean, resumed: Boolean) {
         clock = RideClock()
         sms = SmsSender(this)
+        caller = SosCaller(this, handler) { msg ->
+            callLine = msg
+            recorder.record(EventType.SYSTEM.name, "SOS call: $msg", clock.now())
+            activeSos?.let { refreshSosStatus(it) }
+        }
         recorder = EventRecorder(app.db.events(), app.appScope)
         alerts = AlertController(this, handler)
 
@@ -199,6 +208,7 @@ class RideService : Service() {
 
     private fun release() {
         started = false
+        if (::caller.isInitialized) caller.stop()
         handler.removeCallbacksAndMessages(null)
         gps?.stop(); motion?.stop(); connectivity?.stop(); bluetooth?.stop(); batteryMonitor?.stop()
         alerts.release()
@@ -341,6 +351,8 @@ class RideService : Service() {
                 polling.set(false)
                 if (data != null && started) {
                     engine.onPeers(data.riders)
+                    // Remember everyone's number: an SOS has to reach them later with no internet.
+                    if (data.crew.isNotEmpty() && data.crew != app.prefs.crew) app.prefs.crew = data.crew
                     data.leadId?.let { engine.setLead(it) }
                     engine.onMessages(data.messages)
                     engine.onGroupAlerts(data.alerts, clock.now())
@@ -382,13 +394,23 @@ class RideService : Service() {
     }
 
     private fun sendSos(contacts: List<ContactEntity>, text: String) {
-        if (contacts.isEmpty()) {
-            ArmorRuntime.sosStatus.value = "No emergency contacts are saved, so no text was sent. Call emergency services now."
-            recorder.record(EventType.SYSTEM.name, "SOS could not be texted: no emergency contacts", clock.now())
+        // Everyone who should hear about it: the emergency contacts, then the riders in the group (their numbers were saved
+        // while the ride synced, so this works with no internet). Each number is used once.
+        val crew = app.prefs.crew.filter { it.id != settings.riderId }
+        val seen = HashSet<String>()
+        fun key(phone: String) = phone.filter { it.isDigit() }.takeLast(10)
+        val recipients = buildList {
+            contacts.forEach { if (seen.add(key(it.phone))) add(it) }
+            crew.forEachIndexed { i, r -> if (seen.add(key(r.phone))) add(ContactEntity(-(i + 1).toLong(), "${r.name} (riding with you)", r.phone)) }
+        }
+        if (recipients.isEmpty()) {
+            ArmorRuntime.sosStatus.value = "No emergency contacts are saved and nobody in your group has shared a number, so no text was sent. Call emergency services now."
+            recorder.record(EventType.SYSTEM.name, "SOS could not be texted: no emergency contacts or group numbers", clock.now())
             return
         }
-        val sos = ActiveSos(text, contacts).also { activeSos = it }
-        for (c in contacts) {
+        val sos = ActiveSos(text, recipients).also { activeSos = it }
+        callLine = ""
+        for (c in recipients) {
             if (!sms.send(c.phone, text, attempt = 1)) {
                 sos.failedFinal += c.phone
                 recorder.record(EventType.SYSTEM.name, "SMS to ${c.name} was refused by the phone (permission or number)", clock.now())
@@ -396,7 +418,19 @@ class RideService : Service() {
         }
         refreshSosStatus(sos)
         // Medical details for first responders, as a separate untracked text so the SOS itself stays one SMS.
-        SosMessages.medical(settings.riderName.ifBlank { "A rider" }, settings.medical)?.let { m -> contacts.forEach { sms.sendPlain(it.phone, m) } }
+        SosMessages.medical(settings.riderName.ifBlank { "A rider" }, settings.medical)?.let { m -> recipients.forEach { sms.sendPlain(it.phone, m) } }
+
+        // Then ring them, nearest rider first (they can be there soonest), then the emergency contacts.
+        // A silent SOS never rings: a ringing phone would give the rider away.
+        if (settings.autoCall && !ArmorRuntime.silentSos.value && caller.canCall()) {
+            val distance = lastSnap?.riders?.associate { it.id to (it.distanceFromSelfM ?: Double.MAX_VALUE) } ?: emptyMap()
+            val order = buildList {
+                crew.sortedBy { distance[it.id] ?: Double.MAX_VALUE }.forEach { add(it.phone) }
+                contacts.forEach { add(it.phone) }
+                if (settings.callEmergency && settings.emergencyNumber.isNotBlank()) add(settings.emergencyNumber)
+            }
+            caller.start(order.distinctBy { key(it) }, stopOnAnswer = !settings.callAll)
+        }
     }
 
     /** A plain, untracked text to every emergency contact (safe arrival, running late). Never in demo mode. */
@@ -427,17 +461,20 @@ class RideService : Service() {
 
     private fun refreshSosStatus(sos: ActiveSos) {
         val total = sos.recipients.size
-        ArmorRuntime.sosStatus.value = when {
-            sos.delivered.size == total -> "SOS text sent to all $total emergency contact(s)."
+        val texts = when {
+            sos.delivered.size == total -> "SOS text sent to all $total people (emergency contacts and your group)."
             sos.delivered.size + sos.failedFinal.size == total ->
-                "SOS text reached ${sos.delivered.size} of $total contact(s). Call emergency services now."
-            else -> "SOS text sent to ${sos.delivered.size} of $total contact(s); still trying…"
+                "SOS text reached ${sos.delivered.size} of $total people. Call emergency services now."
+            else -> "SOS text sent to ${sos.delivered.size} of $total people; still trying…"
         }
+        ArmorRuntime.sosStatus.value = if (callLine.isEmpty()) texts else "$texts\n$callLine"
     }
 
     private fun cancelSos() {
         val sos = activeSos
         activeSos = null
+        callLine = ""
+        caller.stop()
         ArmorRuntime.sosStatus.value = null
         if (sos == null || demo != null) return
         val text = SosMessages.cancelled(settings.riderName.ifBlank { "A rider" })
@@ -467,6 +504,7 @@ class RideService : Service() {
 
     private fun updateNotifications(s: RideSnapshot) {
         hapticsFor(s)
+        lastSnap = s
         val nm = requireService<NotificationManager>()
 
         val text = when {

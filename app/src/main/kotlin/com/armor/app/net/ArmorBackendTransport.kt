@@ -100,10 +100,12 @@ class ArmorBackendTransport(
 
     private fun parse(ride: JSONObject, locs: JSONArray, events: JSONArray): GroupData {
         val names = HashMap<String, String>()
+        val crew = ArrayList<GroupPhone>()
         val statuses = HashMap<String, Pair<String, String?>>()
         ride.getJSONArray("riders").let { arr ->
             for (i in 0 until arr.length()) arr.getJSONObject(i).let {
                 names[it.getString("id")] = it.optString("name", "Rider")
+                it.optString("phone").trim().takeIf { p -> p.isNotEmpty() && p != "null" }?.let { p -> crew += GroupPhone(it.getString("id"), it.optString("name", "Rider"), p) }
                 statuses[it.getString("id")] = it.optString("status", "active") to it.optString("manual_status").takeIf { m -> m.isNotEmpty() && m != "null" }
             }
         }
@@ -147,7 +149,7 @@ class ArmorBackendTransport(
         }
         return GroupData(riders, alerts.values.map { a ->
             a.copy(ackedById = acks[a.id]?.first, ackedByName = acks[a.id]?.second, resolved = a.id in resolved)
-        }, messages, ride.optJSONObject("ride")?.optString("admin_id")?.takeIf { it.isNotEmpty() })
+        }, messages, ride.optJSONObject("ride")?.optString("admin_id")?.takeIf { it.isNotEmpty() }, crew)
     }
 
     // ---- HTTP -------------------------------------------------------------------------------

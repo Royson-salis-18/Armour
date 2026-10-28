@@ -4,12 +4,17 @@ import com.armor.core.model.ChatMessage
 import com.armor.core.model.GroupAlert
 import com.armor.core.model.RiderReport
 
+/** A rider in the group and the number to reach them on: who an SOS is texted and called to besides the emergency contacts. */
+data class GroupPhone(val id: String, val name: String, val phone: String)
+
 data class GroupData(
     val riders: List<RiderReport>,
     val alerts: List<GroupAlert>,
     val messages: List<ChatMessage> = emptyList(),
     /** Rider id of the group's lead, when the server knows it. */
     val leadId: String? = null,
+    /** Everyone in the ride who has shared a phone number, including you. */
+    val crew: List<GroupPhone> = emptyList(),
 )
 
 /** A remote ride group: a shared place where riders publish themselves and raise/acknowledge alerts. */

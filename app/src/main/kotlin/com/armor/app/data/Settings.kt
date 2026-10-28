@@ -40,6 +40,16 @@ data class Settings(
     val mapView: String = "MAP",
     /** Vibrate for taps, confirmations and group events. */
     val haptics: Boolean = true,
+    /** Start protecting on boot and after being killed, with no ride started by hand. */
+    val alwaysOn: Boolean = false,
+    /** After an SOS text, ring the emergency contacts one by one until someone picks up. */
+    val autoCall: Boolean = true,
+    /** As a last resort after the contacts, also dial the local emergency number. Off by default: false alarms waste emergency time. */
+    val callEmergency: Boolean = false,
+    /** Keep ringing everyone on the list even after someone answers. Off: the round ends at the first person who picks up. */
+    val callAll: Boolean = false,
+    /** This rider's own number, shared with the ride so the others can be texted and called if they go down. */
+    val phone: String = "",
 ) {
     val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
 
@@ -59,6 +69,21 @@ class Prefs(context: Context) {
     var rideActive: Boolean
         get() = sp.getBoolean("rideActive", false)
         set(value) { sp.edit().putBoolean("rideActive", value).apply() }
+
+    /**
+     * The other riders' numbers, kept on the phone so an SOS can still text and call them with no internet.
+     * Refreshed every time the ride syncs.
+     */
+    var crew: List<com.armor.app.net.GroupPhone>
+        get() = runCatching {
+            val arr = org.json.JSONArray(sp.getString("crew", "[]"))
+            List(arr.length()) { i -> arr.getJSONObject(i).let { com.armor.app.net.GroupPhone(it.getString("id"), it.getString("name"), it.getString("phone")) } }
+        }.getOrDefault(emptyList())
+        set(value) {
+            val arr = org.json.JSONArray()
+            value.forEach { arr.put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("phone", it.phone)) }
+            sp.edit().putString("crew", arr.toString()).apply()
+        }
 
     fun update(change: (Settings) -> Settings) {
         val next = change(_settings.value)
@@ -84,6 +109,11 @@ class Prefs(context: Context) {
             .putString("roadsideNumber", next.roadsideNumber)
             .putString("mapView", next.mapView)
             .putBoolean("haptics", next.haptics)
+            .putBoolean("alwaysOn", next.alwaysOn)
+            .putBoolean("autoCall", next.autoCall)
+            .putBoolean("callEmergency", next.callEmergency)
+            .putBoolean("callAll", next.callAll)
+            .putString("phone", next.phone)
             .apply()
         _settings.value = next
     }
@@ -116,6 +146,11 @@ class Prefs(context: Context) {
             roadsideNumber = sp.getString("roadsideNumber", "") ?: "",
             mapView = sp.getString("mapView", "MAP") ?: "MAP",
             haptics = sp.getBoolean("haptics", true),
+            alwaysOn = sp.getBoolean("alwaysOn", false),
+            autoCall = sp.getBoolean("autoCall", true),
+            callEmergency = sp.getBoolean("callEmergency", false),
+            callAll = sp.getBoolean("callAll", false),
+            phone = sp.getString("phone", "") ?: "",
         )
     }
 }

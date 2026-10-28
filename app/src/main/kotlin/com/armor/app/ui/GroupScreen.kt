@@ -177,11 +177,17 @@ private fun RideSessionCard(settings: Settings) {
                 supportingText = { Text("e.g. https://your-armor-server.example.com") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedTextField(
+                value = settings.phone, onValueChange = { v -> prefs.update { it.copy(phone = v.filter { c -> c.isDigit() || c == '+' }.take(16)) } },
+                label = { Text("Your phone number") }, singleLine = true,
+                supportingText = { Text(if (settings.phone.isBlank()) "Shared with the ride, so riders can text and call you if you go down." else "Shared with the riders in this ride.") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(),
+            )
             OutlinedTextField(value = rideName, onValueChange = { rideName = it.take(40) }, label = { Text("Ride name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             PrimaryButton(if (busy) "Creating…" else "Create ride", color = ArmorColors.Orange, contentColor = androidx.compose.ui.graphics.Color(0xFF1A0B00)) {
                 if (!busy && settings.backendUrl.isNotBlank() && rideName.isNotBlank()) {
                     busy = true
-                    scope.launch { adopt(ArmorBackendTransport.createRide(settings.backendUrl, rideName.trim(), name), "Couldn't create the ride. Check the server URL.") }
+                    scope.launch { adopt(ArmorBackendTransport.createRide(settings.backendUrl, rideName.trim(), name, settings.phone), "Couldn't create the ride. Check the server URL.") }
                 }
             }
             OutlinedTextField(
@@ -191,7 +197,7 @@ private fun RideSessionCard(settings: Settings) {
             SecondaryButton(if (busy) "Joining…" else "Join ride") {
                 if (!busy && settings.backendUrl.isNotBlank() && joinCode.isNotBlank()) {
                     busy = true
-                    scope.launch { adopt(ArmorBackendTransport.joinRide(settings.backendUrl, joinCode, name), "Couldn't join. Check the code and the server URL.") }
+                    scope.launch { adopt(ArmorBackendTransport.joinRide(settings.backendUrl, joinCode, name, settings.phone), "Couldn't join. Check the code and the server URL.") }
                 }
             }
             message?.let { Txt(it, Type.Caption, ArmorColors.Amber) }

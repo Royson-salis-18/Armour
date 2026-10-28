@@ -154,3 +154,24 @@ While the bike is moving above about 11 km/h, chat hides the keyboard and offers
 
 iPhone Safari cannot vibrate from a web page and the browser stops running when the screen is off, so for background
 alerts and vibration on every device use the Android app.
+
+## 8. SOS with no internet (Android app)
+
+When an SOS fires (manual hold, crash countdown that nobody cancels, or the group not answering a check), the phone does
+all of this on its own, with no screen to tap and no permission prompts, over the cellular network only:
+
+1. **Texts** the SOS (name, reason, a maps link with your position, accuracy and age of the fix) to **every emergency
+   contact and every rider in your ride** that has shared a number. Failed texts are retried.
+2. A second text with your **Medical ID** goes to the same people.
+3. **Calls**, one at a time, **nearest rider first**, then the emergency contacts, then (only if you turned it on) the
+   local emergency number. It moves to the next number when a call is rejected, busy or not picked up, and stops when
+   someone answers, unless "Keep calling after someone answers" is on.
+4. Cancelling the SOS stops the calls and sends everyone a "false alarm, I'm OK" text.
+5. A **silent SOS** texts but never calls, because a ringing phone gives the rider away.
+
+Riders' numbers come from the ride: each rider's number is shared with the ride when they create or join it, and the app
+keeps a copy on the phone every time the ride syncs, so the SOS still reaches them when there is no data.
+
+**Always-on**: with "Keep protecting me in the background" on, protection starts by itself after a restart or an app
+update and whenever the app opens, and keeps running with the screen off. All permissions (location all the time, SMS,
+calls, notifications, microphone, battery, full-screen alarms) are requested once in the setup screen, not mid-ride.

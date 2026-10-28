@@ -250,3 +250,16 @@ It has no dependencies (Node 20+). Rides are kept in memory, so restarting the
 server clears them. GPS, the microphone and the camera need HTTPS, so test on
 phones through a deployed URL (Render, for example: build command `npm install`,
 start command `node server.js`, root directory `web`).
+
+## Android app: download and set up
+
+Every push to the branch builds the app on GitHub. Open the repository's **Actions** tab, pick the latest
+"Android debug APK" run, and download the `armor-debug-apk` file at the bottom (you need to be signed in to GitHub).
+Unzip it and open `app-debug.apk` on the phone; Android asks to allow installs from your browser or file manager the first time.
+It is signed with the shared debug key. For the Google map add your key as a repository secret named `MAPS_API_KEY` and run
+the workflow again; without it the app uses its offline map.
+
+First launch: open **Settings > Always-on safety > Set up permissions** (or the card on the start screen) and tap
+**Set everything up**. Allow location **all the time**, SMS, calls, notifications and the microphone, and let ARMOR run
+without battery limits. Then add your emergency contacts, your own phone number and turn on **Keep protecting me in the
+background**. SOS texts and calls then need no data and no taps. See `docs/ride-flows.md`, section 8.

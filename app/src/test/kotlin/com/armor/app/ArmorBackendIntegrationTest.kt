@@ -68,6 +68,20 @@ class ArmorBackendIntegrationTest {
         assertTrue(a.endRide())
     }
 
+    @Test fun `every rider's phone number reaches the others so an SOS can text and call them`() = runBlocking {
+        val lead = assertNotNull(ArmorBackendTransport.createRide(url, "Hill run", "Asha", "+919800000001"))
+        val kabir = assertNotNull(ArmorBackendTransport.joinRide(url, lead.code, "Kabir", "+919800000002"))
+        val meera = assertNotNull(ArmorBackendTransport.joinRide(url, lead.code, "Meera", "+919800000003"))
+        val a = ArmorBackendTransport(url, lead.rideId)
+        assertTrue(a.publishSelf(report(lead.riderId, "Asha", 12.9)))
+
+        val crew = assertNotNull(a.fetch()).crew
+        assertEquals(setOf("Asha", "Kabir", "Meera"), crew.map { it.name }.toSet())
+        assertEquals("+919800000002", crew.single { it.id == kabir.riderId }.phone)
+        assertEquals("+919800000003", crew.single { it.id == meera.riderId }.phone)
+        assertEquals("+919800000001", crew.single { it.id == lead.riderId }.phone)
+    }
+
     @Test fun `lead, team stop with its reason, and chat travel through the server`() = runBlocking {
         val lead = assertNotNull(ArmorBackendTransport.createRide(url, "Coast road", "Arjun"))
         val rider = assertNotNull(ArmorBackendTransport.joinRide(url, lead.code, "Meera"))
