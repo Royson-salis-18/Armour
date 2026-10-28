@@ -32,7 +32,9 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armor.app.ArmorApp
 import com.armor.app.BuildConfig
+import com.armor.app.alert.Haptics
 import com.armor.app.data.Settings
 import com.armor.app.service.ArmorRuntime
 import com.armor.app.service.RideService
@@ -181,6 +184,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     val look = linkLook(s)
     var chatOpen by remember { mutableStateOf(false) }
     var mapPicker by remember { mutableStateOf(false) }
+    var confirmEnd by remember { mutableStateOf(false) }
     val googleMap = BuildConfig.MAPS_API_KEY.isNotBlank() && s.online
     val mapView = MapView.of(settings.mapView)
 
@@ -197,8 +201,6 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                             MapChip(if (s.gpsLost) "GPS lost" else "GPS", if (s.gpsLost) ArmorColors.Red else ArmorColors.Green)
                             MapChip(if (s.online) "Online" else "Offline", if (s.online) ArmorColors.Green else ArmorColors.Dim)
-                            MapChip("Chat", modifier = Modifier.clickable { chatOpen = true })
-                            MapChip("End", modifier = Modifier.clickable { ArmorRuntime.send(ArmorRuntime.Command.Stop) })
                         }
                     }
                     warning?.let { Txt(it, Type.Label, ArmorColors.Amber, Modifier.padding(top = 8.dp)) }
@@ -210,10 +212,12 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
             Column(
                 Modifier.fillMaxWidth().heightIn(max = maxSheet)
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(ArmorColors.S1)
-                    .verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 16.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
             ) {
                 Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).clip(CircleShape).background(ArmorColors.S3))
                 Gap(14.dp)
+                // Details scroll; the actions below them stay pinned so SOS, help and chat are always one reach away.
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 StatusRow(s, look)
                 Gap(14.dp)
                 LeadCard(s)
@@ -232,17 +236,27 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     Gap(14.dp)
                 }
                 QuickStatusRow(s.quickStatus)
-                Gap(16.dp)
-                HelpRow(s)
-                Gap(10.dp)
-                HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
                 if (demo) {
                     Gap(14.dp)
                     DemoControls()
                 }
+                Gap(8.dp)
+                }
+                Gap(10.dp)
+                ActionBar(s, onChat = { chatOpen = true }, onEnd = { confirmEnd = true })
+                Gap(10.dp)
+                HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
             }
         }
         if (chatOpen) ChatScreen(s) { chatOpen = false }
+        if (confirmEnd) AlertDialog(
+            onDismissRequest = { confirmEnd = false },
+            title = { Text("End this ride?") },
+            text = { Text("Tracking and protection for this ride will stop.") },
+            confirmButton = { TextButton({ confirmEnd = false; ArmorRuntime.send(ArmorRuntime.Command.Stop) }) { Text("End ride", color = ArmorColors.Red) } },
+            dismissButton = { TextButton({ confirmEnd = false }) { Text("Keep riding") } },
+            containerColor = ArmorColors.S2, titleContentColor = ArmorColors.OnBg, textContentColor = ArmorColors.Muted,
+        )
         if (mapPicker) MapViewPicker(mapView, onPick = { v -> ArmorApp.instance.prefs.update { it.copy(mapView = v.key) }; mapPicker = false }, onDismiss = { mapPicker = false })
     }
 }
@@ -331,28 +345,33 @@ private fun QuickStatusRow(current: QuickStatus?) {
     }
 }
 
-/** Non-emergency "I need a hand": one tap to ask, and the same row shows who is coming and lets you cancel. */
+/** Always-visible actions: group chat, non-emergency "I need a hand" (shows who is coming, tap again to cancel), end ride. */
 @Composable
-private fun HelpRow(s: RideSnapshot) {
+private fun ActionBar(s: RideSnapshot, onChat: () -> Unit, onEnd: () -> Unit) {
     val help = s.help
-    val shape = RoundedCornerShape(28.dp)
-    Row(
-        Modifier.fillMaxWidth().height(52.dp).clip(shape).background(if (help != null) ArmorColors.Orange.copy(alpha = 0.14f) else ArmorColors.S2)
-            .border(1.dp, if (help != null) ArmorColors.Orange else ArmorColors.Line, shape)
-            .clickable { ArmorRuntime.send(if (help != null) ArmorRuntime.Command.CancelHelp else ArmorRuntime.Command.RequestHelp) }
-            .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Txt(
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BarButton("Chat", Modifier.weight(1f), onClick = onChat)
+        BarButton(
             when {
-                help == null -> "Need a hand?"
-                help.ackedByName != null -> "${help.ackedByName} is coming"
-                else -> "Help requested · waiting"
+                help == null -> "Need a hand"
+                help.ackedByName != null -> "${help.ackedByName} coming"
+                else -> "Cancel help"
             },
-            Type.BodyStrong, if (help != null) ArmorColors.Orange else ArmorColors.OnBg,
-        )
-        Txt(if (help != null) "CANCEL" else "ASK GROUP", Type.Eyebrow, if (help != null) ArmorColors.Orange else ArmorColors.Muted)
+            Modifier.weight(1.4f), active = help != null,
+        ) { ArmorRuntime.send(if (help != null) ArmorRuntime.Command.CancelHelp else ArmorRuntime.Command.RequestHelp) }
+        BarButton("End", Modifier.weight(1f), onClick = onEnd)
     }
+}
+
+@Composable
+private fun BarButton(text: String, modifier: Modifier, active: Boolean = false, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(26.dp)
+    Box(
+        modifier.height(52.dp).clip(shape).background(if (active) ArmorColors.Orange.copy(alpha = 0.14f) else ArmorColors.S2)
+            .border(1.dp, if (active) ArmorColors.Orange else ArmorColors.Line, shape)
+            .clickable { Haptics.click(); onClick() },
+        contentAlignment = Alignment.Center,
+    ) { Txt(text, Type.BodyStrong, if (active) ArmorColors.Orange else ArmorColors.OnBg, maxLines = 1) }
 }
 
 @Composable
