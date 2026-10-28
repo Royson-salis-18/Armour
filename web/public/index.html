@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/app.css?v=8">
+<link rel="stylesheet" href="/app.css?v=9">
 </head>
 <body>
 
@@ -109,14 +109,6 @@
     <!-- Active plans: each one can be answered or cancelled from here -->
     <div class="plans" id="plans"></div>
 
-    <!-- Thumb row: everything needed while riding is one tap away -->
-    <div class="quickbar">
-      <button class="act sos" id="sosBtn"><span class="dot"><span class="ring"></span><b>SOS</b></span><span class="lb">SOS</span></button>
-      <button class="act mic" id="micBtn"><span class="dot" data-ic="mic"></span><span class="lb">Armor</span></button>
-      <button class="act" id="chatBtn"><span class="dot" data-ic="message"></span><span class="lb">Chat</span><i class="badge hidden" id="chatBadge"></i></button>
-      <button class="act" id="expandBtn"><span class="dot" id="expandIc" data-ic="more"></span><span class="lb" id="expandLbl">More</span></button>
-    </div>
-
     <div class="more-groups">
       <div class="stats">
         <div><div class="big" id="dist">0.0</div><div class="lbl">km ridden</div></div>
@@ -156,6 +148,14 @@
       </div>
     </div>
   </div>
+  <!-- Bottom navigation: always within thumb reach -->
+  <nav class="bottomnav" id="bottomnav" aria-label="Ride controls">
+    <button class="nav" id="ridersNav"><span class="ni" data-ic="group"></span><span class="lb">Riders</span></button>
+    <button class="nav" id="chatBtn"><span class="ni" data-ic="message"></span><span class="lb">Chat</span><i class="badge hidden" id="chatBadge"></i></button>
+    <button class="nav mic" id="micBtn"><span class="ni" data-ic="mic"></span><span class="lb">Armor</span></button>
+    <button class="nav sos" id="sosBtn"><span class="ni"><span class="ring"></span><b>SOS</b></span><span class="lb">Hold</span></button>
+    <button class="nav" id="expandBtn"><span class="ni" id="expandIc" data-ic="menu"></span><span class="lb" id="expandLbl">Menu</span></button>
+  </nav>
 </section>
 
 <!-- Summary -->
@@ -187,6 +187,6 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/vendor/maplibre/maplibre-gl.js"></script>
 <script src="/vendor/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="/app.js?v=8"></script>
+<script src="/app.js?v=9"></script>
 </body>
 </html>

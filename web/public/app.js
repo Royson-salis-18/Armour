@@ -68,6 +68,7 @@ const ICONS = {
   link: '<path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   headset: '<path d="M3 14v-2a9 9 0 0118 0v2"/><path d="M21 15a2 2 0 01-2 2h-1v-6h1a2 2 0 012 2zM3 15a2 2 0 002 2h1v-6H5a2 2 0 00-2 2zM18 17v1a3 3 0 01-3 3h-2"/>',
 };
 const ic = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.pin}</svg>`;
@@ -1019,14 +1020,23 @@ function handleCritical() {
 
 // ---- actions -------------------------------------------------------------
 
+// Highlight the nav item for whatever is open.
+function syncNav() {
+  const open = $('#sheet')?.classList.contains('open');
+  $('#chatBtn')?.classList.toggle('on', S.panel === 'chat');
+  $('#ridersNav')?.classList.toggle('on', S.panel === 'riders');
+  $('#expandBtn')?.classList.toggle('on', !!open);
+}
+$('#ridersNav').onclick = () => $('#ridersBtn').click();
+
 function openPanel(kind, html, after) {
-  S.panel = kind;
+  S.panel = kind; syncNav();
   $('#panel').className = 'panel ' + kind + '-panel';
   $('#panel').innerHTML = html;
   $('#sheetLayer').classList.remove('hidden');
   after && after($('#panel'));
 }
-function closePanel() { S.panel = null; $('#sheetLayer').classList.add('hidden'); if (S.screen === 'ride' && S.ride?.status === 'riding') renderRide(); }
+function closePanel() { S.panel = null; syncNav(); $('#sheetLayer').classList.add('hidden'); if (S.screen === 'ride' && S.ride?.status === 'riding') renderRide(); }
 $('#sheetLayer').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closePanel(); });
 
 function confirmPanel(title, body, okText, ok) {
@@ -1218,7 +1228,7 @@ async function shareLocation() {
   location.href = `sms:?&body=${encodeURIComponent(text)}`;
 }
 
-const toggleSheet = () => { const o = $('#sheet').classList.toggle('open'); $('#expandLbl').textContent = o ? 'Less' : 'More'; $('#expandIc').innerHTML = ic(o ? 'close' : 'more'); setTimeout(() => document.documentElement.style.setProperty('--sheet-h', $('#sheet').offsetHeight + 'px'), 420); };
+const toggleSheet = () => { const o = $('#sheet').classList.toggle('open'); $('#expandLbl').textContent = o ? 'Close' : 'Menu'; $('#expandIc').innerHTML = ic(o ? 'close' : 'menu'); syncNav(); setTimeout(() => document.documentElement.style.setProperty('--sheet-h', $('#sheet').offsetHeight + 'px'), 420); };
 $('#grab').onclick = toggleSheet;
 $('#expandBtn').onclick = toggleSheet;
 

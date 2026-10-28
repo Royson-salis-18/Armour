@@ -57,15 +57,19 @@ Active plans sit under the stats. Each has its own answer or cancel button.
 
 ## 4. Controls, grouped
 
-Always visible: **status card** · stats · plans · quick bar (**SOS**, **Need a hand**, **Chat**, **All controls**).
+Always on screen while riding:
 
-All controls:
+- **Status and main button** (top of the dock): current state plus the one thing to tap (Stop, Resume all, I've stopped...). A smaller grey button beside it: Stop team (lead) or Wait for me (rider).
+- **Plans** under it, each with its own answer or cancel.
+- **Bottom navigation bar**, five items: **Riders** · **Chat** · **Armor** (raised mic, talk to the assistant) · **SOS** (hold 1.5 s) · **Menu**.
 
-- **Group**: Stop the team / Ask for a team stop · Wait for me / Slow the group · Voice command · Regroup point · Riders (tap to find on the map, lead hand-over)
-- **Road**: Navigate (Google Maps directions to destination, regroup, lead, any rider) · Report hazard · Destination · Nearby (fuel, hospital, mechanic, food, ATM, police)
-- **Me**: Off the bike · Share location · Safety profile (emergency contact, Medical ID, crash detection) · Leave ride / End ride
+Menu opens the full list:
 
-Lead-only controls are visible to riders but dimmed, saying who decides.
+- **Group**: Stop the team / Ask for a team stop · Wait for me / Slow the group · Voice chat · Need a hand · Regroup point · Riders · Assistant and helmet
+- **Road**: Navigate · Report hazard · Destination · Map style · Nearby
+- **Me**: Off the bike · Share location · Safety profile · Leave ride / End ride
+
+Lead-only items are visible to riders but dimmed, saying who decides.
 
 ## 5. Hands-free (Bluetooth helmet intercom)
 
