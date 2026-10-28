@@ -173,13 +173,16 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     }
     val look = linkLook(s)
     var chatOpen by remember { mutableStateOf(false) }
+    var mapPicker by remember { mutableStateOf(false) }
+    val googleMap = BuildConfig.MAPS_API_KEY.isNotBlank() && s.online
+    val mapView = MapView.of(settings.mapView)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val maxSheet = maxHeight * 0.66f
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // Real map tiles when there is a key and a connection; otherwise the offline map, so nothing safety-related waits on tiles.
-                if (BuildConfig.MAPS_API_KEY.isNotBlank() && s.online) GoogleRiderMap(s, trail.toList(), Modifier.fillMaxSize())
+                if (googleMap) GoogleRiderMap(s, trail.toList(), Modifier.fillMaxSize(), view = mapView)
                 else RiderMap(s, Modifier.fillMaxSize(), trail.toList())
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -193,6 +196,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     }
                     warning?.let { Txt(it, Type.Label, ArmorColors.Amber, Modifier.padding(top = 8.dp)) }
                 }
+                // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
+                if (googleMap) MapChip(mapView.label, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).clickable { mapPicker = true })
             }
 
             Column(
@@ -231,6 +236,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
             }
         }
         if (chatOpen) ChatScreen(s) { chatOpen = false }
+        if (mapPicker) MapViewPicker(mapView, onPick = { v -> ArmorApp.instance.prefs.update { it.copy(mapView = v.key) }; mapPicker = false }, onDismiss = { mapPicker = false })
     }
 }
 private data class LinkLook(val title: String, val sub: String, val color: Color)

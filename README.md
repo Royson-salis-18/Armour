@@ -152,6 +152,8 @@ Put your key in `local.properties` (git-ignored) as `MAPS_API_KEY=...`, or set t
 and enable "Maps SDK for Android" for it in Google Cloud. The map code (`ui/GoogleRiderMap.kt`) has only been
 compile-checked against stand-ins for the maps libraries here; it has not been run with a real key or on a device.
 
+On the ride screen the **Map** chip (bottom right of the map) switches between Map, Night, Terrain, Satellite and Hybrid. Terrain, Satellite and Hybrid are Google's built-in map types.
+
 ## Group rides on the ARMOR server
 
 Instead of Firebase, riders can use the ARMOR FastAPI server (the `backend/` of the ARMOR repo). On the **Group** tab, enter

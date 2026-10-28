@@ -36,6 +36,8 @@ data class Settings(
     val medications: String = "",
     /** Roadside assistance / breakdown number (insurer, OEM, local mechanic). */
     val roadsideNumber: String = "",
+    /** Which Google map view the ride screen shows: MAP, NIGHT, TERRAIN, SATELLITE or HYBRID. */
+    val mapView: String = "MAP",
 ) {
     val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
 
@@ -78,6 +80,7 @@ class Prefs(context: Context) {
             .putString("conditions", next.conditions)
             .putString("medications", next.medications)
             .putString("roadsideNumber", next.roadsideNumber)
+            .putString("mapView", next.mapView)
             .apply()
         _settings.value = next
     }
@@ -108,6 +111,7 @@ class Prefs(context: Context) {
             conditions = sp.getString("conditions", "") ?: "",
             medications = sp.getString("medications", "") ?: "",
             roadsideNumber = sp.getString("roadsideNumber", "") ?: "",
+            mapView = sp.getString("mapView", "MAP") ?: "MAP",
         )
     }
 }

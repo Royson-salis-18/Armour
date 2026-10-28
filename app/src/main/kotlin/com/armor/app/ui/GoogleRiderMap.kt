@@ -2,9 +2,18 @@ package com.armor.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +40,7 @@ import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.Polyline
@@ -45,9 +56,10 @@ private fun LatLon.g() = LatLng(lat, lon)
  * [RiderMap] (the offline map) is used instead, so the safety features never depend on tiles loading.
  */
 @Composable
-fun GoogleRiderMap(snapshot: RideSnapshot, trail: List<LatLon>, modifier: Modifier = Modifier, bottomInset: Dp = 0.dp) {
+fun GoogleRiderMap(snapshot: RideSnapshot, trail: List<LatLon>, modifier: Modifier = Modifier, bottomInset: Dp = 0.dp, view: MapView = MapView.MAP) {
     val context = LocalContext.current
-    val style = remember { runCatching { MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_light) }.getOrNull() }
+    // Custom styling only applies to the normal map type; Terrain, Satellite and Hybrid are Google's own.
+    val style = remember(view) { view.style?.let { res -> runCatching { MapStyleOptions.loadRawResourceStyle(context, res) }.getOrNull() } }
     val camera = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(LatLng(20.0, 78.0), 4f) }
 
     // Re-frame when anyone has moved noticeably (≈ 25 m), not on every GPS tick, so the map doesn't jitter.
@@ -65,7 +77,7 @@ fun GoogleRiderMap(snapshot: RideSnapshot, trail: List<LatLon>, modifier: Modifi
         modifier = modifier,
         cameraPositionState = camera,
         contentPadding = PaddingValues(bottom = bottomInset),
-        properties = MapProperties(mapStyleOptions = style),
+        properties = MapProperties(mapType = view.type, mapStyleOptions = style),
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false, compassEnabled = false, mapToolbarEnabled = false,
             myLocationButtonEnabled = false, indoorLevelPickerEnabled = false, tiltGesturesEnabled = false,
@@ -114,6 +126,44 @@ private fun RiderPuck(r: RiderView) {
     ) {
         Box(Modifier.size(30.dp).background(fill, CircleShape), contentAlignment = Alignment.Center) {
             Text(r.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** The ways to look at the map. Google's map has Terrain, Satellite and Hybrid built in; Map and Night are ARMOR's own styles of the normal map. */
+enum class MapView(val key: String, val label: String, val hint: String, val type: MapType, val style: Int?) {
+    MAP("MAP", "Map", "Clean and light", MapType.NORMAL, R.raw.map_style_light),
+    NIGHT("NIGHT", "Night", "Easy on the eyes", MapType.NORMAL, R.raw.map_style_dark),
+    TERRAIN("TERRAIN", "Terrain", "Hills and contours", MapType.TERRAIN, null),
+    SATELLITE("SATELLITE", "Satellite", "Aerial photos", MapType.SATELLITE, null),
+    HYBRID("HYBRID", "Hybrid", "Aerial photos with place names", MapType.HYBRID, null),
+    ;
+
+    companion object {
+        fun of(key: String): MapView = entries.firstOrNull { it.key == key } ?: MAP
+    }
+}
+
+/** A bottom sheet over the ride screen for choosing the map view. Tapping outside closes it. */
+@Composable
+fun MapViewPicker(current: MapView, onPick: (MapView) -> Unit, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable(onClick = onDismiss)) {
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(ArmorColors.S1).clickable(enabled = false) {}.navigationBarsPadding().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Txt("Map view", Type.Title)
+            Gap(8.dp)
+            MapView.entries.forEach { v ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { onPick(v) }.padding(horizontal = 4.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Txt(v.label, Type.Body, if (v == current) ArmorColors.Orange else ArmorColors.OnBg)
+                        Txt(v.hint, Type.Caption, ArmorColors.Muted)
+                    }
+                    if (v == current) Txt("Selected", Type.Label, ArmorColors.Orange)
+                }
+            }
         }
     }
 }
