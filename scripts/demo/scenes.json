@@ -1,0 +1,12 @@
+[
+  {"id": "01-intro", "caption": "ARMOR: rider safety for groups", "text": "This is ARMOR, the Advanced Rider Monitoring and Orientation Reasoning System. It watches over your riding group, and calls for help when you can't."},
+  {"id": "02-group", "caption": "Create or join a group ride", "text": "In the Group tab, add your name and number, then create a ride, or join one with a six letter code. Riders on the Android app and on the web share the same ride."},
+  {"id": "03-contacts", "caption": "Emergency contacts and a test SOS text", "text": "In Settings, add your emergency contacts, straight from your phone's contacts or typed in. Indian numbers are sent in plus ninety one format, and a test text confirms that S M S works on your phone."},
+  {"id": "04-start", "caption": "Slide to ride", "text": "Slide to ride. ARMOR starts tracking with a live street map. GPS is smoothed, so your dot stays put when you stop, and follows you closely when you ride."},
+  {"id": "05-map", "caption": "Move, zoom and switch map views", "text": "Drag and pinch to explore. The big zoom buttons work with gloves on, recentre brings you back, and you can switch between map, night, terrain and satellite views."},
+  {"id": "06-panel", "caption": "Full-screen map, SOS always in reach", "text": "Drag the panel down for a full screen map. Your status and the S O S button always stay in reach. Drag it back up for chat, help and your ride stats."},
+  {"id": "07-group-live", "caption": "Riders appear live", "text": "Riders appear live on the map. Here, Kabir joins the ride a couple of hundred metres away and sends the group a message."},
+  {"id": "08-voice", "caption": "Push-to-talk voice assistant", "text": "Tap the mic, or press your helmet button, and speak. Say stop for fuel, status, read messages, call Mom, or pothole ahead. ARMOR answers out loud, through your helmet when it's connected."},
+  {"id": "09-safety", "caption": "Automatic safety check", "text": "If you stop away from the group and don't respond, ARMOR asks if you're okay. Then it alerts the group, and finally texts and calls your emergency contacts and fellow riders automatically, even without internet. One tap on I'm okay cancels it."},
+  {"id": "10-outro", "caption": "Ride together. Come home together.", "text": "ARMOR. Ride together. Come home together."}
+]
