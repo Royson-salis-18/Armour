@@ -193,6 +193,11 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     var mapPicker by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
+    // Opening the details scrolls them into view; otherwise they open below the fold and look like nothing happened.
+    val sheetScroll = rememberScrollState()
+    LaunchedEffect(details) {
+        if (details) { kotlinx.coroutines.delay(120); sheetScroll.animateScrollTo(minOf(sheetScroll.maxValue, sheetScroll.value + 900)) }
+    }
     var minimized by remember { mutableStateOf(false) }
     val camera = remember { MapCamera() }
 
@@ -312,7 +317,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 // Details scroll; the actions below them stay pinned so SOS, help and chat are always one reach away.
                 if (minimized) {
                     Box(grip) { MiniStatus(s, look) }
-                } else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                } else Column(Modifier.weight(1f, fill = false).verticalScroll(sheetScroll)) {
                 Box(grip) { StatusRow(s, look) }
                 Gap(12.dp)
                 StatsStrip(s)

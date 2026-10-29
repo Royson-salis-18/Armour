@@ -159,7 +159,11 @@ KID=$(echo "$J" | python3 -c "import json,sys;print(json.load(sys.stdin)['riderI
 KTOK=$(echo "$J" | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])" 2>/dev/null)
 kabir() { [ -n "$KID" ] && curl -s -m 15 -X POST "$SERVER/api/rides/$CODE/$1" -H 'Content-Type: application/json' -d "{\"riderId\":\"$KID\",\"token\":\"$KTOK\"${2:+,$2}}"; }
 ride_json() { curl -s -m 15 "$SERVER/api/rides/$CODE"; }
-kabir location '"lat":12.9720,"lon":77.5950,"acc":8,"speed":6' >/dev/null
+# Kabir's phone keeps reporting every few seconds, like a real rider, from wherever /tmp/kabir_pos says he is.
+echo "12.9718 77.5944 5" > /tmp/kabir_pos
+( while [ ! -f /tmp/kabir_stop ]; do read la lo sp < /tmp/kabir_pos; kabir location "\"lat\":$la,\"lon\":$lo,\"acc\":8,\"speed\":$sp" >/dev/null; sleep 3; done ) &
+# Find a control inside the ride panel by scrolling the panel itself (not the map above it).
+sheet_find() { for i in 1 2 3 4 5 6; do [ -n "$(find_node "$1")" ] && return 0; swipe 50 66 50 52 350; sleep 0.5; done; return 1; }
 
 # ---- 5 contacts ------------------------------------------------------------------------------
 scene_start 05-contacts
@@ -201,7 +205,8 @@ nav home
 for i in 1 2 3; do b=$(find_node "SLIDE TO RIDE"); [ -n "$b" ] && break; swipe 50 75 50 30 300; sleep 1; done
 set -- ${b:-0 0 0 0}; y=$(( ($2 + $4) / 2 ))
 adb shell input swipe $((W*12/100)) $y $((W*96/100)) $y 1100
-for i in $(seq 1 8); do geo $(python3 -c "print(77.5946 + $i*0.00015, 12.9716 + $i*0.00008)"); kabir location "\"lat\":$(python3 -c "print(12.9714 + $i*0.00008)"),\"lon\":$(python3 -c "print(77.5942 + $i*0.00015)"),\"acc\":8,\"speed\":7" >/dev/null; sleep 1.3; done
+for i in $(seq 1 8); do geo $(python3 -c "print(77.5946 + $i*0.00015, 12.9716 + $i*0.00008)"); echo "$(python3 -c "print(12.9714 + $i*0.00008, 77.5942 + $i*0.00015)") 7" > /tmp/kabir_pos; sleep 1.3; done
+echo "12.97205 77.59565 0" > /tmp/kabir_pos
 scene_end
 
 # ---- 9 map views -------------------------------------------------------------------------------
@@ -209,7 +214,8 @@ scene_start 09-map
 for v in Night Terrain Satellite Hybrid Map; do tap_text "$(cat /tmp/curview 2>/dev/null || echo Map)" >/dev/null || true; sleep 1; tap_text "$v"; echo "$v" > /tmp/curview; sleep 2.2; done
 swipe 50 25 25 32 700; sleep 1
 tap_text "Zoom in"; sleep 0.7; tap_text "Zoom in"; sleep 1.2; tap_text "Zoom out"; sleep 0.7; tap_text "Zoom out"; sleep 1
-tap_text "Recentre"; sleep 2
+tap_text "Recentre"; sleep 1
+tap_text "Hybrid" && sleep 1 && tap_text "Map"; sleep 1.5
 scene_end
 
 # ---- 10 panel ----------------------------------------------------------------------------------
@@ -243,9 +249,8 @@ scene_end
 
 # ---- 13 lead: team stop ------------------------------------------------------------------------
 scene_start 13-lead
-tap_text "Show details"; sleep 1.5
-swipe 50 75 50 55 500; sleep 1
-tap_text "Team stop"; sleep 1.5; tap_text "Fuel"; sleep 4
+tap_text "Show details"; sleep 2
+sheet_find "Team stop"; tap_text "Team stop"; sleep 1.5; tap_text "Fuel"; sleep 4
 SID=$(ride_json | python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get('teamStop') or {}).get('id',''))" 2>/dev/null)
 [ -n "$SID" ] && kabir confirmStop "\"stopId\":\"$SID\"" >/dev/null
 sleep 5
@@ -255,11 +260,11 @@ scene_end
 
 # ---- 14 tools ----------------------------------------------------------------------------------
 scene_start 14-tools
-scroll_to "Report hazard"; tap_text "Report hazard"; sleep 1.5; tap_text "Pothole"; sleep 2.5
+sheet_find "Report hazard"; tap_text "Report hazard"; sleep 1.5; tap_text "Pothole"; sleep 2.5
 tap_text "Off the bike"; sleep 2.5; tap_text "Back on bike"; sleep 1.5
 tap_text "Regroup here"; sleep 2.5
-scroll_to "Fuel"; tap_text "Fuel"; sleep 2; tap_text "Fuel"; sleep 1.5
-tap_text "Hide details"; sleep 1.5
+sheet_find "Repair"; tap_text "Fuel"; sleep 2; tap_text "Fuel"; sleep 1.5
+sheet_find "Hide details"; tap_text "Hide details"; sleep 1.5
 scene_end
 
 # ---- 15 voice ----------------------------------------------------------------------------------
@@ -282,9 +287,9 @@ tap_text "cancel SOS" || tap_text "I'm okay"; sleep 1.5; back_to_armor 1; sleep 
 scene_end
 
 # ---- 18 automatic safety check -----------------------------------------------------------------
-kabir location '"lat":12.9690,"lon":77.5930,"acc":8,"speed":0' >/dev/null
+echo "12.9690 77.5930 0" > /tmp/kabir_pos
 front
-for i in $(seq 1 70); do kabir location '"lat":12.9690,"lon":77.5930,"acc":8,"speed":0' >/dev/null; [ -n "$(find_node "I'm okay")" ] && break; sleep 3; done
+for i in $(seq 1 70); do [ -n "$(find_node "I'm okay")" ] && break; sleep 3; done
 scene_start 18-safety
 sleep 7; tap_text "I'm okay"; sleep 2.5
 scene_end
@@ -300,5 +305,6 @@ scene_start 20-outro
 tap_text "Done"; sleep 4
 scene_end
 
+touch /tmp/kabir_stop
 adb logcat -d -s AndroidRuntime:E | grep -A8 "FATAL EXCEPTION" | head -30
 ls -la "$OUT"
