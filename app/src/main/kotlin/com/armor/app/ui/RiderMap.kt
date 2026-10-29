@@ -1,7 +1,13 @@
 package com.armor.app.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -43,6 +49,36 @@ private val NIGHT_FILTER = ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
     0f, 0f, 0f, 1f, 0f,
 )))
 
+/**
+ * The map's camera. By default it follows the group (centred on you, zoomed to fit everyone). Dragging or pinching
+ * hands control to the rider: the view stays where they put it until they tap recentre.
+ */
+class MapCamera {
+    var center by mutableStateOf<LatLon?>(null)
+    var scale by mutableStateOf<Float?>(null)
+    val following get() = center == null && scale == null
+    fun recenter() { center = null; scale = null }
+
+    // Written by the draw pass so a gesture knows what the map currently looks like.
+    internal var frame: LocalFrame? = null
+    internal var anchor = Offset.Zero
+    internal var curScale = 1f
+    internal var curCenter = Point(0.0, 0.0)
+
+    internal fun transform(centroid: Offset, pan: Offset, zoom: Float) {
+        val f = frame ?: return
+        val s0 = curScale.toDouble()
+        var cp = curCenter
+        cp = Point(cp.x - pan.x / s0, cp.y + pan.y / s0)
+        val s2 = (s0 * zoom).coerceIn(0.002, 40.0)
+        val px = cp.x + (centroid.x - anchor.x) / s0
+        val py = cp.y - (centroid.y - anchor.y) / s0
+        cp = Point(px - (centroid.x - anchor.x) / s2, py + (centroid.y - anchor.y) / s2)
+        center = f.toLatLon(cp)
+        scale = s2.toFloat()
+    }
+}
+
 private val RING_STEPS = doubleArrayOf(50.0, 100.0, 200.0, 500.0, 1_000.0, 2_000.0, 5_000.0, 10_000.0, 20_000.0, 50_000.0, 100_000.0)
 
 /**
@@ -52,12 +88,12 @@ private val RING_STEPS = doubleArrayOf(50.0, 100.0, 200.0, 500.0, 1_000.0, 2_000
  * nothing safety-related ever waits on the network.
  */
 @Composable
-fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<LatLon> = emptyList(), bottomInsetFraction: Float = 0f, view: MapView = MapView.MAP) {
+fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<LatLon> = emptyList(), bottomInsetFraction: Float = 0f, view: MapView = MapView.MAP, camera: MapCamera = remember { MapCamera() }) {
     val measurer = rememberTextMeasurer()
     val label = TextStyle(color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
     val faint = TextStyle(color = (if (view == MapView.MAP || view == MapView.TERRAIN) Color.Black else Color.White).copy(alpha = 0.55f), fontSize = 10.sp)
 
-    Canvas(modifier) {
+    Canvas(modifier.pointerInput(camera) { detectTransformGestures { centroid, pan, zoom, _ -> camera.transform(centroid, pan, zoom) } }) {
         MapTiles.version // repaint when a tile arrives
         // Light street map: the land colour of the tiles, so the map still looks right while tiles load or offline.
         val night = view == MapView.NIGHT
@@ -81,8 +117,10 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
         val usableH = size.height * (1f - bottomInsetFraction)
         val c = Offset(size.width / 2f, usableH / 2f + 20.dp.toPx())
         val half = min(size.width / 2f - 56.dp.toPx(), usableH / 2f - 56.dp.toPx())
-        val scale = half / extent
-        fun screen(p: Point) = Offset(c.x + (p.x * scale).toFloat(), c.y - (p.y * scale).toFloat())
+        val scale: Double = camera.scale?.toDouble() ?: (half / extent)
+        val cp = camera.center?.let { frame.toPoint(it) } ?: Point(0.0, 0.0)
+        camera.frame = frame; camera.anchor = c; camera.curScale = scale.toFloat(); camera.curCenter = cp
+        fun screen(p: Point) = Offset(c.x + ((p.x - cp.x) * scale).toFloat(), c.y - ((p.y - cp.y) * scale).toFloat())
 
         // Street tiles under everything else.
         run {
@@ -95,8 +133,8 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
                 else -> listOf(TileSet.STREETS)
             }
             val z = Math.round(kotlin.math.ln(mpp * scale) / kotlin.math.ln(2.0)).toInt().coerceIn(3, layers.minOf { it.maxZoom })
-            val tl = frame.toLatLon(Point(-c.x / scale.toDouble(), c.y / scale.toDouble()))
-            val br = frame.toLatLon(Point((size.width - c.x) / scale.toDouble(), -(size.height - c.y) / scale.toDouble()))
+            val tl = frame.toLatLon(Point(cp.x - c.x / scale.toDouble(), cp.y + c.y / scale.toDouble()))
+            val br = frame.toLatLon(Point(cp.x + (size.width - c.x) / scale.toDouble(), cp.y - (size.height - c.y) / scale.toDouble()))
             val x0 = MapTiles.tileX(tl.lon, z); val x1 = MapTiles.tileX(br.lon, z)
             val y0 = MapTiles.tileY(tl.lat, z); val y1 = MapTiles.tileY(br.lat, z)
             if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 40) {

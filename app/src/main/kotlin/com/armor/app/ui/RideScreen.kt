@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -46,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -182,6 +184,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     var mapPicker by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
+    var minimized by remember { mutableStateOf(false) }
+    val camera = remember { MapCamera() }
     val mapView = MapView.of(settings.mapView)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -189,7 +193,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // Street map tiles (cached for offline); rider positions never wait on them.
-                RiderMap(s, Modifier.fillMaxSize(), trail.toList(), view = mapView)
+                RiderMap(s, Modifier.fillMaxSize(), trail.toList(), view = mapView, camera = camera)
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         MapChip(if (demo) "ARMOR · DEMO" else "ARMOR")
@@ -201,7 +205,10 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     warning?.let { Txt(it, Type.Label, ArmorColors.Amber, Modifier.padding(top = 8.dp)) }
                 }
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
-                MapChip(mapView.label, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).clickable { mapPicker = true })
+                Row(Modifier.align(Alignment.BottomEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!camera.following) MapChip("Recentre", ArmorColors.Orange, Modifier.clickable { Haptics.click(); camera.recenter() })
+                    MapChip(mapView.label, modifier = Modifier.clickable { mapPicker = true })
+                }
             }
 
             Column(
@@ -209,10 +216,17 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(ArmorColors.S1)
                     .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
             ) {
-                Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).clip(CircleShape).background(ArmorColors.S3))
-                Gap(14.dp)
+                // Drag the handle (or tap it) to minimise the panel and give the map the whole screen.
+                Box(
+                    Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
+                        detectVerticalDragGestures { _, dy -> if (dy > 6f) minimized = true else if (dy < -6f) minimized = false }
+                    }.clickable { Haptics.tick(); minimized = !minimized },
+                    contentAlignment = Alignment.Center,
+                ) { Box(Modifier.size(40.dp, 5.dp).clip(CircleShape).background(ArmorColors.S3)) }
                 // Details scroll; the actions below them stay pinned so SOS, help and chat are always one reach away.
-                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                if (minimized) {
+                    MiniStatus(s, look)
+                } else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 StatusRow(s, look)
                 Gap(12.dp)
                 StatsStrip(s)
@@ -241,8 +255,10 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 Gap(8.dp)
                 }
                 Gap(10.dp)
-                ActionBar(s, onChat = { chatOpen = true }, onEnd = { confirmEnd = true })
-                Gap(10.dp)
+                if (!minimized) {
+                    ActionBar(s, onChat = { chatOpen = true }, onEnd = { confirmEnd = true })
+                    Gap(10.dp)
+                }
                 HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
             }
         }
@@ -283,6 +299,17 @@ private fun linkLook(s: RideSnapshot): LinkLook {
             )
         }
         else -> LinkLook("Safety check in progress", "Follow the prompt on screen", ArmorColors.Amber)
+    }
+}
+
+/** The panel when minimised: one line, so the map has almost the whole screen. */
+@Composable
+private fun MiniStatus(s: RideSnapshot, look: LinkLook) {
+    val kmh = max(0.0, s.self?.speedMps ?: 0.0) * 3.6
+    Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatusDot(look.color, 10.dp)
+        Txt(look.title.uppercase(), Type.BodyStrong, modifier = Modifier.weight(1f), maxLines = 1)
+        Txt("${kmh.roundToInt()} km/h", Type.BodyStrong, ArmorColors.Orange)
     }
 }
 
