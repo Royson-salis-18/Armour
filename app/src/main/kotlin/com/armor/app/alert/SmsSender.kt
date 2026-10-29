@@ -62,7 +62,8 @@ class SmsSender(private val context: Context) {
      * A follow-up text with no delivery tracking (medical info, safe-arrival notes). Kept apart from [send] so its
      * result can never be mistaken for the SOS itself in the retry logic.
      */
-    fun sendPlain(phone: String, text: String): Boolean {
+    fun sendPlain(number: String, text: String): Boolean {
+        val phone = Phones.normalize(context, number)
         val manager = sms ?: return false
         return try {
             manager.sendMultipartTextMessage(phone, null, manager.divideMessage(text), null, null)
@@ -73,7 +74,10 @@ class SmsSender(private val context: Context) {
     }
 
     /** Returns false if the request could not even be queued (permission denied, malformed number...). */
-    fun send(phone: String, text: String, attempt: Int, action: String = ActionReceiver.ACTION_SMS_SENT): Boolean {
+    fun send(number: String, text: String, attempt: Int, action: String = ActionReceiver.ACTION_SMS_SENT): Boolean {
+        // "98765 43210" or "098765..." fails on some networks; +91XXXXXXXXXX works everywhere. Reports keep the number as
+        // stored so the retry logic can match them.
+        val phone = Phones.normalize(context, number)
         val manager = sms ?: return false
         return try {
             val parts = manager.divideMessage(text)
@@ -82,7 +86,7 @@ class SmsSender(private val context: Context) {
                 (phone.hashCode() * 31) + attempt,
                 Intent(context, ActionReceiver::class.java)
                     .setAction(action)
-                    .putExtra(ActionReceiver.EXTRA_PHONE, phone)
+                    .putExtra(ActionReceiver.EXTRA_PHONE, number)
                     .putExtra(ActionReceiver.EXTRA_ATTEMPT, attempt),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )

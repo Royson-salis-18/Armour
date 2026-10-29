@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,12 +46,12 @@ fun GroupScreen(settings: Settings) {
 
         Card2 {
             SectionTitle("You")
-            OutlinedTextField(
+            ArmorField(
                 value = settings.riderName,
                 onValueChange = { v -> prefs.update { it.copy(riderName = v.take(24)) } },
                 label = { Text("Your name") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            ArmorField(
                 value = settings.phone, onValueChange = { v -> prefs.update { it.copy(phone = v.filter { c -> c.isDigit() || c == '+' }.take(16)) } },
                 label = { Text("Your phone number") }, singleLine = true,
                 supportingText = { Text("So your group can text and call you if you go down.") },
@@ -141,24 +140,24 @@ private fun RideSessionCard(settings: Settings) {
     } else {
         Card2 {
             SectionTitle("Start a group ride")
-            OutlinedTextField(value = rideName, onValueChange = { rideName = it.take(40) }, label = { Text("Ride name (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ArmorField(value = rideName, onValueChange = { rideName = it.take(40) }, label = { Text("Ride name (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             PrimaryButton(if (busy == "create") "Creating\u2026" else "Create ride", color = ArmorColors.Orange, contentColor = androidx.compose.ui.graphics.Color(0xFF1A0B00)) {
                 if (busy == null) {
                     busy = "create"; message = "Connecting to ARMOR\u2026 the first connection can take up to a minute."
-                    scope.launch { adopt(ArmorCloudTransport.createRide(rideName.trim().ifBlank { "$name's ride" }, name, settings.phone), "Couldn't create the ride. Check your internet and try again.") }
+                    scope.launch { adopt(ArmorCloudTransport.createRide(rideName.trim().ifBlank { "$name's ride" }, name, com.armor.app.alert.Phones.normalize(context, settings.phone)), "Couldn't create the ride. Check your internet and try again.") }
                 }
             }
         }
         Card2 {
             SectionTitle("Join a ride")
-            OutlinedTextField(
+            ArmorField(
                 value = joinCode, onValueChange = { v -> joinCode = v.uppercase().filter { c -> c in CODE_ALPHABET }.take(6) },
                 label = { Text("6-letter ride code") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
             SecondaryButton(if (busy == "join") "Joining\u2026" else "Join ride") {
                 if (busy == null && joinCode.length == 6) {
                     busy = "join"; message = "Connecting to ARMOR\u2026"
-                    scope.launch { adopt(ArmorCloudTransport.joinRide(joinCode, name, settings.phone), "Couldn't join. Check the code (it may have ended) and your internet.") }
+                    scope.launch { adopt(ArmorCloudTransport.joinRide(joinCode, name, com.armor.app.alert.Phones.normalize(context, settings.phone)), "Couldn't join. Check the code (it may have ended) and your internet.") }
                 }
             }
             message?.let { Txt(it, Type.Caption, ArmorColors.Muted) }

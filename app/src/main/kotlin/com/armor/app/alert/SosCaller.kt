@@ -40,7 +40,7 @@ class SosCaller(private val context: Context, private val handler: Handler, priv
     fun start(numbers: List<String>, stopOnAnswer: Boolean = true) {
         if (active || !canCall()) return
         this.stopOnAnswer = stopOnAnswer
-        val list = numbers.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val list = numbers.map { Phones.normalize(context, it) }.filter { it.isNotEmpty() }.distinct()
         if (list.isEmpty()) return
         queue.clear(); queue.addAll(list)
         active = true

@@ -295,3 +295,33 @@ fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = this.clickable(
 
 @Composable
 fun FullScreenBg(content: @Composable () -> Unit) = Box(Modifier.fillMaxSize().background(ArmorColors.Bg)) { content() }
+
+/**
+ * The text field used across the app: large, high-contrast text on the dark cards (white on charcoal, orange when
+ * focused), so what was typed is always readable in sunlight.
+ */
+@Composable
+fun ArmorField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    singleLine: Boolean = false,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = androidx.compose.foundation.text.KeyboardOptions.Default,
+) = androidx.compose.material3.OutlinedTextField(
+    value, onValueChange, modifier,
+    label = label, placeholder = placeholder, supportingText = supportingText, singleLine = singleLine, keyboardOptions = keyboardOptions,
+    textStyle = Type.Body.copy(fontSize = 17.sp, color = ArmorColors.OnBg),
+    shape = RoundedCornerShape(14.dp),
+    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+        focusedTextColor = ArmorColors.OnBg, unfocusedTextColor = ArmorColors.OnBg,
+        focusedContainerColor = ArmorColors.S2, unfocusedContainerColor = ArmorColors.S2,
+        focusedBorderColor = ArmorColors.Orange, unfocusedBorderColor = ArmorColors.S3,
+        focusedLabelColor = ArmorColors.Orange, unfocusedLabelColor = ArmorColors.Muted,
+        focusedPlaceholderColor = ArmorColors.Dim, unfocusedPlaceholderColor = ArmorColors.Dim,
+        focusedSupportingTextColor = ArmorColors.Muted, unfocusedSupportingTextColor = ArmorColors.Muted,
+        cursorColor = ArmorColors.Orange,
+    ),
+)

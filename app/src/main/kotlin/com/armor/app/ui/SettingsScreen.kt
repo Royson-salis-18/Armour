@@ -12,7 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
+import android.content.Intent
+import android.provider.ContactsContract.CommonDataKinds.Phone
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.armor.app.alert.Phones
+import com.armor.core.sos.PhoneNumbers
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,6 +55,28 @@ fun SettingsScreen(settings: Settings) {
 
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var contactNote by remember { mutableStateOf<String?>(null) }
+
+    /** Saves a contact in international form, once per person. */
+    fun addContact(contactName: String, number: String) {
+        val clean = Phones.normalize(context, number)
+        if (!PhoneNumbers.looksValid(clean)) { contactNote = "That number looks too short."; return }
+        if (contacts.any { PhoneNumbers.sameNumber(it.phone, clean) }) { contactNote = "$contactName is already on the list."; return }
+        scope.launch { app.db.contacts().insert(ContactEntity(name = contactName.trim().ifBlank { "Contact" }.take(30), phone = clean)) }
+        contactNote = "Added $contactName ($clean)."
+    }
+
+    // Opens the phone's Contacts app; the chosen number comes back with no contacts permission needed.
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uri = result.data?.data ?: return@rememberLauncherForActivityResult
+        try {
+            context.contentResolver.query(uri, arrayOf(Phone.DISPLAY_NAME, Phone.NUMBER), null, null, null)?.use { c ->
+                if (c.moveToFirst()) addContact(c.getString(0) ?: "Contact", c.getString(1) ?: "")
+            }
+        } catch (e: Exception) {
+            contactNote = "Couldn't read that contact. Type the number below instead."
+        }
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenTitle("Settings")
@@ -68,7 +95,7 @@ fun SettingsScreen(settings: Settings) {
             ToggleRow("Call after an SOS", "Texts everyone, then rings the nearest rider and your emergency contacts one by one until someone answers.", settings.autoCall) { v -> app.prefs.update { it.copy(autoCall = v) } }
             ToggleRow("Keep calling after someone answers", "Ring everyone on the list, not just until the first answer.", settings.callAll) { v -> app.prefs.update { it.copy(callAll = v) } }
             ToggleRow("Also call emergency services", "After your contacts, dial " + settings.emergencyNumber.ifBlank { "112" } + ". Leave off unless you want that: a false alarm ties up the line.", settings.callEmergency) { v -> app.prefs.update { it.copy(callEmergency = v) } }
-            OutlinedTextField(
+            ArmorField(
                 value = settings.phone, onValueChange = { v -> app.prefs.update { it.copy(phone = v.filter { c -> c.isDigit() || c == '+' }.take(16)) } },
                 label = { Text("Your phone number") }, singleLine = true,
                 supportingText = { Text("Shared with the riders in your ride, so they can text and call you if you go down.") },
@@ -81,9 +108,9 @@ fun SettingsScreen(settings: Settings) {
             Text("An SOS is texted to these numbers with your location. SMS works without internet.", color = ArmorColors.Muted, fontSize = 12.sp)
             contacts.forEach { c ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text(c.name, color = ArmorColors.OnBg, fontWeight = FontWeight.Medium)
-                        Text(c.phone, color = ArmorColors.Muted, fontSize = 12.sp)
+                    Column(Modifier.weight(1f)) {
+                        Text(c.name, color = ArmorColors.OnBg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                        Text(c.phone, color = ArmorColors.OnBg.copy(alpha = 0.75f), fontSize = 15.sp)
                     }
                     Row {
                         TextButton(onClick = { sendTestText(context, c.phone, settings.riderName) }) { Text("Test", color = ArmorColors.Orange) }
@@ -92,25 +119,27 @@ fun SettingsScreen(settings: Settings) {
                 }
             }
             smsTest?.let { Text(it, color = ArmorColors.OnBg, fontSize = 13.sp) }
-            OutlinedTextField(name, { name = it.take(30) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                phone, { phone = it.filter { ch -> ch.isDigit() || ch == '+' }.take(16) },
+            PrimaryButton("Pick from contacts", color = ArmorColors.Orange, contentColor = androidx.compose.ui.graphics.Color(0xFF1A0B00)) {
+                picker.launch(Intent(Intent.ACTION_PICK, Phone.CONTENT_URI))
+            }
+            Text("Or type one in:", color = ArmorColors.Muted, fontSize = 12.sp)
+            ArmorField(name, { name = it.take(30) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ArmorField(
+                phone, { phone = it.filter { ch -> ch.isDigit() || ch == '+' || ch == ' ' }.take(20) },
                 label = { Text("Phone number") }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
             )
             TextButton(
                 enabled = name.isNotBlank() && phone.count { it.isDigit() } >= 5,
-                onClick = {
-                    scope.launch { app.db.contacts().insert(ContactEntity(name = name.trim(), phone = phone)) }
-                    name = ""; phone = ""
-                },
+                onClick = { addContact(name, phone); name = ""; phone = "" },
             ) { Text("Add contact", color = ArmorColors.Orange) }
+            contactNote?.let { Text(it, color = ArmorColors.OnBg, fontSize = 13.sp) }
         }
 
         Card2 {
             SectionTitle("Emergency number")
-            OutlinedTextField(
+            ArmorField(
                 settings.emergencyNumber,
                 { v -> app.prefs.update { it.copy(emergencyNumber = v.filter { ch -> ch.isDigit() }.take(6)) } },
                 label = { Text("Number the Call button dials") }, singleLine = true,
@@ -123,15 +152,15 @@ fun SettingsScreen(settings: Settings) {
         Card2 {
             SectionTitle("Medical ID")
             Text("Shown on the SOS screen for whoever reaches you first, and texted to your contacts with an SOS.", color = ArmorColors.Muted, fontSize = 12.sp)
-            OutlinedTextField(settings.bloodGroup, { v -> app.prefs.update { it.copy(bloodGroup = v.take(6)) } }, label = { Text("Blood group (e.g. O+)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(settings.allergies, { v -> app.prefs.update { it.copy(allergies = v.take(60)) } }, label = { Text("Allergies") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(settings.conditions, { v -> app.prefs.update { it.copy(conditions = v.take(60)) } }, label = { Text("Medical conditions") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(settings.medications, { v -> app.prefs.update { it.copy(medications = v.take(60)) } }, label = { Text("Medications") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ArmorField(settings.bloodGroup, { v -> app.prefs.update { it.copy(bloodGroup = v.take(6)) } }, label = { Text("Blood group (e.g. O+)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ArmorField(settings.allergies, { v -> app.prefs.update { it.copy(allergies = v.take(60)) } }, label = { Text("Allergies") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ArmorField(settings.conditions, { v -> app.prefs.update { it.copy(conditions = v.take(60)) } }, label = { Text("Medical conditions") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ArmorField(settings.medications, { v -> app.prefs.update { it.copy(medications = v.take(60)) } }, label = { Text("Medications") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         }
 
         Card2 {
             SectionTitle("Roadside help")
-            OutlinedTextField(
+            ArmorField(
                 settings.roadsideNumber,
                 { v -> app.prefs.update { it.copy(roadsideNumber = v.filter { ch -> ch.isDigit() || ch == '+' }.take(16)) } },
                 label = { Text("Breakdown / roadside assistance number") }, singleLine = true,

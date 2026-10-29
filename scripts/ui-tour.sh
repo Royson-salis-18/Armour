@@ -18,9 +18,11 @@ find_node() {
   python3 - "$1" "$OUT/ui.xml" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 want = sys.argv[1].lower()
-for n in ET.parse(sys.argv[2]).iter('node'):
-    if want in (n.get('text') or '').lower() or want in (n.get('content-desc') or '').lower():
-        print(*re.findall(r'\d+', n.get('bounds'))); break
+nodes = list(ET.parse(sys.argv[2]).iter('node'))
+label = lambda n: ((n.get('text') or '') + '|' + (n.get('content-desc') or '')).lower()
+# An exact label wins over a longer one that merely contains it ("Phone number" vs "Your phone number").
+hit = next((n for n in nodes if want in label(n).split('|')), None) or next((n for n in nodes if want in label(n)), None)
+if hit is not None: print(*re.findall(r'\d+', hit.get('bounds')))
 PY
 }
 tap_text() {
@@ -67,6 +69,22 @@ adb shell input swipe $((W/2)) $((H/4)) $((W*9/10)) $((H/5)) 500; sleep 2; shot 
 for i in 1 2 3 4 5 6 7 8; do tap_text "Zoom out"; sleep 1; done; sleep 3; shot 09-zoomed-out
 
 for v in Map Terrain; do :; done
+# Settings: add an emergency contact typed the Indian way, check it is readable and saved as +91, send a real test SMS.
+adb shell input tap $((W*79/100)) $((H*92/100)); sleep 3
+for i in 1 2 3 4 5; do b=$(find_node "Add contact"); [ -n "$b" ] && break; adb shell input swipe $((W/2)) $((H*3/4)) $((W/2)) $((H/3)) 400; sleep 1; done
+adb shell input swipe $((W/2)) $((H*2/3)) $((W/2)) $((H/3)) 400; sleep 1
+tap_text "Name" && adb shell input text "Mom" && sleep 1
+tap_text "Phone number" && adb shell input text "98765%s43210" && sleep 1
+shot 10-contact-typed
+adb shell input keyevent 4; sleep 1
+tap_text "Add contact"; sleep 2
+shot 11-contact-added
+tap_text "Test"; sleep 6
+shot 12-test-sms
+tap_text "Pick from contacts"; sleep 4
+shot 13-contacts-app
+adb shell input keyevent 4; sleep 1
+
 echo "----- tile log -----"; adb logcat -d -s ArmorTiles:* | tail -20
 echo "----- crashes -----"; adb logcat -d -s AndroidRuntime:E | grep -A12 "FATAL EXCEPTION" | head -60
 adb shell pidof com.armor.app >/dev/null && echo "APP STILL RUNNING" || echo "APP NOT RUNNING (crashed?)"
