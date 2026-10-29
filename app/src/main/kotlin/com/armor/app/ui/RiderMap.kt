@@ -19,6 +19,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armor.core.engine.RideSnapshot
@@ -34,31 +36,27 @@ import kotlin.math.min
 private val RING_STEPS = doubleArrayOf(50.0, 100.0, 200.0, 500.0, 1_000.0, 2_000.0, 5_000.0, 10_000.0, 20_000.0, 50_000.0, 100_000.0)
 
 /**
- * An offline map: north-up, centred on you, auto-scaled to keep everyone in frame. It draws no tiles on purpose — it
- * must work with no internet and no API key — so it shows relative geometry (who is where, who is with the group, who
- * has fallen away) rather than roads: soft range rings, the group's area, your route, and each rider as an avatar.
+ * The default ride map: north-up, centred on you, auto-scaled to keep everyone in frame, on OpenStreetMap street tiles
+ * that need no API key (see MapTiles). Tiles are cached, and with none available it still shows who is where, who is
+ * with the group and who has fallen away (range rings, the group's area, your route, each rider as an avatar), so
+ * nothing safety-related ever waits on the network.
  */
 @Composable
 fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<LatLon> = emptyList(), bottomInsetFraction: Float = 0f) {
     val measurer = rememberTextMeasurer()
     val label = TextStyle(color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-    val faint = TextStyle(color = Color.White.copy(alpha = 0.38f), fontSize = 10.sp)
+    val faint = TextStyle(color = Color.Black.copy(alpha = 0.5f), fontSize = 10.sp)
 
     Canvas(modifier) {
-        drawRect(ArmorColors.MapBg)
-        // A faint street-grid texture, rotated like a city block pattern. It is decoration, not real roads.
-        rotate(-18f, center) {
-            val g = 46.dp.toPx()
-            var gx = -size.width
-            while (gx < size.width * 2) { drawLine(Color.White.copy(alpha = 0.035f), Offset(gx, -size.height), Offset(gx, size.height * 2), strokeWidth = 7.dp.toPx()); gx += g * 2.2f }
-            var gy = -size.height
-            while (gy < size.height * 2) { drawLine(Color.White.copy(alpha = 0.03f), Offset(-size.width, gy), Offset(size.width * 2, gy), strokeWidth = 5.dp.toPx()); gy += g * 1.7f }
-        }
+        MapTiles.version // repaint when a tile arrives
+        // Light street map: the land colour of the tiles, so the map still looks right while tiles load or offline.
+        drawRect(Color(0xFFEDEAE3))
+        val ink = Color.Black
 
         val riders = snapshot.riders
         if (riders.isEmpty()) {
             val msg = if (snapshot.gpsLost) "Finding your location…" else "No riders yet"
-            val st = TextStyle(color = ArmorColors.Muted, fontSize = 14.sp)
+            val st = TextStyle(color = Color(0xFF55575C), fontSize = 14.sp)
             val m = measurer.measure(msg, st)
             drawText(measurer, msg, Offset((size.width - m.size.width) / 2f, (size.height - m.size.height) / 2f), st)
             return@Canvas
@@ -74,20 +72,42 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
         val scale = half / extent
         fun screen(p: Point) = Offset(c.x + (p.x * scale).toFloat(), c.y - (p.y * scale).toFloat())
 
+        // Street tiles under everything else.
+        run {
+            val lat0 = frame.origin.lat
+            val mpp = 156543.03392 * kotlin.math.cos(Math.toRadians(lat0))
+            val z = Math.round(kotlin.math.ln(mpp * scale) / kotlin.math.ln(2.0)).toInt().coerceIn(3, 18)
+            val tl = frame.toLatLon(Point(-c.x / scale.toDouble(), c.y / scale.toDouble()))
+            val br = frame.toLatLon(Point((size.width - c.x) / scale.toDouble(), -(size.height - c.y) / scale.toDouble()))
+            val x0 = MapTiles.tileX(tl.lon, z); val x1 = MapTiles.tileX(br.lon, z)
+            val y0 = MapTiles.tileY(tl.lat, z); val y1 = MapTiles.tileY(br.lat, z)
+            if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 40) {
+                for (tx in x0..x1) for (ty in y0..y1) {
+                    val a = screen(frame.toPoint(LatLon(MapTiles.lat(ty, z), MapTiles.lon(tx, z))))
+                    val b = screen(frame.toPoint(LatLon(MapTiles.lat(ty + 1, z), MapTiles.lon(tx + 1, z))))
+                    val img = MapTiles.get(z, tx, ty) ?: continue
+                    drawImage(
+                        img, dstOffset = IntOffset(Math.round(a.x), Math.round(a.y)),
+                        dstSize = IntSize(Math.round(b.x - a.x) + 1, Math.round(b.y - a.y) + 1),
+                    )
+                }
+            }
+        }
+
         // Range rings
         val step = RING_STEPS.firstOrNull { it >= extent / 3 } ?: RING_STEPS.last()
         var ring = step
         var n = 0
         while (ring <= extent * 1.3 && n < 3) {
             val radius = (ring * scale).toFloat()
-            drawCircle(Color.White.copy(alpha = 0.085f - n * 0.02f), radius, c, style = Stroke(1.dp.toPx()))
+            drawCircle(ink.copy(alpha = 0.16f - n * 0.04f), radius, c, style = Stroke(1.dp.toPx()))
             drawText(measurer, fmtDistance(ring), Offset(c.x + radius * 0.707f + 4.dp.toPx(), c.y - radius * 0.707f - 14.dp.toPx()), faint)
             ring += step; n++
         }
 
         // The group's area: a soft rounded blob around the main group, orange; any other cluster is red.
         snapshot.clusters.forEachIndexed { i, cluster ->
-            val tint = if (i == snapshot.mainClusterIndex) Color.White else ArmorColors.Red
+            val tint = if (i == snapshot.mainClusterIndex) ArmorColors.Orange else ArmorColors.Red
             val hull = cluster.hull.map { screen(frame.toPoint(it)) }
             val path = Path().apply {
                 hull.forEachIndexed { k, o -> if (k == 0) moveTo(o.x, o.y) else lineTo(o.x, o.y) }
