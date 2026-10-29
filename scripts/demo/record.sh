@@ -54,6 +54,8 @@ echo "capture mode: $MODE"
 
 scene_start() {
   clear_dialogs
+  if [ "${KEEP_APP:-0}" != 1 ] && ! on_armor; then front; fi
+  hide_kb
   SCENE=$1; T0=$(now)
   if [ "$MODE" = record ]; then
     adb shell screenrecord --bit-rate 6000000 --time-limit 180 "/sdcard/$SCENE.mp4" >/dev/null 2>&1 &
@@ -88,6 +90,10 @@ clear_dialogs() {
   done
 }
 front() { adb shell am start -n $P/.MainActivity >/dev/null 2>&1; sleep 1.5; }
+hide_kb() { adb shell dumpsys input_method | grep -q 'mInputShown=true' && adb shell input keyevent 4 && sleep 0.6; return 0; }
+# Bring ARMOR back after another app (dialer, Messages) has been shown; those apps can take a few seconds to appear.
+back_to_armor() { sleep "${1:-0}"; adb shell am force-stop com.google.android.apps.messaging; adb shell input keyevent 6; sleep 0.5; front; hide_kb; }
+on_armor() { adb shell dumpsys window | grep -m1 mCurrentFocus | grep -q "$P"; }
 long_press() { b=$(find_node "$1"); [ -z "$b" ] && { echo "no node '$1'"; return 1; }; set -- $b; x=$(( ($1 + $3) / 2 )); y=$(( ($2 + $4) / 2 )); adb shell input swipe $x $y $x $y ${2:-1900}; }
 scroll_to() { for i in 1 2 3 4 5 6; do [ -n "$(find_node "$1")" ] && return 0; swipe 50 72 50 38 450; sleep 0.5; done; return 1; }
 scroll_top() { for i in 1 2 3 4; do swipe 50 30 50 80 250; done; sleep 0.5; }
@@ -166,11 +172,11 @@ scene_end
 # ---- 6 call / message / test ---------------------------------------------------------------
 scene_start 06-call-message
 for i in 1 2 3 4; do [ -n "$(find_node "Call Mom")" ] && break; swipe 50 35 50 65 400; sleep 0.5; done
-tap_text "Call Mom"; sleep 5
-adb shell input keyevent 6; sleep 1.5; front
+tap_text "Call Mom"; sleep 6
+back_to_armor 1
 for i in 1 2 3 4; do [ -n "$(find_node "Message Mom")" ] && break; swipe 50 35 50 65 400; sleep 0.5; done
-tap_text "Message Mom"; sleep 4
-adb shell input keyevent 4; sleep 1; front
+tap_text "Message Mom"; sleep 7
+back_to_armor 1
 for i in 1 2 3 4; do [ -n "$(find_node "Send test SOS text")" ] && break; swipe 50 35 50 65 400; sleep 0.5; done
 tap_text "Send test SOS text"; sleep 3
 scene_end
@@ -266,8 +272,8 @@ scene_end
 scene_start 17-sos
 long_press "Hold for SOS" 1900; sleep 5
 # ARMOR starts ringing the nearest rider and the contacts through the phone app; hang up and return to show the SOS screen.
-sleep 4; adb shell input keyevent 6; sleep 1; front; sleep 3
-tap_text "cancel SOS" || tap_text "I'm okay"; sleep 1.5; adb shell input keyevent 6; front; sleep 3
+sleep 4; back_to_armor; sleep 3
+tap_text "cancel SOS" || tap_text "I'm okay"; sleep 1.5; back_to_armor 1; sleep 3
 scene_end
 
 # ---- 18 automatic safety check -----------------------------------------------------------------
