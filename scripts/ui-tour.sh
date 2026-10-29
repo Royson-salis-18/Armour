@@ -37,6 +37,9 @@ geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity
 sleep 6
 shot 01-home
+# The Group tab (second item in the bottom bar): create or join a ride, no server address to type.
+adb shell input tap $((W*40/100)) $((H*92/100)); sleep 3; shot 01b-group
+adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
 
 # Slide to ride: scroll down until the slider is on screen, then drag its thumb all the way across.
 for i in 1 2 3; do b=$(find_node "SLIDE TO RIDE"); [ -n "$b" ] && break; adb shell input swipe $((W/2)) $((H*3/4)) $((W/2)) $((H/4)) 300; sleep 1; done
