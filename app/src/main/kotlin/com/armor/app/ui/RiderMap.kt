@@ -107,7 +107,7 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
             val msg = if (snapshot.gpsLost) "Finding your location…" else "No riders yet"
             val st = TextStyle(color = Color(0xFF55575C), fontSize = 14.sp)
             val m = measurer.measure(msg, st)
-            drawText(measurer, msg, Offset((size.width - m.size.width) / 2f, (size.height - m.size.height) / 2f), st)
+            drawLabel(measurer, msg, Offset((size.width - m.size.width) / 2f, (size.height - m.size.height) / 2f), st)
             return@Canvas
         }
 
@@ -161,7 +161,7 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
         while (ring <= extent * 1.3 && n < 3) {
             val radius = (ring * scale).toFloat()
             drawCircle(ink.copy(alpha = 0.16f - n * 0.04f), radius, c, style = Stroke(1.dp.toPx()))
-            drawText(measurer, fmtDistance(ring), Offset(c.x + radius * 0.707f + 4.dp.toPx(), c.y - radius * 0.707f - 14.dp.toPx()), faint)
+            drawLabel(measurer, fmtDistance(ring), Offset(c.x + radius * 0.707f + 4.dp.toPx(), c.y - radius * 0.707f - 14.dp.toPx()), faint)
             ring += step; n++
         }
 
@@ -226,7 +226,7 @@ private fun DrawScope.drawRiderMarker(rider: RiderView, at: Offset, measurer: Te
     val initial = rider.name.firstOrNull()?.uppercase() ?: "?"
     val st = TextStyle(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     val im = measurer.measure(initial, st)
-    drawText(measurer, initial, Offset(at.x - im.size.width / 2f, at.y - im.size.height / 2f), st)
+    drawLabel(measurer, initial, Offset(at.x - im.size.width / 2f, at.y - im.size.height / 2f), st)
 
     if (rider.isOutlier || alarm || warn) {
         val bc = if (warn && !alarm && !rider.isOutlier) ArmorColors.Amber else ArmorColors.Red
@@ -235,7 +235,7 @@ private fun DrawScope.drawRiderMarker(rider: RiderView, at: Offset, measurer: Te
         drawCircle(bc, 7.dp.toPx(), b)
         val bs = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
         val bm = measurer.measure("!", bs)
-        drawText(measurer, "!", Offset(b.x - bm.size.width / 2f, b.y - bm.size.height / 2f), bs)
+        drawLabel(measurer, "!", Offset(b.x - bm.size.width / 2f, b.y - bm.size.height / 2f), bs)
     }
 }
 
@@ -256,5 +256,16 @@ private fun DrawScope.drawRiderLabel(rider: RiderView, at: Offset, measurer: Tex
         size = Size(m.size.width + padX * 2, m.size.height + padY * 2),
         cornerRadius = CornerRadius(50f, 50f),
     )
-    drawText(measurer, text, Offset(at.x - m.size.width / 2f, top + padY), label)
+    drawLabel(measurer, text, Offset(at.x - m.size.width / 2f, top + padY), label)
+}
+
+/**
+ * drawText that is safe anywhere on the canvas. Compose's drawText(measurer, ...) throws when the text starts outside the
+ * canvas, which happens to distance labels and rider names as soon as the map is zoomed or dragged.
+ */
+private fun DrawScope.drawLabel(measurer: TextMeasurer, text: String, topLeft: Offset, style: TextStyle) {
+    if (topLeft.x >= size.width || topLeft.y >= size.height) return
+    val layout = measurer.measure(text, style)
+    if (topLeft.x + layout.size.width <= 0f || topLeft.y + layout.size.height <= 0f) return
+    drawText(layout, topLeft = topLeft)
 }

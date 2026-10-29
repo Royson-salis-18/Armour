@@ -62,8 +62,11 @@ sleep 2
 shot 04-minimised
 tap_text "Recentre" && sleep 2 && shot 05-recentred
 tap_text "Show controls" && sleep 2 && shot 06-shown
-tap_text "Zoom in" && sleep 1 && tap_text "Zoom in" && sleep 4 && shot 07-zoomed-in
+for i in 1 2 3 4; do tap_text "Zoom in"; sleep 1; done; sleep 3; shot 07-zoomed-in
+adb shell input swipe $((W/2)) $((H/4)) $((W*9/10)) $((H/5)) 500; sleep 2; shot 08-zoomed-dragged
+for i in 1 2 3 4 5 6 7 8; do tap_text "Zoom out"; sleep 1; done; sleep 3; shot 09-zoomed-out
 
 for v in Map Terrain; do :; done
 echo "----- tile log -----"; adb logcat -d -s ArmorTiles:* | tail -20
-echo "----- crashes -----"; adb logcat -d -s AndroidRuntime:E | tail -40
+echo "----- crashes -----"; adb logcat -d -s AndroidRuntime:E | grep -A12 "FATAL EXCEPTION" | head -60
+adb shell pidof com.armor.app >/dev/null && echo "APP STILL RUNNING" || echo "APP NOT RUNNING (crashed?)"
