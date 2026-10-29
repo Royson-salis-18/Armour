@@ -44,6 +44,7 @@ if [ "${PROBE:-0}" -gt 0 ]; then MODE=record; else MODE=frames; fi
 echo "capture mode: $MODE"
 
 scene_start() {
+  clear_dialogs
   SCENE=$1; T0=$(now)
   if [ "$MODE" = record ]; then
     adb shell screenrecord --bit-rate 6000000 --time-limit 180 "/sdcard/$SCENE.mp4" >/dev/null 2>&1 &
@@ -69,6 +70,17 @@ scene_end() {
 }
 
 # ---- setup -----------------------------------------------------------------------------------
+# CI emulators are slow right after boot and the system then shows "Pixel Launcher isn't responding" over everything.
+# Hide system error dialogs, let the device settle, and dismiss any that still appear before each scene.
+adb shell settings put global hide_error_dialogs 1
+adb shell settings put secure anr_show_background 0 >/dev/null 2>&1 || true
+clear_dialogs() {
+  for i in 1 2 3; do
+    if [ -n "$(find_node "isn't responding")" ]; then tap_text "Wait" || adb shell input keyevent 4; sleep 1; else break; fi
+  done
+}
+sleep 25
+clear_dialogs
 adb install -r -g "$APK"
 adb shell pm grant $P android.permission.ACCESS_BACKGROUND_LOCATION || true
 adb shell settings put system screen_off_timeout 1800000
@@ -76,6 +88,7 @@ adb shell cmd uimode night yes >/dev/null 2>&1 || true
 geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity >/dev/null
 sleep 6
+clear_dialogs
 # Name and number first, off camera, so the demo shows a set-up rider.
 nav group
 tap_text "Your name" && type_text "Royson"; adb shell input keyevent 4; sleep 1
