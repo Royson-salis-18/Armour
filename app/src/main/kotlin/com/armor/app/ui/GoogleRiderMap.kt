@@ -147,6 +147,7 @@ enum class MapView(val key: String, val label: String, val hint: String, val typ
 /** A bottom sheet over the ride screen for choosing the map view. Tapping outside closes it. */
 @Composable
 fun MapViewPicker(current: MapView, onPick: (MapView) -> Unit, onDismiss: () -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable(onClick = onDismiss)) {
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))

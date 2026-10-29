@@ -156,6 +156,8 @@ fun ChatScreen(s: RideSnapshot, onClose: () -> Unit) {
     var text by remember { mutableStateOf("") }
     LaunchedEffect(s.messages.size) { if (s.messages.isNotEmpty()) list.animateScrollToItem(s.messages.size - 1) }
     fun send(t: String) { if (t.isNotBlank()) ArmorRuntime.send(ArmorRuntime.Command.SendMessage(t)) }
+    // Back closes the chat, not the app.
+    androidx.activity.compose.BackHandler(onBack = onClose)
 
     Column(Modifier.fillMaxSize().background(ArmorColors.Bg).warmGlow(strength = 0.14f).statusBarsPadding().imePadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {

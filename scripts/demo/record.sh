@@ -160,11 +160,13 @@ if [ -n "$CODE" ]; then
   nav home
   kabir message '"text":"Hi all, I am right behind you"'
   for i in $(seq 1 6); do kabir location "\"lat\":$(python3 -c "print(12.9712 + $i*0.00012)"),\"lon\":77.5952,\"acc\":8,\"speed\":7"; sleep 1.5; done
-  tap_text "Chat"; sleep 3; adb shell input keyevent 4; sleep 1
+  tap_text "Chat"; sleep 3; tap_text "Close" || adb shell input keyevent 4; sleep 1
 fi
 scene_end
 
 # ---- 8 voice ---------------------------------------------------------------------------------
+front() { adb shell am start -n $P/.MainActivity >/dev/null 2>&1; sleep 1; }
+front
 scene_start 08-voice
 tap_text "Talk to Armor"; sleep 6
 kabir location '"lat":12.9722,"lon":77.5953,"acc":8,"speed":0'
@@ -172,6 +174,7 @@ scene_end
 
 # ---- 9 safety --------------------------------------------------------------------------------
 # Stay still away from Kabir until ARMOR asks; record from the moment it does.
+front
 for i in $(seq 1 60); do kabir location '"lat":12.9705,"lon":77.5950,"acc":8,"speed":0'; [ -n "$(find_node "I'm okay")" ] && break; sleep 3; done
 scene_start 09-safety
 sleep 6; tap_text "I'm okay"; sleep 2
