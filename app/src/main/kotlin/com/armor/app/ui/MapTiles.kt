@@ -2,6 +2,7 @@ package com.armor.app.ui
 
 import android.graphics.BitmapFactory
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -62,7 +63,8 @@ object MapTiles {
                 try {
                     val bmp = load(key, set, z, x, y)
                     if (bmp != null) synchronized(memory) { memory[key] = bmp } else failedAt[key] = SystemClock.elapsedRealtime()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.w("ArmorTiles", "tile $key failed: $e")
                     failedAt[key] = SystemClock.elapsedRealtime()
                 } finally {
                     loading.remove(key)
@@ -82,7 +84,7 @@ object MapTiles {
         c.readTimeout = 8_000
         c.setRequestProperty("User-Agent", "ARMOR-Android/1.0 (rider safety app)")
         try {
-            if (c.responseCode != 200) return null
+            if (c.responseCode != 200) { Log.w("ArmorTiles", "${c.responseCode} for ${set.name} $z/$x/$y"); return null }
             val bytes = c.inputStream.use { it.readBytes() }
             dir.mkdirs()
             file.writeBytes(bytes)

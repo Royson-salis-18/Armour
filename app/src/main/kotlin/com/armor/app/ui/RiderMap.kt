@@ -132,12 +132,12 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
                 MapView.HYBRID -> listOf(TileSet.IMAGERY, TileSet.LABELS)
                 else -> listOf(TileSet.STREETS)
             }
-            val z = Math.round(kotlin.math.ln(mpp * scale) / kotlin.math.ln(2.0)).toInt().coerceIn(3, layers.minOf { it.maxZoom })
+            val z = kotlin.math.floor(kotlin.math.ln(mpp * scale) / kotlin.math.ln(2.0)).toInt().coerceIn(3, layers.minOf { it.maxZoom })
             val tl = frame.toLatLon(Point(cp.x - c.x / scale.toDouble(), cp.y + c.y / scale.toDouble()))
             val br = frame.toLatLon(Point(cp.x + (size.width - c.x) / scale.toDouble(), cp.y - (size.height - c.y) / scale.toDouble()))
             val x0 = MapTiles.tileX(tl.lon, z); val x1 = MapTiles.tileX(br.lon, z)
             val y0 = MapTiles.tileY(tl.lat, z); val y1 = MapTiles.tileY(br.lat, z)
-            if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 40) {
+            if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 120) {
                 for (tx in x0..x1) for (ty in y0..y1) {
                     val a = screen(frame.toPoint(LatLon(MapTiles.lat(ty, z), MapTiles.lon(tx, z))))
                     val b = screen(frame.toPoint(LatLon(MapTiles.lat(ty + 1, z), MapTiles.lon(tx + 1, z))))
