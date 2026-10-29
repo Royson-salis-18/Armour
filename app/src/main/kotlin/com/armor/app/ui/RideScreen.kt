@@ -54,7 +54,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armor.app.ArmorApp
-import com.armor.app.BuildConfig
 import com.armor.app.alert.Haptics
 import com.armor.app.data.Settings
 import com.armor.app.service.ArmorRuntime
@@ -152,9 +151,6 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
 
         Gap(22.dp)
         SlideToStart(if (starting) "STARTING\u2026" else "SLIDE TO RIDE") { if (!starting) launcher.launch(needed) }
-        Gap(12.dp)
-        SecondaryButton("Try a demo ride") { if (!starting) RideService.start(context, demo = true) }
-        Txt("The demo needs no GPS and sends no real messages", Type.Caption, ArmorColors.Dim, Modifier.fillMaxWidth().padding(top = 12.dp), TextAlign.Center)
     }
 }
 
@@ -185,16 +181,15 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     var chatOpen by remember { mutableStateOf(false) }
     var mapPicker by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
-    val googleMap = BuildConfig.MAPS_API_KEY.isNotBlank() && s.online
+    var details by remember { mutableStateOf(false) }
     val mapView = MapView.of(settings.mapView)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val maxSheet = maxHeight * 0.66f
+        val maxSheet = maxHeight * 0.58f
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                // Real map tiles when there is a key and a connection; otherwise the offline map, so nothing safety-related waits on tiles.
-                if (googleMap) GoogleRiderMap(s, trail.toList(), Modifier.fillMaxSize(), view = mapView)
-                else RiderMap(s, Modifier.fillMaxSize(), trail.toList())
+                // Street map tiles (cached for offline); rider positions never wait on them.
+                RiderMap(s, Modifier.fillMaxSize(), trail.toList(), view = mapView)
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         MapChip(if (demo) "ARMOR · DEMO" else "ARMOR")
@@ -206,7 +201,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     warning?.let { Txt(it, Type.Label, ArmorColors.Amber, Modifier.padding(top = 8.dp)) }
                 }
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
-                if (googleMap) MapChip(mapView.label, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).clickable { mapPicker = true })
+                MapChip(mapView.label, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).clickable { mapPicker = true })
             }
 
             Column(
@@ -219,23 +214,26 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 // Details scroll; the actions below them stay pinned so SOS, help and chat are always one reach away.
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 StatusRow(s, look)
-                Gap(14.dp)
-                LeadCard(s)
-                Gap(10.dp)
-                SafetyTools(s, settings)
-                Gap(14.dp)
+                Gap(12.dp)
                 StatsStrip(s)
-                Gap(14.dp)
-                val others = s.riders.filter { !it.isSelf }
-                if (others.isNotEmpty()) {
-                    ConvoyStrip(s)
-                    Gap(8.dp)
-                }
                 if (s.safety is SafetyState.Acknowledged) {
+                    Gap(12.dp)
                     PrimaryButton("I'm okay", color = ArmorColors.Green, contentColor = Color.Black) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
-                    Gap(14.dp)
                 }
-                QuickStatusRow(s.quickStatus)
+                Gap(12.dp)
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { Haptics.tick(); details = !details }.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+                ) { Txt(if (details) "HIDE DETAILS" else "RIDERS, LEAD AND SAFETY TOOLS", Type.Eyebrow, ArmorColors.Muted) }
+                if (details) {
+                    Gap(10.dp)
+                    LeadCard(s)
+                    Gap(12.dp)
+                    SafetyTools(s, settings)
+                    if (s.riders.any { !it.isSelf }) { Gap(16.dp); ConvoyStrip(s) }
+                    Gap(16.dp)
+                    QuickStatusRow(s.quickStatus)
+                }
                 if (demo) {
                     Gap(14.dp)
                     DemoControls()

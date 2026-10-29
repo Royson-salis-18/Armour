@@ -7,6 +7,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -33,6 +35,14 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
+/** Inverts the street tiles into a dark map for night riding. */
+private val NIGHT_FILTER = ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+    -0.85f, 0f, 0f, 0f, 235f,
+    0f, -0.85f, 0f, 0f, 235f,
+    0f, 0f, -0.85f, 0f, 235f,
+    0f, 0f, 0f, 1f, 0f,
+)))
+
 private val RING_STEPS = doubleArrayOf(50.0, 100.0, 200.0, 500.0, 1_000.0, 2_000.0, 5_000.0, 10_000.0, 20_000.0, 50_000.0, 100_000.0)
 
 /**
@@ -42,16 +52,18 @@ private val RING_STEPS = doubleArrayOf(50.0, 100.0, 200.0, 500.0, 1_000.0, 2_000
  * nothing safety-related ever waits on the network.
  */
 @Composable
-fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<LatLon> = emptyList(), bottomInsetFraction: Float = 0f) {
+fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<LatLon> = emptyList(), bottomInsetFraction: Float = 0f, view: MapView = MapView.MAP) {
     val measurer = rememberTextMeasurer()
     val label = TextStyle(color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-    val faint = TextStyle(color = Color.Black.copy(alpha = 0.5f), fontSize = 10.sp)
+    val faint = TextStyle(color = (if (view == MapView.MAP || view == MapView.TERRAIN) Color.Black else Color.White).copy(alpha = 0.55f), fontSize = 10.sp)
 
     Canvas(modifier) {
         MapTiles.version // repaint when a tile arrives
         // Light street map: the land colour of the tiles, so the map still looks right while tiles load or offline.
-        drawRect(Color(0xFFEDEAE3))
-        val ink = Color.Black
+        val night = view == MapView.NIGHT
+        val dark = night || view == MapView.SATELLITE || view == MapView.HYBRID
+        drawRect(if (night) Color(0xFF1B1D21) else if (dark) Color(0xFF14181A) else Color(0xFFEDEAE3))
+        val ink = if (dark) Color.White else Color.Black
 
         val riders = snapshot.riders
         if (riders.isEmpty()) {
@@ -76,7 +88,13 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
         run {
             val lat0 = frame.origin.lat
             val mpp = 156543.03392 * kotlin.math.cos(Math.toRadians(lat0))
-            val z = Math.round(kotlin.math.ln(mpp * scale) / kotlin.math.ln(2.0)).toInt().coerceIn(3, 18)
+            val layers = when (view) {
+                MapView.TERRAIN -> listOf(TileSet.TOPO)
+                MapView.SATELLITE -> listOf(TileSet.IMAGERY)
+                MapView.HYBRID -> listOf(TileSet.IMAGERY, TileSet.LABELS)
+                else -> listOf(TileSet.STREETS)
+            }
+            val z = Math.round(kotlin.math.ln(mpp * scale) / kotlin.math.ln(2.0)).toInt().coerceIn(3, layers.minOf { it.maxZoom })
             val tl = frame.toLatLon(Point(-c.x / scale.toDouble(), c.y / scale.toDouble()))
             val br = frame.toLatLon(Point((size.width - c.x) / scale.toDouble(), -(size.height - c.y) / scale.toDouble()))
             val x0 = MapTiles.tileX(tl.lon, z); val x1 = MapTiles.tileX(br.lon, z)
@@ -85,11 +103,14 @@ fun RiderMap(snapshot: RideSnapshot, modifier: Modifier = Modifier, trail: List<
                 for (tx in x0..x1) for (ty in y0..y1) {
                     val a = screen(frame.toPoint(LatLon(MapTiles.lat(ty, z), MapTiles.lon(tx, z))))
                     val b = screen(frame.toPoint(LatLon(MapTiles.lat(ty + 1, z), MapTiles.lon(tx + 1, z))))
-                    val img = MapTiles.get(z, tx, ty) ?: continue
-                    drawImage(
-                        img, dstOffset = IntOffset(Math.round(a.x), Math.round(a.y)),
-                        dstSize = IntSize(Math.round(b.x - a.x) + 1, Math.round(b.y - a.y) + 1),
-                    )
+                    for (set in layers) {
+                        val img = MapTiles.get(set, z, tx, ty) ?: continue
+                        drawImage(
+                            img, dstOffset = IntOffset(Math.round(a.x), Math.round(a.y)),
+                            dstSize = IntSize(Math.round(b.x - a.x) + 1, Math.round(b.y - a.y) + 1),
+                            colorFilter = if (night && set == TileSet.STREETS) NIGHT_FILTER else null,
+                        )
+                    }
                 }
             }
         }
