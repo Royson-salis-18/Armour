@@ -55,7 +55,7 @@ data class Settings(
     /** This rider's own number, shared with the ride so the others can be texted and called if they go down. */
     val phone: String = "",
     /** Listen for "Armor" while the ride screen is open, so commands need no tap. */
-    val voiceWake: Boolean = true,
+    val voiceWake: Boolean = false,
 ) {
     val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
 
@@ -122,7 +122,7 @@ class Prefs(context: Context) {
             .putBoolean("callEmergency", next.callEmergency)
             .putBoolean("callAll", next.callAll)
             .putString("phone", next.phone)
-            .putBoolean("voiceWake", next.voiceWake)
+            .putBoolean("voiceWakeV2", next.voiceWake)
             .apply()
         _settings.value = next
     }
@@ -162,7 +162,7 @@ class Prefs(context: Context) {
             callEmergency = sp.getBoolean("callEmergency", false),
             callAll = sp.getBoolean("callAll", false),
             phone = sp.getString("phone", "") ?: "",
-            voiceWake = sp.getBoolean("voiceWake", true),
+            voiceWake = sp.getBoolean("voiceWakeV2", false),
         )
     }
 }

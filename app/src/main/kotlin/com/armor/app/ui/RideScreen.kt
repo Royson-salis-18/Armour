@@ -197,6 +197,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     val assistant = remember { VoiceAssistant(context) }
     val caption by assistant.caption.collectAsState()
     val listening by assistant.listening.collectAsState()
+    val micLevel by assistant.level.collectAsState()
     val savedContacts by remember { ArmorApp.instance.db.contacts().all() }.collectAsState(initial = emptyList())
     LaunchedEffect(savedContacts, s.riders.size) {
         val crew = ArmorApp.instance.prefs.crew.filter { it.id != settings.riderId }
@@ -231,11 +232,13 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
                 // The assistant: tap the mic (or say "Armor") and speak; what it heard and its answer show above it.
                 Column(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    caption?.let {
+                    (caption ?: "Tap to talk").let {
                         Txt(it, Type.Label, Color.White, Modifier.widthIn(max = 260.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xE6101113)).padding(horizontal = 12.dp, vertical = 8.dp), maxLines = 3)
                     }
+                    // While listening, a ring around the mic grows with your voice, so you can see it hears you.
+                    val ring = if (listening) (6 + (micLevel.coerceIn(0f, 10f) * 1.6f)).dp else 0.dp
                     Box(
-                        Modifier.size(60.dp).clip(CircleShape)
+                        Modifier.size(60.dp + ring * 2).clip(CircleShape).background(if (listening) ArmorColors.Red.copy(alpha = 0.25f) else Color.Transparent).padding(ring).clip(CircleShape)
                             .background(if (listening) ArmorColors.Red else ArmorColors.Orange)
                             .border(3.dp, Color.White, CircleShape)
                             .clickable { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) }

@@ -139,9 +139,9 @@ fun SettingsScreen(settings: Settings) {
 
         Card2 {
             SectionTitle("Voice assistant")
-            Text("Say \u201cArmor\u201d and a command while riding, or tap the orange mic on the map. Answers are spoken, through your helmet if it's connected.", color = ArmorColors.Muted, fontSize = 12.sp)
-            ToggleRow("Listen for \u201cArmor\u201d during rides", "Hands-free: no tap needed. Some phones play a short beep each time listening restarts.", settings.voiceWake) { v -> app.prefs.update { it.copy(voiceWake = v) } }
-            Text("Try: \u201cArmor, stop for fuel\u201d \u00b7 \u201cstatus\u201d \u00b7 \u201cread messages\u201d \u00b7 \u201cpothole ahead\u201d \u00b7 \u201ccall Mom\u201d \u00b7 \u201ctext Mom running late\u201d \u00b7 \u201cneed a hand\u201d \u00b7 \u201cSOS\u201d (asks you to say yes)", color = ArmorColors.OnBg, fontSize = 13.sp)
+            Text("Tap the orange mic on the map, or press your helmet or headset button, then speak after the short buzz. ARMOR answers out loud (through your helmet when connected) and stops listening. Tap again to stop early.", color = ArmorColors.Muted, fontSize = 12.sp)
+            ToggleRow("Also listen for \u201cArmor\u201d (experimental)", "Keeps the microphone listening while the ride screen is open. Android has no true wake word for apps, so some phones click or beep between listens and it may miss words. Off is more reliable.", settings.voiceWake) { v -> app.prefs.update { it.copy(voiceWake = v) } }
+            Text("Try: \u201cstop for fuel\u201d \u00b7 \u201cstatus\u201d \u00b7 \u201cread messages\u201d \u00b7 \u201cpothole ahead\u201d \u00b7 \u201ccall Mom\u201d \u00b7 \u201ctext Mom running late\u201d \u00b7 \u201cneed a hand\u201d \u00b7 \u201cSOS\u201d (asks you to say yes)", color = ArmorColors.OnBg, fontSize = 13.sp)
         }
 
         Card2 {
