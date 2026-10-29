@@ -23,6 +23,7 @@ import com.armor.app.data.EventRecorder
 import com.armor.app.data.Settings
 import com.armor.app.net.ConnectivityMonitor
 import com.armor.app.net.ArmorBackendTransport
+import com.armor.app.net.ArmorCloudTransport
 import com.armor.app.net.FirebaseRestTransport
 import com.armor.app.net.GroupTransport
 import com.armor.app.net.RemoteEvent
@@ -184,7 +185,7 @@ class RideService : Service() {
             }
             connectivity = ConnectivityMonitor(this, handler) { online -> networkOnline = online; pushConnectivity() }.also { it.start() }
             transport = when {
-                settings.backendConfigured -> ArmorBackendTransport(settings.backendUrl, settings.rideId)
+                settings.backendConfigured -> ArmorCloudTransport(settings.rideCode, settings.riderId, settings.rideToken)
                 settings.syncConfigured -> FirebaseRestTransport(settings.firebaseUrl, settings.groupCode)
                 else -> null
             }

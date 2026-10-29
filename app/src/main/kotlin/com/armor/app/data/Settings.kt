@@ -28,6 +28,8 @@ data class Settings(
     /** The ride this rider has created or joined on the ARMOR server (blank when not in one). */
     val rideId: String = "",
     val rideCode: String = "",
+    /** Proves to the ride server that this phone is [riderId] in ride [rideCode]. */
+    val rideToken: String = "",
     val rideName: String = "",
     val isRideAdmin: Boolean = false,
     val bloodGroup: String = "",
@@ -53,7 +55,7 @@ data class Settings(
 ) {
     val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
 
-    val backendConfigured: Boolean get() = backendUrl.isNotBlank() && rideId.isNotBlank()
+    val backendConfigured: Boolean get() = rideCode.isNotBlank() && rideToken.isNotBlank()
     val syncConfigured: Boolean get() = backendConfigured || (groupCode.isNotBlank() && firebaseUrl.isNotBlank())
 }
 
@@ -100,6 +102,7 @@ class Prefs(context: Context) {
             .putString("backendUrl", next.backendUrl)
             .putString("rideId", next.rideId)
             .putString("rideCode", next.rideCode)
+            .putString("rideToken", next.rideToken)
             .putString("rideName", next.rideName)
             .putBoolean("isRideAdmin", next.isRideAdmin)
             .putString("bloodGroup", next.bloodGroup)
@@ -137,6 +140,7 @@ class Prefs(context: Context) {
             backendUrl = sp.getString("backendUrl", "") ?: "",
             rideId = sp.getString("rideId", "") ?: "",
             rideCode = sp.getString("rideCode", "") ?: "",
+            rideToken = sp.getString("rideToken", "") ?: "",
             rideName = sp.getString("rideName", "") ?: "",
             isRideAdmin = sp.getBoolean("isRideAdmin", false),
             bloodGroup = sp.getString("bloodGroup", "") ?: "",

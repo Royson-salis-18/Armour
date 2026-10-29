@@ -59,11 +59,13 @@ function num(value, min, max) {
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
 }
 
-function addRider(ride, name) {
+function addRider(ride, name, phone) {
   const rider = {
     id: newId(),
     token: newId() + newId(),
     name: clean(name, 24) || 'Rider',
+    // Shared with the ride so the others can text and call this rider in an SOS.
+    phone: clean(phone, 20).replace(/[^0-9+]/g, ''),
     joinedAt: now(),
     seenAt: now(),
     lat: null, lon: null, acc: null, speed: null, heading: null, fixAt: null,
@@ -463,7 +465,7 @@ async function api(req, res, url) {
       teamStop: null, regroup: null, destination: null,
       leadId: null,
     };
-    const rider = addRider(ride, b.riderName);
+    const rider = addRider(ride, b.riderName, b.phone);
     ride.leadId = rider.id;
     systemMessage(ride, `${rider.name} created the ride. Share code ${code} with the group.`);
     rides.set(code, ride);
@@ -507,7 +509,7 @@ async function api(req, res, url) {
     if (ride.status === 'ended') throw fail(410, 'That ride has ended');
     const active = [...ride.riders.values()].filter((r) => r.state !== 'LEFT').length;
     if (active >= MAX_RIDERS) throw fail(409, 'Ride is full');
-    const rider = addRider(ride, b.riderName);
+    const rider = addRider(ride, b.riderName, b.phone);
     systemMessage(ride, `${rider.name} joined`);
     touch(ride);
     return send(res, 201, { code: ride.code, riderId: rider.id, token: rider.token, ride: snapshot(ride) });
