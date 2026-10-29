@@ -195,8 +195,10 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     var details by remember { mutableStateOf(false) }
     // Opening the details scrolls them into view; otherwise they open below the fold and look like nothing happened.
     val sheetScroll = rememberScrollState()
+    // Far enough to bring the lead controls (the first thing in the details) up under the status line.
+    val detailsJump = with(androidx.compose.ui.platform.LocalDensity.current) { 190.dp.roundToPx() }
     LaunchedEffect(details) {
-        if (details) { kotlinx.coroutines.delay(120); sheetScroll.animateScrollTo(minOf(sheetScroll.maxValue, sheetScroll.value + 900)) }
+        if (details) { kotlinx.coroutines.delay(120); sheetScroll.animateScrollTo(minOf(sheetScroll.maxValue, sheetScroll.value + detailsJump)) }
     }
     var minimized by remember { mutableStateOf(false) }
     val camera = remember { MapCamera() }

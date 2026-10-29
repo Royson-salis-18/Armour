@@ -163,7 +163,12 @@ ride_json() { curl -s -m 15 "$SERVER/api/rides/$CODE"; }
 echo "12.9718 77.5944 5" > /tmp/kabir_pos
 ( while [ ! -f /tmp/kabir_stop ]; do read la lo sp < /tmp/kabir_pos; kabir location "\"lat\":$la,\"lon\":$lo,\"acc\":8,\"speed\":$sp" >/dev/null; sleep 3; done ) &
 # Find a control inside the ride panel by scrolling the panel itself (not the map above it).
-sheet_find() { for i in 1 2 3 4 5 6; do [ -n "$(find_node "$1")" ] && return 0; swipe 50 66 50 52 350; sleep 0.5; done; return 1; }
+sheet_find() {
+  [ -n "$(find_node "$1")" ] && return 0
+  for i in 1 2 3; do swipe 50 54 50 68 350; sleep 0.5; [ -n "$(find_node "$1")" ] && return 0; done
+  for i in 1 2 3 4 5 6 7; do swipe 50 68 50 54 350; sleep 0.5; [ -n "$(find_node "$1")" ] && return 0; done
+  return 1
+}
 
 # ---- 5 contacts ------------------------------------------------------------------------------
 scene_start 05-contacts
@@ -211,11 +216,18 @@ scene_end
 
 # ---- 9 map views -------------------------------------------------------------------------------
 scene_start 09-map
-for v in Night Terrain Satellite Hybrid Map; do tap_text "$(cat /tmp/curview 2>/dev/null || echo Map)" >/dev/null || true; sleep 1; tap_text "$v"; echo "$v" > /tmp/curview; sleep 2.2; done
+# Open the picker from the map-view button (its label is the current view) and pick each view by its description.
+pick_view() { b=$(find_node "Map view"); [ -z "$b" ] && { tap_text "$CUR" || return; sleep 1.2; }; tap_text "$1"; sleep 2.4; }
+CUR=Map
+pick_view "Easy on the eyes"; CUR=Night
+pick_view "Hills and contours"; CUR=Terrain
+pick_view "Aerial photos"; CUR=Satellite
+pick_view "Aerial photos with place names"; CUR=Hybrid
+pick_view "Clean and light"; CUR=Map
+[ -n "$(find_node "Map view")" ] && adb shell input keyevent 4
 swipe 50 25 25 32 700; sleep 1
 tap_text "Zoom in"; sleep 0.7; tap_text "Zoom in"; sleep 1.2; tap_text "Zoom out"; sleep 0.7; tap_text "Zoom out"; sleep 1
-tap_text "Recentre"; sleep 1
-tap_text "Hybrid" && sleep 1 && tap_text "Map"; sleep 1.5
+tap_text "Recentre"; sleep 2
 scene_end
 
 # ---- 10 panel ----------------------------------------------------------------------------------
