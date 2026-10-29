@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -202,7 +204,9 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                             MapChip(if (s.online) "Online" else "Offline", if (s.online) ArmorColors.Green else ArmorColors.Dim)
                         }
                     }
-                    warning?.let { Txt(it, Type.Label, ArmorColors.Amber, Modifier.padding(top = 8.dp)) }
+                    warning?.let {
+                        Txt(it, Type.Label, ArmorColors.Orange, Modifier.padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xE6101113)).padding(horizontal = 12.dp, vertical = 8.dp))
+                    }
                 }
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
                 Row(Modifier.align(Alignment.BottomEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -216,18 +220,23 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(ArmorColors.S1)
                     .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
             ) {
-                // Drag the handle (or tap it) to minimise the panel and give the map the whole screen.
+                // The whole header (handle and status) is the grip: drag it down or tap it to minimise the panel and give
+                // the map the screen; drag up or tap again to bring the controls back.
+                val grip = Modifier.pointerInput(Unit) {
+                    detectVerticalDragGestures { _, dy -> if (dy > 6f) minimized = true else if (dy < -6f) minimized = false }
+                }.clickable { Haptics.tick(); minimized = !minimized }
                 Box(
-                    Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dy -> if (dy > 6f) minimized = true else if (dy < -6f) minimized = false }
-                    }.clickable { Haptics.tick(); minimized = !minimized },
+                    grip.fillMaxWidth().height(30.dp).semantics { contentDescription = if (minimized) "Show controls" else "Hide controls" },
                     contentAlignment = Alignment.Center,
-                ) { Box(Modifier.size(40.dp, 5.dp).clip(CircleShape).background(ArmorColors.S3)) }
+                ) {
+                    Box(Modifier.size(44.dp, 5.dp).clip(CircleShape).background(ArmorColors.S3))
+                    Txt(if (minimized) "SHOW" else "HIDE", Type.Eyebrow.copy(fontSize = 11.sp), ArmorColors.Dim, Modifier.align(Alignment.CenterEnd))
+                }
                 // Details scroll; the actions below them stay pinned so SOS, help and chat are always one reach away.
                 if (minimized) {
-                    MiniStatus(s, look)
+                    Box(grip) { MiniStatus(s, look) }
                 } else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                StatusRow(s, look)
+                Box(grip) { StatusRow(s, look) }
                 Gap(12.dp)
                 StatsStrip(s)
                 if (s.safety is SafetyState.Acknowledged) {

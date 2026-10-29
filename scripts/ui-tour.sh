@@ -51,18 +51,14 @@ adb shell input swipe $((W/2)) $((H/4)) $((W/5)) $((H/3)) 600
 sleep 3
 shot 03-map-dragged
 
-# Minimise the bottom panel from its handle (the top edge of the dark sheet).
-tap_text "RIDING" >/dev/null || true
-b=$(find_node "Chat"); set -- ${b:-0 0 0 0}
-python3 - "$OUT/ui.xml" > "$OUT/sheet-top.txt" <<'PY'
-import re, sys, xml.etree.ElementTree as ET
-print(min([int(re.findall(r'\d+', n.get('bounds'))[1]) for n in ET.parse(sys.argv[1]).iter('node') if (n.get('text') or '').upper().startswith(('RIDING', 'WITH THE', 'SEPARATED', 'GROUP OUT'))] or [0]))
-PY
-top=$(cat "$OUT/sheet-top.txt"); echo "status title at y=$top"
-[ "$top" -gt 0 ] && adb shell input swipe $((W/2)) $((top - 60)) $((W/2)) $((top + 400)) 300
+# Minimise the bottom panel by dragging its handle down.
+b=$(find_node "Hide controls"); set -- ${b:-0 0 0 0}
+hy=$(( ($2 + $4) / 2 )); echo "handle at y=$hy"
+[ "$hy" -gt 0 ] && adb shell input swipe $((W/2)) $hy $((W/2)) $((hy + 500)) 400
 sleep 2
 shot 04-minimised
 tap_text "Recentre" && sleep 2 && shot 05-recentred
+tap_text "Show controls" && sleep 2 && shot 06-shown
 
 for v in Map Terrain; do :; done
 echo "----- tile log -----"; adb logcat -d -s ArmorTiles:* | tail -20
