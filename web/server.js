@@ -9,6 +9,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const store = require('./store').create(process.env.DATABASE_URL);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
 const PUBLIC = path.join(__dirname, 'public');
@@ -556,7 +557,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(self), accelerometer=(self)');
   try {
-    if (url.pathname === '/healthz') return send(res, 200, { ok: true, rides: rides.size });
+    if (url.pathname === '/healthz') return send(res, 200, { ok: true, rides: rides.size, database: store.enabled });
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (req.method !== 'GET' && req.method !== 'HEAD') throw fail(405, 'Method not allowed');
     serveStatic(req, res, url);
@@ -570,9 +571,22 @@ const server = http.createServer(async (req, res) => {
 // Drop rides nobody has touched for a day.
 setInterval(() => {
   const cutoff = now() - RIDE_TTL_MS;
-  for (const [code, ride] of rides) if (ride.updatedAt < cutoff) rides.delete(code);
+  for (const [code, ride] of rides) if (ride.updatedAt < cutoff) { rides.delete(code); store.remove(code); }
 }, 10 * 60 * 1000).unref();
 
-server.listen(PORT, () => console.log(`ARMOR web listening on :${PORT}`));
+// Bring back the rides saved before the last restart, then start serving.
+store.load(RIDE_TTL_MS)
+  .then((saved) => {
+    for (const ride of saved) rides.set(ride.code, ride);
+    if (store.enabled) console.log(`database: restored ${saved.length} ride(s)`);
+  })
+  .catch((e) => console.error('database load failed, rides will not survive a restart:', e.message))
+  .finally(() => {
+    store.start(rides);
+    server.listen(PORT, () => console.log(`ARMOR web listening on :${PORT}`));
+  });
+
+// Save everything before Render stops the process for a redeploy.
+process.on('SIGTERM', () => store.flush().finally(() => process.exit(0)));
 
 module.exports = server;
