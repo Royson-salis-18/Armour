@@ -27,7 +27,16 @@ hit = next((n for n in nodes if want in label(n).split('|')), None) or next((n f
 if hit is not None: print(*re.findall(r'\d+', hit.get('bounds')))
 PY
 }
-tap_text() { b=$(find_node "$1"); [ -z "$b" ] && { echo "no node '$1'"; return 1; }; set -- $b; adb shell input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 )); }
+mkdir -p "$OUT/debug"; MISS=0
+tap_text() {
+  b=$(find_node "$1")
+  if [ -z "$b" ]; then
+    MISS=$((MISS+1)); echo "no node '$1' (debug/miss-$MISS.png)"
+    adb exec-out screencap -p > "$OUT/debug/miss-$MISS-$(echo "$1" | tr -c 'A-Za-z0-9' '_').png"
+    return 1
+  fi
+  set -- $b; adb shell input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 ))
+}
 tap_at() { adb shell input tap $(( W * $1 / 100 )) $(( H * $2 / 100 )); }
 swipe() { adb shell input swipe $(( W * $1 / 100 )) $(( H * $2 / 100 )) $(( W * $3 / 100 )) $(( H * $4 / 100 )) "${5:-400}"; }
 geo() { adb emu geo fix "$1" "$2" >/dev/null; }
@@ -66,7 +75,8 @@ scene_end() {
   else
     touch "$OUT/$SCENE/.stop"; wait $REC 2>/dev/null
   fi
-  echo "scene $SCENE done"
+  adb exec-out screencap -p > "$OUT/debug/end-$SCENE.png"
+  echo "scene $SCENE done; focus: $(adb shell dumpsys window | grep -m1 mCurrentFocus)"
 }
 
 # ---- setup -----------------------------------------------------------------------------------

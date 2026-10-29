@@ -42,7 +42,11 @@ for i, s in enumerate(scenes):
         print("missing scene", sid)
         continue
     audio = os.path.join(NAR, sid + ".mp3")
-    length = max(duration(src), duration(audio) + 0.6)
+    try:
+        length = max(duration(src), duration(audio) + 0.6)
+    except subprocess.CalledProcessError:
+        print("skipping broken scene", sid)
+        continue
     clip = os.path.join(TMP, sid + ".mp4")
     # Same size and frame rate for every clip; the narration starts 0.3 s in and is padded with silence to the clip's end.
     run(

@@ -49,16 +49,19 @@ jobs:
           disable-animations: true
           script: bash scripts/demo/record.sh
       - name: Edit the video
+        if: always()
         run: python3 scripts/demo/make_video.py video narration ARMOR-demo.mp4
       - name: Save to the ci-video branch
+        if: always()
         run: |
-          mkdir -p /tmp/out && cp ARMOR-demo.mp4 /tmp/out/
+          mkdir -p /tmp/out/debug && cp ARMOR-demo.mp4 /tmp/out/ 2>/dev/null || true
+          cp video/debug/*.png /tmp/out/debug/ 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan ci-video
           git rm -rfq --cached .
           git clean -fdxq
-          cp /tmp/out/ARMOR-demo.mp4 .
-          git add ARMOR-demo.mp4
+          cp -r /tmp/out/* .
+          git add -A .
           git commit -qm "Demo video for ${GITHUB_SHA::7}"
           git push -f origin HEAD:ci-video
