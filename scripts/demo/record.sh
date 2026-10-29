@@ -53,6 +53,7 @@ if [ "${PROBE:-0}" -gt 0 ]; then MODE=record; else MODE=frames; fi
 echo "capture mode: $MODE"
 
 scene_start() {
+  wake
   clear_dialogs
   if [ "${KEEP_APP:-0}" != 1 ] && ! on_armor; then front; fi
   hide_kb
@@ -89,10 +90,14 @@ clear_dialogs() {
     if [ -n "$(find_node "isn't responding")" ]; then tap_text "Wait" || adb shell input keyevent 4; sleep 1; else break; fi
   done
 }
-front() { adb shell am start -n $P/.MainActivity >/dev/null 2>&1; sleep 1.5; }
+# Wake and unlock first: a black, locked screen makes every later step miss.
+wake() { adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard >/dev/null 2>&1; }
+front() { wake; adb shell am start -n $P/.MainActivity >/dev/null 2>&1; sleep 1.5; }
+# The hang-up key doubles as the power button when no call is active, so only press it during a call.
+hang_up() { adb shell dumpsys telephony.registry | grep -q 'mCallState=[12]' && adb shell input keyevent KEYCODE_ENDCALL; sleep 0.5; }
 hide_kb() { adb shell dumpsys input_method | grep -q 'mInputShown=true' && adb shell input keyevent 4 && sleep 0.6; return 0; }
 # Bring ARMOR back after another app (dialer, Messages) has been shown; those apps can take a few seconds to appear.
-back_to_armor() { sleep "${1:-0}"; adb shell am force-stop com.google.android.apps.messaging; adb shell input keyevent 6; sleep 0.5; front; hide_kb; }
+back_to_armor() { sleep "${1:-0}"; adb shell am force-stop com.google.android.apps.messaging; hang_up; front; hide_kb; }
 on_armor() { adb shell dumpsys window | grep -m1 mCurrentFocus | grep -q "$P"; }
 long_press() { b=$(find_node "$1"); [ -z "$b" ] && { echo "no node '$1'"; return 1; }; set -- $b; x=$(( ($1 + $3) / 2 )); y=$(( ($2 + $4) / 2 )); adb shell input swipe $x $y $x $y ${2:-1900}; }
 scroll_to() { for i in 1 2 3 4 5 6; do [ -n "$(find_node "$1")" ] && return 0; swipe 50 72 50 38 450; sleep 0.5; done; return 1; }
