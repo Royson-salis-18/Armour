@@ -69,6 +69,11 @@ adb shell input swipe $((W/2)) $((H/4)) $((W*9/10)) $((H/5)) 500; sleep 2; shot 
 for i in 1 2 3 4 5 6 7 8; do tap_text "Zoom out"; sleep 1; done; sleep 3; shot 09-zoomed-out
 
 for v in Map Terrain; do :; done
+# The voice assistant: tap the orange mic and check it listens (the emulator has no real microphone input).
+adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
+tap_text "Talk to Armor" && sleep 1 && shot 09b-assistant-listening
+sleep 8; shot 09c-assistant-after
+
 # Settings: add an emergency contact typed the Indian way, check it is readable and saved as +91, send a real test SMS.
 adb shell input tap $((W*79/100)) $((H*92/100)); sleep 3
 for i in 1 2 3 4 5; do b=$(find_node "Add contact"); [ -n "$b" ] && break; adb shell input swipe $((W/2)) $((H*3/4)) $((W/2)) $((H/3)) 400; sleep 1; done

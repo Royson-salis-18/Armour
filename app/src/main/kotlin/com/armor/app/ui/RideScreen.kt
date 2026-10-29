@@ -59,6 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armor.app.ArmorApp
 import com.armor.app.alert.Haptics
+import com.armor.app.voice.VoiceAssistant
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.layout.widthIn
 import com.armor.app.data.Settings
 import com.armor.app.service.ArmorRuntime
 import com.armor.app.service.RideService
@@ -188,6 +191,23 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     var details by remember { mutableStateOf(false) }
     var minimized by remember { mutableStateOf(false) }
     val camera = remember { MapCamera() }
+
+    // "Armor, ..." voice assistant: contacts and riders it can call or text, wake word while this screen is open.
+    val context = LocalContext.current
+    val assistant = remember { VoiceAssistant(context) }
+    val caption by assistant.caption.collectAsState()
+    val listening by assistant.listening.collectAsState()
+    val savedContacts by remember { ArmorApp.instance.db.contacts().all() }.collectAsState(initial = emptyList())
+    LaunchedEffect(savedContacts, s.riders.size) {
+        val crew = ArmorApp.instance.prefs.crew.filter { it.id != settings.riderId }
+            .mapIndexed { i, r -> com.armor.app.data.ContactEntity(-(i + 1).toLong(), r.name, r.phone) }
+        assistant.contacts = savedContacts + crew
+    }
+    var micGranted by remember { mutableStateOf(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> micGranted = ok; if (ok) assistant.listenForCommand() }
+    LaunchedEffect(settings.voiceWake, micGranted) { assistant.setWakeMode(settings.voiceWake && micGranted) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(4_000); assistant.resume() } }
+    DisposableEffect(Unit) { onDispose { assistant.release() } }
     val mapView = MapView.of(settings.mapView)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -209,6 +229,20 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     }
                 }
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
+                // The assistant: tap the mic (or say "Armor") and speak; what it heard and its answer show above it.
+                Column(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    caption?.let {
+                        Txt(it, Type.Label, Color.White, Modifier.widthIn(max = 260.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xE6101113)).padding(horizontal = 12.dp, vertical = 8.dp), maxLines = 3)
+                    }
+                    Box(
+                        Modifier.size(60.dp).clip(CircleShape)
+                            .background(if (listening) ArmorColors.Red else ArmorColors.Orange)
+                            .border(3.dp, Color.White, CircleShape)
+                            .clickable { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+                            .semantics { contentDescription = "Talk to Armor" },
+                        contentAlignment = Alignment.Center,
+                    ) { MicGlyph(Color.White) }
+                }
                 // Zoom buttons for gloved hands; pinch and drag work too.
                 Column(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ZoomButton("+") { camera.zoomBy(1.6f) }

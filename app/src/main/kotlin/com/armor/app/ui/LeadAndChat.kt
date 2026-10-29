@@ -283,6 +283,8 @@ private fun describe(i: VoiceIntent): String = when (i) {
     is VoiceIntent.Say -> "Send to the group: \"${i.text}\""
     VoiceIntent.ImOkay -> "Say you're okay."
     VoiceIntent.SosRequest -> "Hold the SOS button to send an SOS."
+    is VoiceIntent.Hazard -> "Mark ${i.type.label.lowercase()} for the riders behind."
+    VoiceIntent.Status, VoiceIntent.ReadMessages, is VoiceIntent.CallContact, is VoiceIntent.TextContact -> "Use the Armor mic on the map for that."
 }
 
 private fun run(i: VoiceIntent) {
@@ -294,11 +296,13 @@ private fun run(i: VoiceIntent) {
         is VoiceIntent.Say -> ArmorRuntime.send(ArmorRuntime.Command.SendMessage(i.text))
         VoiceIntent.ImOkay -> ArmorRuntime.send(ArmorRuntime.Command.RiderOk)
         VoiceIntent.SosRequest -> Unit // never executed by voice
+        is VoiceIntent.Hazard -> ArmorRuntime.send(ArmorRuntime.Command.ReportHazard(i.type))
+        VoiceIntent.Status, VoiceIntent.ReadMessages, is VoiceIntent.CallContact, is VoiceIntent.TextContact -> Unit // spoken assistant only
     }
 }
 
 @Composable
-private fun MicGlyph(color: Color) {
+internal fun MicGlyph(color: Color) {
     Canvas(Modifier.size(22.dp)) {
         val w = size.width
         val stroke = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round)

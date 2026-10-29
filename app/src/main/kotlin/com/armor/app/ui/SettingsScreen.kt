@@ -107,13 +107,13 @@ fun SettingsScreen(settings: Settings) {
             SectionTitle("Emergency contacts")
             Text("An SOS is texted to these numbers with your location. SMS works without internet.", color = ArmorColors.Muted, fontSize = 12.sp)
             contacts.forEach { c ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(c.name, color = ArmorColors.OnBg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                        Text(c.phone, color = ArmorColors.OnBg.copy(alpha = 0.75f), fontSize = 15.sp)
-                    }
+                Column(Modifier.fillMaxWidth()) {
+                    Text(c.name, color = ArmorColors.OnBg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Text(c.phone, color = ArmorColors.OnBg.copy(alpha = 0.75f), fontSize = 15.sp)
                     Row {
-                        TextButton(onClick = { sendTestText(context, c.phone, settings.riderName) }) { Text("Test", color = ArmorColors.Orange) }
+                        TextButton(onClick = { Phones.call(context, c.phone) }) { Text("Call", color = ArmorColors.Orange) }
+                        TextButton(onClick = { Phones.openMessages(context, c.phone) }) { Text("Message", color = ArmorColors.Orange) }
+                        TextButton(onClick = { sendTestText(context, c.phone, settings.riderName) }) { Text("Test SOS text", color = ArmorColors.Orange) }
                         TextButton(onClick = { scope.launch { app.db.contacts().delete(c) } }) { Text("Remove", color = ArmorColors.Red) }
                     }
                 }
@@ -135,6 +135,13 @@ fun SettingsScreen(settings: Settings) {
                 onClick = { addContact(name, phone); name = ""; phone = "" },
             ) { Text("Add contact", color = ArmorColors.Orange) }
             contactNote?.let { Text(it, color = ArmorColors.OnBg, fontSize = 13.sp) }
+        }
+
+        Card2 {
+            SectionTitle("Voice assistant")
+            Text("Say \u201cArmor\u201d and a command while riding, or tap the orange mic on the map. Answers are spoken, through your helmet if it's connected.", color = ArmorColors.Muted, fontSize = 12.sp)
+            ToggleRow("Listen for \u201cArmor\u201d during rides", "Hands-free: no tap needed. Some phones play a short beep each time listening restarts.", settings.voiceWake) { v -> app.prefs.update { it.copy(voiceWake = v) } }
+            Text("Try: \u201cArmor, stop for fuel\u201d \u00b7 \u201cstatus\u201d \u00b7 \u201cread messages\u201d \u00b7 \u201cpothole ahead\u201d \u00b7 \u201ccall Mom\u201d \u00b7 \u201ctext Mom running late\u201d \u00b7 \u201cneed a hand\u201d \u00b7 \u201cSOS\u201d (asks you to say yes)", color = ArmorColors.OnBg, fontSize = 13.sp)
         }
 
         Card2 {

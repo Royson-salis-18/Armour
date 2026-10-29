@@ -1,5 +1,6 @@
 package com.armor.core
 
+import com.armor.core.model.HazardType
 import com.armor.core.model.QuickStatus
 import com.armor.core.model.StopReason
 import com.armor.core.voice.VoiceCommands
@@ -53,5 +54,38 @@ class VoiceCommandsTest {
         assertNull(rider("the weather is lovely today"))
         assertNull(rider(""))
         assertNull(rider("sosig rolls"))
+    }
+
+    @Test fun `the wake word starts a command and background talk is ignored`() {
+        assertEquals("stop for fuel", VoiceCommands.afterWakeWord("Armor, stop for fuel"))
+        assertEquals("status", VoiceCommands.afterWakeWord("hey armour status"))
+        assertEquals("", VoiceCommands.afterWakeWord("Armor"))
+        assertEquals(null, VoiceCommands.afterWakeWord("lets get some fuel"))
+    }
+
+    @Test fun `call and text a saved contact by name`() {
+        val people = listOf("Mom", "Ravi Kumar")
+        assertEquals(VoiceIntent.CallContact("Mom"), VoiceCommands.parse("call mom", false, people))
+        assertEquals(VoiceIntent.CallContact("Ravi Kumar"), VoiceCommands.parse("ring Ravi", false, people))
+        assertEquals(VoiceIntent.TextContact("Mom", "running late"), VoiceCommands.parse("text Mom running late", false, people))
+        assertEquals(VoiceIntent.TextContact("Ravi Kumar", "on my way"), VoiceCommands.parse("message ravi kumar on my way", false, people))
+        assertEquals(null, VoiceCommands.parse("call Steve", false, people), "unknown names are not guessed")
+        assertEquals(VoiceIntent.Say("wait at the toll"), VoiceCommands.parse("tell everyone wait at the toll", false, people))
+        assertEquals(VoiceIntent.SosRequest, VoiceCommands.parse("call an ambulance", false, people))
+    }
+
+    @Test fun `status messages and hazards`() {
+        assertEquals(VoiceIntent.Status, rider("status"))
+        assertEquals(VoiceIntent.ReadMessages, rider("read messages"))
+        assertEquals(VoiceIntent.Hazard(HazardType.POTHOLE), rider("pothole ahead"))
+        assertEquals(VoiceIntent.Hazard(HazardType.POLICE), rider("police checkpoint"))
+        assertEquals(VoiceIntent.Hazard(HazardType.ANIMAL), rider("watch out cows on the road"))
+        assertEquals(VoiceIntent.SosRequest, rider("I had an accident"))
+    }
+
+    @Test fun `yes and no`() {
+        assertEquals(true, VoiceCommands.yesNo("yes send it"))
+        assertEquals(false, VoiceCommands.yesNo("no cancel"))
+        assertEquals(null, VoiceCommands.yesNo("what"))
     }
 }

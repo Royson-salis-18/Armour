@@ -62,6 +62,8 @@ fun GroupScreen(settings: Settings) {
         RideSessionCard(settings)
 
         val riders = snapshot?.riders.orEmpty()
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val crew = remember(riders.size) { prefs.crew }
         if (settings.backendConfigured) Card2 {
             SectionTitle("Riders")
             if (riders.isEmpty()) {
@@ -82,6 +84,12 @@ fun GroupScreen(settings: Settings) {
                         )
                     }
                     if (r.safety != SafetyCode.NORMAL) Text(r.safety.name.lowercase(), color = ArmorColors.Amber, fontSize = 12.sp)
+                }
+                // Their number, if they shared it: ring or message them through the phone's own apps.
+                val phone = crew.firstOrNull { it.id == r.id }?.phone
+                if (!r.isSelf && phone != null) Row {
+                    TextButton(onClick = { com.armor.app.alert.Phones.call(context, phone) }) { Text("Call", color = ArmorColors.Orange) }
+                    TextButton(onClick = { com.armor.app.alert.Phones.openMessages(context, phone) }) { Text("Message", color = ArmorColors.Orange) }
                 }
             }
         }
