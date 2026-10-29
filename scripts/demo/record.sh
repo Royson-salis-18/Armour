@@ -131,12 +131,12 @@ scene_start 03-profile
 nav group
 tap_text "Your name" && type_text "Royson"; sleep 0.5
 tap_text "Your phone number" && type_text "98450 12345"; sleep 0.5
-adb shell input keyevent 4; sleep 2
+hide_kb; sleep 2
 scene_end
 
 # ---- 4 create ride + invite --------------------------------------------------------------------
 scene_start 04-create
-tap_text "Ride name (optional)" && type_text "Sunday coast run"; adb shell input keyevent 4; sleep 0.5
+tap_text "Ride name (optional)" && type_text "Sunday coast run"; hide_kb; sleep 0.5
 tap_text "Create ride"; sleep 8
 CODE=$(adb shell cat /sdcard/ui.xml >/dev/null; adb shell uiautomator dump /sdcard/ui.xml >/dev/null; adb shell cat /sdcard/ui.xml | python3 -c "
 import re,sys,xml.etree.ElementTree as ET
@@ -165,7 +165,7 @@ tap_text "Dad"; sleep 3
 scroll_to "Add contact"; swipe 50 62 50 42 400; sleep 0.5
 tap_text "Name" && type_text "Mom"; sleep 0.4
 tap_text "Phone number" && type_text "98765 43210"; sleep 0.6
-adb shell input keyevent 4; sleep 0.4
+hide_kb; sleep 0.4
 tap_text "Add contact"; sleep 1.5
 scene_end
 
@@ -185,8 +185,8 @@ scene_end
 scene_start 07-settings
 scroll_top; sleep 1.5
 swipe 50 70 50 40 900; sleep 1.5
-scroll_to "Blood group"; tap_text "Blood group" && type_text "O+"; adb shell input keyevent 4; sleep 0.5
-tap_text "Allergies" && type_text "None"; adb shell input keyevent 4; sleep 1
+scroll_to "Blood group"; tap_text "Blood group" && type_text "O+"; hide_kb; sleep 0.5
+tap_text "Allergies" && type_text "None"; hide_kb; sleep 1
 swipe 50 70 50 40 900; sleep 1.5
 scene_end
 
@@ -222,7 +222,7 @@ tap_text "Message the group" && type_text "Pump in 5 km, see you there"; sleep 0
 b=$(find_node "Message the group"); set -- ${b:-0 0 0 0}; adb shell input keyevent 66; sleep 0.5
 tap_text "›" >/dev/null; sleep 1.5
 kabir message '"text":"Got it, right behind you"' >/dev/null; sleep 5
-adb shell input keyevent 4; sleep 0.8
+hide_kb; sleep 0.8
 adb shell input keyevent 4; sleep 1.5
 front
 scene_end
