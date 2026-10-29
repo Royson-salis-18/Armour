@@ -1,5 +1,13 @@
 package com.armor.app.ui
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Call
 import com.armor.app.alert.SmsSender
 import com.armor.app.service.ActionReceiver
 import com.armor.app.service.ArmorRuntime
@@ -107,16 +115,13 @@ fun SettingsScreen(settings: Settings) {
             SectionTitle("Emergency contacts")
             Text("An SOS is texted to these numbers with your location. SMS works without internet.", color = ArmorColors.Muted, fontSize = 12.sp)
             contacts.forEach { c ->
-                Column(Modifier.fillMaxWidth()) {
-                    Text(c.name, color = ArmorColors.OnBg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                    Text(c.phone, color = ArmorColors.OnBg.copy(alpha = 0.75f), fontSize = 15.sp)
-                    Row {
-                        TextButton(onClick = { Phones.call(context, c.phone) }) { Text("Call", color = ArmorColors.Orange) }
-                        TextButton(onClick = { Phones.openMessages(context, c.phone) }) { Text("Message", color = ArmorColors.Orange) }
-                        TextButton(onClick = { sendTestText(context, c.phone, settings.riderName) }) { Text("Test SOS text", color = ArmorColors.Orange) }
-                        TextButton(onClick = { scope.launch { app.db.contacts().delete(c) } }) { Text("Remove", color = ArmorColors.Red) }
-                    }
-                }
+                ContactRow(
+                    c.name, c.phone,
+                    onCall = { Phones.call(context, c.phone) },
+                    onMessage = { Phones.openMessages(context, c.phone) },
+                    onTest = { sendTestText(context, c.phone, settings.riderName) },
+                    onRemove = { scope.launch { app.db.contacts().delete(c) } },
+                )
             }
             smsTest?.let { Text(it, color = ArmorColors.OnBg, fontSize = 13.sp) }
             PrimaryButton("Pick from contacts", color = ArmorColors.Orange, contentColor = androidx.compose.ui.graphics.Color(0xFF1A0B00)) {
@@ -239,4 +244,37 @@ private fun sendTestText(context: android.content.Context, phone: String, name: 
     if (!sender.send(phone, text, attempt = 1, action = ActionReceiver.ACTION_SMS_TEST)) {
         ArmorRuntime.smsTest.value = "Couldn't send the test text: ${sender.lastError ?: "unknown reason"}."
     }
+}
+
+/** One emergency contact: initial, name and number, with round Call and Message buttons and quieter test/remove links. */
+@Composable
+private fun ContactRow(name: String, phone: String, onCall: () -> Unit, onMessage: () -> Unit, onTest: () -> Unit, onRemove: () -> Unit) {
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(ArmorColors.S2).border(1.dp, ArmorColors.Line, shape).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Avatar(name.firstOrNull()?.uppercase() ?: "?", ArmorColors.Orange, 42.dp, textColor = androidx.compose.ui.graphics.Color(0xFF1A0B00))
+            Column(Modifier.weight(1f)) {
+                Text(name, color = ArmorColors.OnBg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+                Text(phone, color = ArmorColors.Muted, fontSize = 14.sp, maxLines = 1)
+            }
+            RoundAction(androidx.compose.material.icons.Icons.Filled.Call, "Call $name", onCall)
+            RoundAction(androidx.compose.material.icons.Icons.Filled.Email, "Message $name", onMessage)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = onTest) { Text("Send test SOS text", color = ArmorColors.Orange, fontSize = 13.sp) }
+            Box(Modifier.weight(1f))
+            TextButton(onClick = onRemove) { Text("Remove", color = ArmorColors.Muted, fontSize = 13.sp) }
+        }
+    }
+}
+
+@Composable
+private fun RoundAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(ArmorColors.Orange.copy(alpha = 0.16f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { androidx.compose.material3.Icon(icon, contentDescription = label, tint = ArmorColors.Orange, modifier = Modifier.size(20.dp)) }
 }

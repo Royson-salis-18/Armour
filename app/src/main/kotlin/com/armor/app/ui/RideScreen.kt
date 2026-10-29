@@ -32,6 +32,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -51,6 +54,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -219,41 +223,73 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 RiderMap(s, Modifier.fillMaxSize(), trail.toList(), view = mapView, camera = camera)
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        MapChip(if (demo) "ARMOR · DEMO" else "ARMOR")
-                        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                            MapChip(if (s.gpsLost) "GPS lost" else "GPS", if (s.gpsLost) ArmorColors.Red else ArmorColors.Green)
-                            MapChip(if (s.online) "Online" else "Offline", if (s.online) ArmorColors.Green else ArmorColors.Dim)
+                        Row(Modifier.glass(RoundedCornerShape(50)).padding(start = 10.dp, end = 14.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            ArmorLogo(18.dp)
+                            Txt("ARMOR", Type.Eyebrow.copy(fontSize = 12.sp, letterSpacing = 2.sp), Color.White)
+                        }
+                        Box(Modifier.weight(1f))
+                        // One pill for the two things a rider wants to know at a glance: is GPS locked, is the group reachable.
+                        Row(Modifier.glass(RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            StatusDot(if (s.gpsLost) ArmorColors.Red else ArmorColors.Green, 7.dp)
+                            Txt(if (s.gpsLost) "No GPS" else "GPS", Type.Label.copy(fontSize = 12.sp), Color.White)
+                            Box(Modifier.size(1.dp, 12.dp).background(Color.White.copy(alpha = 0.2f)))
+                            StatusDot(if (s.online) ArmorColors.Green else ArmorColors.Dim, 7.dp)
+                            Txt(if (s.online) "Online" else "Offline", Type.Label.copy(fontSize = 12.sp), Color.White)
                         }
                     }
-                    warning?.let {
-                        Txt(it, Type.Label, ArmorColors.Orange, Modifier.padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xE6101113)).padding(horizontal = 12.dp, vertical = 8.dp))
+                    var hiddenWarning by remember { mutableStateOf<String?>(null) }
+                    warning?.takeIf { it != hiddenWarning }?.let { w ->
+                        Row(
+                            Modifier.padding(top = 10.dp).fillMaxWidth().glass(RoundedCornerShape(16.dp)).padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(Modifier.padding(start = 8.dp).size(4.dp, 28.dp).clip(CircleShape).background(ArmorColors.Orange))
+                            Txt(w, Type.Label.copy(fontSize = 13.sp), Color.White, Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 8.dp), maxLines = 3)
+                            Box(Modifier.size(36.dp).clip(CircleShape).clickable { hiddenWarning = w }.semantics { contentDescription = "Dismiss" }, contentAlignment = Alignment.Center) {
+                                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Close, null, tint = ArmorColors.Muted, modifier = Modifier.size(18.dp))
+                            }
+                        }
                     }
                 }
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
                 // The assistant: tap the mic (or say "Armor") and speak; what it heard and its answer show above it.
                 Column(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    (caption ?: "Tap to talk").let {
-                        Txt(it, Type.Label, Color.White, Modifier.widthIn(max = 260.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xE6101113)).padding(horizontal = 12.dp, vertical = 8.dp), maxLines = 3)
+                    caption?.let {
+                        Txt(it, Type.Label, Color.White, Modifier.widthIn(max = 260.dp).glass(RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp), maxLines = 3)
                     }
                     // While listening, a ring around the mic grows with your voice, so you can see it hears you.
                     val ring = if (listening) (6 + (micLevel.coerceIn(0f, 10f) * 1.6f)).dp else 0.dp
                     Box(
-                        Modifier.size(60.dp + ring * 2).clip(CircleShape).background(if (listening) ArmorColors.Red.copy(alpha = 0.25f) else Color.Transparent).padding(ring).clip(CircleShape)
-                            .background(if (listening) ArmorColors.Red else ArmorColors.Orange)
-                            .border(3.dp, Color.White, CircleShape)
+                        Modifier.size(58.dp + ring * 2).clip(CircleShape).background(if (listening) ArmorColors.Red.copy(alpha = 0.22f) else Color.Transparent).padding(ring)
+                            .shadow(10.dp, CircleShape).clip(CircleShape)
+                            .background(if (listening) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF5A52), ArmorColors.Red)) else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)))
                             .clickable { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) }
                             .semantics { contentDescription = "Talk to Armor" },
                         contentAlignment = Alignment.Center,
                     ) { MicGlyph(Color.White) }
                 }
                 // Zoom buttons for gloved hands; pinch and drag work too.
-                Column(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Map controls, one style: zoom as a single stacked pill, recentre and map view as round buttons.
+                Column(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp).glass(RoundedCornerShape(24.dp))) {
                     ZoomButton("+") { camera.zoomBy(1.6f) }
+                    Box(Modifier.padding(horizontal = 10.dp).size(28.dp, 1.dp).background(Color.White.copy(alpha = 0.14f)))
                     ZoomButton("\u2212") { camera.zoomBy(1f / 1.6f) }
                 }
-                Row(Modifier.align(Alignment.BottomEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!camera.following) MapChip("Recentre", ArmorColors.Orange, Modifier.clickable { Haptics.click(); camera.recenter() })
-                    MapChip(mapView.label, modifier = Modifier.clickable { mapPicker = true })
+                Row(Modifier.align(Alignment.BottomEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (!camera.following) Row(
+                        Modifier.glass(RoundedCornerShape(50)).clickable { Haptics.click(); camera.recenter() }.padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.LocationOn, null, tint = ArmorColors.Orange, modifier = Modifier.size(16.dp))
+                        Txt("Recentre", Type.Label.copy(fontSize = 13.sp), Color.White)
+                    }
+                    Row(
+                        Modifier.glass(RoundedCornerShape(50)).clickable { mapPicker = true }.padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Txt(mapView.label, Type.Label.copy(fontSize = 13.sp), Color.White)
+                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.KeyboardArrowUp, null, tint = ArmorColors.Muted, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
 
@@ -271,8 +307,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     grip.fillMaxWidth().height(30.dp).semantics { contentDescription = if (minimized) "Show controls" else "Hide controls" },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(44.dp, 5.dp).clip(CircleShape).background(ArmorColors.S3))
-                    Txt(if (minimized) "SHOW" else "HIDE", Type.Eyebrow.copy(fontSize = 11.sp), ArmorColors.Dim, Modifier.align(Alignment.CenterEnd))
+                    Box(Modifier.size(40.dp, 5.dp).clip(CircleShape).background(ArmorColors.S3))
                 }
                 // Details scroll; the actions below them stay pinned so SOS, help and chat are always one reach away.
                 if (minimized) {
@@ -287,9 +322,15 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 }
                 Gap(12.dp)
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { Haptics.tick(); details = !details }.padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
-                ) { Txt(if (details) "HIDE DETAILS" else "RIDERS, LEAD AND SAFETY TOOLS", Type.Eyebrow, ArmorColors.Muted) }
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { Haptics.tick(); details = !details }.padding(horizontal = 4.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Txt("Riders, lead & safety tools", Type.BodyStrong.copy(fontSize = 14.sp), ArmorColors.Muted, Modifier.weight(1f))
+                    androidx.compose.material3.Icon(
+                        if (details) androidx.compose.material.icons.Icons.Filled.KeyboardArrowUp else androidx.compose.material.icons.Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (details) "Hide details" else "Show details", tint = ArmorColors.Muted,
+                    )
+                }
                 if (details) {
                     Gap(10.dp)
                     LeadCard(s)
@@ -356,11 +397,15 @@ private fun linkLook(s: RideSnapshot): LinkLook {
 @Composable
 private fun ZoomButton(label: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(48.dp).clip(CircleShape).background(Color(0xE6101113)).border(1.dp, ArmorColors.Line, CircleShape)
+        Modifier.size(48.dp).clip(CircleShape)
             .clickable { Haptics.tick(); onClick() }.semantics { contentDescription = if (label == "+") "Zoom in" else "Zoom out" },
         contentAlignment = Alignment.Center,
-    ) { Txt(label, Type.Title.copy(fontSize = 24.sp), Color.White) }
+    ) { Txt(label, Type.Title.copy(fontSize = 22.sp), Color.White) }
 }
+
+/** Frosted dark surface for everything that floats over the map, so all map controls read as one set. */
+private fun Modifier.glass(shape: androidx.compose.ui.graphics.Shape): Modifier =
+    this.shadow(6.dp, shape).clip(shape).background(Color(0xE0121316)).border(1.dp, Color.White.copy(alpha = 0.08f), shape)
 
 /** The panel when minimised: one line, so the map has almost the whole screen. */
 @Composable

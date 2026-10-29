@@ -89,6 +89,8 @@ if [ -n "$CODE" ]; then
     sleep 2
   done
   shot 09e-two-riders
+  # Standing still away from Kabir starts the "Are you okay?" check; answer it so the rest of the tour can carry on.
+  tap_text "I'm okay"; sleep 2; tap_text "I'm okay"; sleep 2
   echo "server sees: $(curl -s -m 20 "$SERVER/api/rides/$CODE" | python3 -c "import json,sys;d=json.load(sys.stdin);print([(r['name'], r.get('lat')) for r in d['riders']])")"
 fi
 
