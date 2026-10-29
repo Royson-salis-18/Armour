@@ -30,6 +30,8 @@ data class Settings(
     val rideCode: String = "",
     /** Proves to the ride server that this phone is [riderId] in ride [rideCode]. */
     val rideToken: String = "",
+    /** The ride server's id for this rider in [rideCode]; [riderId] stays this phone's own id. */
+    val rideRiderId: String = "",
     val rideName: String = "",
     val isRideAdmin: Boolean = false,
     val bloodGroup: String = "",
@@ -105,6 +107,7 @@ class Prefs(context: Context) {
             .putString("rideId", next.rideId)
             .putString("rideCode", next.rideCode)
             .putString("rideToken", next.rideToken)
+            .putString("rideRiderId", next.rideRiderId)
             .putString("rideName", next.rideName)
             .putBoolean("isRideAdmin", next.isRideAdmin)
             .putString("bloodGroup", next.bloodGroup)
@@ -144,6 +147,7 @@ class Prefs(context: Context) {
             rideId = sp.getString("rideId", "") ?: "",
             rideCode = sp.getString("rideCode", "") ?: "",
             rideToken = sp.getString("rideToken", "") ?: "",
+            rideRiderId = sp.getString("rideRiderId", "") ?: "",
             rideName = sp.getString("rideName", "") ?: "",
             isRideAdmin = sp.getBoolean("isRideAdmin", false),
             bloodGroup = sp.getString("bloodGroup", "") ?: "",

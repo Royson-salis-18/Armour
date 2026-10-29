@@ -184,10 +184,23 @@ class RideService : Service() {
                 else if (!m.hasGyroscope) recorder.record(EventType.SYSTEM.name, "no gyroscope: crash detection uses impact and tilt only", clock.now())
             }
             connectivity = ConnectivityMonitor(this, handler) { online -> networkOnline = online; pushConnectivity() }.also { it.start() }
-            transport = when {
-                settings.backendConfigured -> ArmorCloudTransport(settings.rideCode, settings.riderId, settings.rideToken)
-                settings.syncConfigured -> FirebaseRestTransport(settings.firebaseUrl, settings.groupCode)
-                else -> null
+            transport = groupTransport(settings)
+            // Creating, joining or leaving a ride while already riding (or with background protection on) takes effect
+            // straight away: the old ride connection is swapped for the new one.
+            scope.launch {
+                app.prefs.settings.collect { next ->
+                    handler.post {
+                        if (!started || demo != null) return@post
+                        val changed = next.rideCode != settings.rideCode || next.rideToken != settings.rideToken || next.rideRiderId != settings.rideRiderId
+                        settings = next
+                        if (changed) {
+                            transport = groupTransport(next)
+                            outbox.clear()
+                            recorder.record(EventType.SYSTEM.name, if (next.backendConfigured) "connected to ride ${next.rideCode}" else "left the group ride", clock.now())
+                            if (!next.backendConfigured) engine.onPeers(emptyList())
+                        }
+                    }
+                }
             }
         }
         bluetooth = BluetoothAudioMonitor(this, handler) { names -> bluetoothNames = names; ArmorRuntime.bluetoothAudio.value = names; pushConnectivity() }.also { it.start() }
@@ -206,6 +219,12 @@ class RideService : Service() {
         release()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun groupTransport(s: Settings): GroupTransport? = when {
+        s.backendConfigured -> ArmorCloudTransport(s.rideCode, s.rideRiderId.ifBlank { s.riderId }, s.rideToken, localId = s.riderId)
+        s.syncConfigured -> FirebaseRestTransport(s.firebaseUrl, s.groupCode)
+        else -> null
     }
 
     private fun release() {

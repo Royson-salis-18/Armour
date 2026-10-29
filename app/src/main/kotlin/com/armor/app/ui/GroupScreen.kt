@@ -115,10 +115,10 @@ private fun RideSessionCard(settings: Settings) {
         busy = null
         if (session == null) { message = failure; return }
         message = null
-        prefs.update { it.copy(riderId = session.riderId, rideCode = session.code, rideToken = session.token, rideName = session.rideName, isRideAdmin = session.isLead) }
+        prefs.update { it.copy(rideRiderId = session.riderId, rideCode = session.code, rideToken = session.token, rideName = session.rideName, isRideAdmin = session.isLead) }
     }
-    fun forget() = prefs.update { it.copy(rideCode = "", rideToken = "", rideName = "", isRideAdmin = false) }
-    fun cloud() = ArmorCloudTransport(settings.rideCode, settings.riderId, settings.rideToken)
+    fun forget() = prefs.update { it.copy(rideCode = "", rideToken = "", rideRiderId = "", rideName = "", isRideAdmin = false) }
+    fun cloud() = ArmorCloudTransport(settings.rideCode, settings.rideRiderId.ifBlank { settings.riderId }, settings.rideToken, localId = settings.riderId)
 
     if (settings.backendConfigured) {
         Card2 {

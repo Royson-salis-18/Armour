@@ -69,6 +69,29 @@ adb shell input swipe $((W/2)) $((H/4)) $((W*9/10)) $((H/5)) 500; sleep 2; shot 
 for i in 1 2 3 4 5 6 7 8; do tap_text "Zoom out"; sleep 1; done; sleep 3; shot 09-zoomed-out
 
 for v in Map Terrain; do :; done
+# Group ride on the live server, joined while already riding: a second rider ("Kabir") is simulated with curl.
+SERVER=${ARMOR_SERVER:-https://armor-ride.onrender.com}
+R=$(curl -s -m 90 -X POST "$SERVER/api/rides" -H 'Content-Type: application/json' -d '{"name":"CI ride","riderName":"Kabir","phone":"+919800000002"}')
+CODE=$(echo "$R" | python3 -c "import json,sys;print(json.load(sys.stdin)['code'])" 2>/dev/null)
+KID=$(echo "$R" | python3 -c "import json,sys;print(json.load(sys.stdin)['riderId'])" 2>/dev/null)
+KTOK=$(echo "$R" | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])" 2>/dev/null)
+echo "ride code: ${CODE:-none}"
+if [ -n "$CODE" ]; then
+  adb shell input tap $((W*40/100)) $((H*92/100)); sleep 3
+  tap_text "6-letter ride code" && adb shell input text "$CODE"; adb shell input keyevent 4; sleep 1
+  tap_text "Join ride"; sleep 12
+  shot 09d-group-joined
+  adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
+  tap_text "Recentre"
+  curl -s -m 20 -X POST "$SERVER/api/rides/$CODE/message" -H 'Content-Type: application/json' -d "{\"riderId\":\"$KID\",\"token\":\"$KTOK\",\"text\":\"Hi from Kabir, 200 m behind you\"}" >/dev/null
+  for i in $(seq 1 8); do
+    curl -s -m 20 -X POST "$SERVER/api/rides/$CODE/location" -H 'Content-Type: application/json' -d "{\"riderId\":\"$KID\",\"token\":\"$KTOK\",\"lat\":$(python3 -c "print(12.9700 + $i*0.0001)"),\"lon\":77.5950,\"acc\":8,\"speed\":6}" >/dev/null
+    sleep 2
+  done
+  shot 09e-two-riders
+  echo "server sees: $(curl -s -m 20 "$SERVER/api/rides/$CODE" | python3 -c "import json,sys;d=json.load(sys.stdin);print([(r['name'], r.get('lat')) for r in d['riders']])")"
+fi
+
 # The voice assistant: tap the orange mic and check it listens (the emulator has no real microphone input).
 adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
 tap_text "Talk to Armor" && sleep 1 && shot 09b-assistant-listening

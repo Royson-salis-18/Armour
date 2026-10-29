@@ -24,6 +24,8 @@ class GpsLocationSource(
 ) {
     private val manager = context.requireService<LocationManager>()
     private var previous: LocationFix? = null
+    /** Holds the dot still while parked and smooths it while riding (raw GPS wanders 5-30 m standing still). */
+    private val smoother = com.armor.core.geo.FixSmoother()
 
     private val listener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
@@ -44,7 +46,7 @@ class GpsLocationSource(
                 accuracyM = if (location.hasAccuracy()) location.accuracy.toDouble() else 50.0,
             )
             previous = fix
-            onFix(fix)
+            smoother.smooth(fix)?.let(onFix)
         }
 
         override fun onProviderEnabled(provider: String) = Unit

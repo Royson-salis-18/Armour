@@ -27,8 +27,11 @@ class ArmorCloudTransport(
     private val code: String,
     private val riderId: String,
     private val token: String,
+    /** This phone's own rider id in the ride engine; the server's id for us ([riderId]) is translated to it on the way in. */
+    private val localId: String = riderId,
     private val timeoutMs: Int = 8_000,
 ) : GroupTransport {
+    private fun me(id: String) = if (id == riderId) localId else id
     private val base = "$SERVER/api/rides/$code"
     private val localToServer = HashMap<String, String>()
     private val serverToLocal = HashMap<String, String>()
@@ -122,34 +125,34 @@ class ArmorCloudTransport(
                 else -> null // stop requests and catch-ups are web-only plans
             } ?: continue
             val resolved = !a.isNull("resolvedAt")
-            if (!resolved && (kind == AlertKind.SOS || kind == AlertKind.CRASH)) emergency[a.getString("riderId")] = if (kind == AlertKind.SOS) SafetyCode.SOS else SafetyCode.CRASH
+            if (!resolved && (kind == AlertKind.SOS || kind == AlertKind.CRASH)) emergency[me(a.getString("riderId"))] = if (kind == AlertKind.SOS) SafetyCode.SOS else SafetyCode.CRASH
             val ack = a.optJSONArray("acks")?.let { arr -> (0 until arr.length()).map { arr.getJSONObject(it) }.firstOrNull { it.optString("riderId") != a.getString("riderId") } }
             val pos = if (a.has("lat") && !a.isNull("lat")) LatLon(a.getDouble("lat"), a.getDouble("lon")) else null
             alerts += GroupAlert(
-                id = serverToLocal[a.getString("id")] ?: a.getString("id"), riderId = a.getString("riderId"), riderName = a.optString("name", "Rider"),
-                kind = kind, position = pos, raisedAtMs = t(a.optLong("at")), ackedById = ack?.optString("riderId"), ackedByName = ack?.optString("name"),
+                id = serverToLocal[a.getString("id")] ?: a.getString("id"), riderId = me(a.getString("riderId")), riderName = a.optString("name", "Rider"),
+                kind = kind, position = pos, raisedAtMs = t(a.optLong("at")), ackedById = ack?.optString("riderId")?.let(::me), ackedByName = ack?.optString("name"),
                 resolved = resolved, detail = a.optString("detail").takeIf { it.isNotEmpty() },
             )
         }
         o.optJSONArray("hazards")?.let { arr ->
             for (i in 0 until arr.length()) arr.getJSONObject(i).let { h ->
                 val type = when (h.optString("type")) { "GRAVEL", "WATER" -> HazardType.OIL; else -> HazardType.entries.firstOrNull { it.name == h.optString("type") } ?: HazardType.ROADWORK }
-                alerts += GroupAlert(h.getString("id"), h.optString("riderId"), h.optString("by", "Rider"), AlertKind.HAZARD, LatLon(h.getDouble("lat"), h.getDouble("lon")), t(h.optLong("at")), detail = type.name)
+                alerts += GroupAlert(h.getString("id"), me(h.optString("riderId")), h.optString("by", "Rider"), AlertKind.HAZARD, LatLon(h.getDouble("lat"), h.getDouble("lon")), t(h.optLong("at")), detail = type.name)
             }
         }
         o.optJSONObject("teamStop")?.let { s ->
             val reason = StopReason.entries.firstOrNull { it.label.equals(s.optString("reason"), true) } ?: StopReason.OTHER
-            alerts += GroupAlert(TEAM_STOP_PREFIX + s.getString("id"), s.optString("byId"), s.optString("by", "Lead"), AlertKind.TEAM_STOP, null, t(s.optLong("at")), detail = reason.name)
+            alerts += GroupAlert(TEAM_STOP_PREFIX + s.getString("id"), me(s.optString("byId")), s.optString("by", "Lead"), AlertKind.TEAM_STOP, null, t(s.optLong("at")), detail = reason.name)
         }
         o.optJSONObject("regroup")?.let { g ->
-            alerts += GroupAlert(REGROUP_PREFIX + g.optLong("at"), o.optString("leadId"), g.optString("by", "Lead"), AlertKind.REGROUP, LatLon(g.getDouble("lat"), g.getDouble("lon")), t(g.optLong("at")), detail = g.optString("label").takeIf { it.isNotEmpty() })
+            alerts += GroupAlert(REGROUP_PREFIX + g.optLong("at"), me(o.optString("leadId")), g.optString("by", "Lead"), AlertKind.REGROUP, LatLon(g.getDouble("lat"), g.getDouble("lon")), t(g.optLong("at")), detail = g.optString("label").takeIf { it.isNotEmpty() })
         }
 
         val riders = ArrayList<RiderReport>()
         val crew = ArrayList<GroupPhone>()
         o.optJSONArray("riders")?.let { arr ->
             for (i in 0 until arr.length()) arr.getJSONObject(i).let { r ->
-                val id = r.getString("id")
+                val id = me(r.getString("id"))
                 val name = r.optString("name", "Rider")
                 r.optString("phone").trim().takeIf { it.isNotEmpty() && it != "null" }?.let { crew += GroupPhone(id, name, it) }
                 if (r.isNull("lat") || r.isNull("lon")) return@let
@@ -167,10 +170,10 @@ class ArmorCloudTransport(
         val messages = ArrayList<ChatMessage>()
         o.optJSONArray("messages")?.let { arr ->
             for (i in 0 until arr.length()) arr.getJSONObject(i).let { m ->
-                messages += ChatMessage(m.getString("id"), m.optString("riderId").takeIf { it.isNotEmpty() && it != "null" } ?: "system", m.optString("name", "ARMOR"), m.optString("text"), t(m.optLong("at")))
+                messages += ChatMessage(m.getString("id"), m.optString("riderId").takeIf { it.isNotEmpty() && it != "null" }?.let(::me) ?: "system", m.optString("name", "ARMOR"), m.optString("text"), t(m.optLong("at")))
             }
         }
-        return GroupData(riders, alerts, messages, o.optString("leadId").takeIf { it.isNotEmpty() }, crew)
+        return GroupData(riders, alerts, messages, o.optString("leadId").takeIf { it.isNotEmpty() }?.let(::me), crew)
     }
 
     // ---- HTTP -------------------------------------------------------------------------------

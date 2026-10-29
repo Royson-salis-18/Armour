@@ -33,11 +33,12 @@ class ArmorCloudIntegrationTest {
         assertTrue(lead.isLead)
         val member = assertNotNull(ArmorCloudTransport.joinRide(lead.code.lowercase(), "Kabir", "9800000002"))
         assertEquals(lead.code, member.code)
-        val a = ArmorCloudTransport(lead.code, lead.riderId, lead.token)
+        // The lead's phone keeps its own rider id; the server's id for it is translated on the way in.
+        val a = ArmorCloudTransport(lead.code, lead.riderId, lead.token, localId = "asha-phone")
         val b = ArmorCloudTransport(member.code, member.riderId, member.token)
         assertTrue(a.start())
 
-        assertTrue(a.publishSelf(report(lead.riderId, "Asha", 12.9700)))
+        assertTrue(a.publishSelf(report("asha-phone", "Asha", 12.9700)))
         assertTrue(b.publishSelf(report(member.riderId, "Kabir", 12.9710, QuickStatus.FUEL)))
         val seen = assertNotNull(a.fetch())
         assertEquals(2, seen.riders.size)
@@ -46,7 +47,10 @@ class ArmorCloudIntegrationTest {
         assertEquals(12.0, kabir.fix.speedMps, 1e-9)
         assertTrue(kabir.status != null, "a declared stop shows as stopped")
         assertEquals(setOf("+919800000001", "9800000002"), seen.crew.map { it.phone }.toSet())
-        assertEquals(lead.riderId, seen.leadId)
+        assertEquals("asha-phone", seen.leadId)
+        assertTrue(seen.riders.any { it.id == "asha-phone" }, "the lead sees itself under its own id, not as a stranger")
+        // Kabir's phone sees the lead under the server id, which is how it addresses everyone else.
+        assertEquals(lead.riderId, assertNotNull(b.fetch()).leadId)
 
         assertTrue(b.sendMessage(ChatMessage("m1", member.riderId, "Kabir", "fuel at the next pump", 0)))
         assertTrue(assertNotNull(a.fetch()).messages.any { it.text == "fuel at the next pump" && it.riderId == member.riderId })
@@ -56,7 +60,7 @@ class ArmorCloudIntegrationTest {
         assertTrue(b.upsertAlert(sos))
         val onA = assertNotNull(a.fetch()).alerts.first { it.kind == AlertKind.SOS }
         assertEquals(SafetyCode.SOS, assertNotNull(a.fetch()).riders.first { it.id == member.riderId }.safety)
-        assertTrue(a.acknowledge(onA.id, lead.riderId, "Asha"))
+        assertTrue(a.acknowledge(onA.id, "asha-phone", "Asha"))
         val onB = assertNotNull(b.fetch()).alerts.first { it.kind == AlertKind.SOS }
         assertEquals("local-sos-1", onB.id, "the raiser sees its own id")
         assertEquals("Asha", onB.ackedByName)
@@ -64,7 +68,7 @@ class ArmorCloudIntegrationTest {
         assertTrue(assertNotNull(a.fetch()).alerts.first { it.kind == AlertKind.SOS }.resolved)
 
         // Team stop from the lead, confirmed by the rider, then lifted.
-        assertTrue(a.upsertAlert(GroupAlert("ts", lead.riderId, "Asha", AlertKind.TEAM_STOP, null, 0, detail = StopReason.FUEL.name)))
+        assertTrue(a.upsertAlert(GroupAlert("ts", "asha-phone", "Asha", AlertKind.TEAM_STOP, null, 0, detail = StopReason.FUEL.name)))
         val stop = assertNotNull(b.fetch()).alerts.first { it.kind == AlertKind.TEAM_STOP }
         assertEquals(StopReason.FUEL.name, stop.detail)
         assertTrue(b.acknowledge(stop.id, member.riderId, "Kabir"))
