@@ -209,6 +209,11 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     }
                 }
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
+                // Zoom buttons for gloved hands; pinch and drag work too.
+                Column(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ZoomButton("+") { camera.zoomBy(1.6f) }
+                    ZoomButton("\u2212") { camera.zoomBy(1f / 1.6f) }
+                }
                 Row(Modifier.align(Alignment.BottomEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!camera.following) MapChip("Recentre", ArmorColors.Orange, Modifier.clickable { Haptics.click(); camera.recenter() })
                     MapChip(mapView.label, modifier = Modifier.clickable { mapPicker = true })
@@ -309,6 +314,15 @@ private fun linkLook(s: RideSnapshot): LinkLook {
         }
         else -> LinkLook("Safety check in progress", "Follow the prompt on screen", ArmorColors.Amber)
     }
+}
+
+@Composable
+private fun ZoomButton(label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(48.dp).clip(CircleShape).background(Color(0xE6101113)).border(1.dp, ArmorColors.Line, CircleShape)
+            .clickable { Haptics.tick(); onClick() }.semantics { contentDescription = if (label == "+") "Zoom in" else "Zoom out" },
+        contentAlignment = Alignment.Center,
+    ) { Txt(label, Type.Title.copy(fontSize = 24.sp), Color.White) }
 }
 
 /** The panel when minimised: one line, so the map has almost the whole screen. */

@@ -59,6 +59,7 @@ sleep 2
 shot 04-minimised
 tap_text "Recentre" && sleep 2 && shot 05-recentred
 tap_text "Show controls" && sleep 2 && shot 06-shown
+tap_text "Zoom in" && sleep 1 && tap_text "Zoom in" && sleep 4 && shot 07-zoomed-in
 
 for v in Map Terrain; do :; done
 echo "----- tile log -----"; adb logcat -d -s ArmorTiles:* | tail -20

@@ -1,5 +1,8 @@
 package com.armor.app.ui
 
+import com.armor.app.alert.SmsSender
+import com.armor.app.service.ActionReceiver
+import com.armor.app.service.ArmorRuntime
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +46,7 @@ fun SettingsScreen(settings: Settings) {
     val contacts by contactsFlow.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val smsTest by ArmorRuntime.smsTest.collectAsState()
 
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -81,9 +85,13 @@ fun SettingsScreen(settings: Settings) {
                         Text(c.name, color = ArmorColors.OnBg, fontWeight = FontWeight.Medium)
                         Text(c.phone, color = ArmorColors.Muted, fontSize = 12.sp)
                     }
-                    TextButton(onClick = { scope.launch { app.db.contacts().delete(c) } }) { Text("Remove", color = ArmorColors.Red) }
+                    Row {
+                        TextButton(onClick = { sendTestText(context, c.phone, settings.riderName) }) { Text("Test", color = ArmorColors.Orange) }
+                        TextButton(onClick = { scope.launch { app.db.contacts().delete(c) } }) { Text("Remove", color = ArmorColors.Red) }
+                    }
                 }
             }
+            smsTest?.let { Text(it, color = ArmorColors.OnBg, fontSize = 13.sp) }
             OutlinedTextField(name, { name = it.take(30) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 phone, { phone = it.filter { ch -> ch.isDigit() || ch == '+' }.take(16) },
@@ -180,5 +188,19 @@ private fun ToggleRow(title: String, detail: String, checked: Boolean, onChange:
             Text(detail, color = ArmorColors.Muted, fontSize = 12.sp)
         }
         Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/** Sends a real text to one contact so the rider can check SOS texting works on this phone and SIM before a ride. */
+private fun sendTestText(context: android.content.Context, phone: String, name: String) {
+    if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        ArmorRuntime.smsTest.value = "ARMOR isn't allowed to send SMS. Open Always-on safety setup above and allow SMS."
+        return
+    }
+    ArmorRuntime.smsTest.value = "Sending a test text to $phone\u2026"
+    val sender = SmsSender(context)
+    val text = "ARMOR test: ${name.ifBlank { "A rider" }} added you as an emergency contact. If they ever need help, you'll get a text like this with their location. No action needed."
+    if (!sender.send(phone, text, attempt = 1, action = ActionReceiver.ACTION_SMS_TEST)) {
+        ArmorRuntime.smsTest.value = "Couldn't send the test text: ${sender.lastError ?: "unknown reason"}."
     }
 }

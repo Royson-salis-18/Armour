@@ -58,6 +58,7 @@ class MapCamera {
     var scale by mutableStateOf<Float?>(null)
     val following get() = center == null && scale == null
     fun recenter() { center = null; scale = null }
+    fun zoomBy(f: Float) = transform(anchor, Offset.Zero, f)
 
     // Written by the draw pass so a gesture knows what the map currently looks like.
     internal var frame: LocalFrame? = null

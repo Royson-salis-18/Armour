@@ -32,7 +32,7 @@ object ArmorRuntime {
         data class Acknowledge(val alertId: String) : Command
         data class Dismiss(val alertId: String) : Command
         data class Demo(val action: DemoAction) : Command
-        data class SmsResult(val phone: String, val ok: Boolean, val attempt: Int) : Command
+        data class SmsResult(val phone: String, val ok: Boolean, val attempt: Int, val reason: String? = null) : Command
         data object Stop : Command
     }
 
@@ -43,6 +43,9 @@ object ArmorRuntime {
 
     /** Human-readable progress of the SOS message delivery, shown on the SOS screen. */
     val sosStatus = MutableStateFlow<String?>(null)
+
+    /** Result of the "Send a test text" button in Settings. */
+    val smsTest = MutableStateFlow<String?>(null)
 
     /** True after a silent SOS: the alarm stays quiet. */
     val silentSos = MutableStateFlow(false)

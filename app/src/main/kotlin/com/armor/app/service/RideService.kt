@@ -63,6 +63,7 @@ class RideService : Service() {
     private class ActiveSos(val text: String, val recipients: List<ContactEntity>) {
         val delivered = HashSet<String>()
         val failedFinal = HashSet<String>()
+        var reason: String? = null
     }
 
     private val app get() = application as ArmorApp
@@ -413,7 +414,8 @@ class RideService : Service() {
         for (c in recipients) {
             if (!sms.send(c.phone, text, attempt = 1)) {
                 sos.failedFinal += c.phone
-                recorder.record(EventType.SYSTEM.name, "SMS to ${c.name} was refused by the phone (permission or number)", clock.now())
+                sos.reason = sms.lastError
+                recorder.record(EventType.SYSTEM.name, "SMS to ${c.name} was refused by the phone: ${sms.lastError}", clock.now())
             }
         }
         refreshSosStatus(sos)
@@ -448,13 +450,15 @@ class RideService : Service() {
             sos.delivered += r.phone
             recorder.record(EventType.SYSTEM.name, "SOS text handed to the network for ${r.phone}", clock.now())
         } else if (r.attempt < MAX_SMS_ATTEMPTS && engine.state is SafetyState.Sos) {
-            recorder.record(EventType.SYSTEM.name, "SOS text to ${r.phone} failed (attempt ${r.attempt}); retrying in 20 s", clock.now())
+            sos.reason = r.reason
+            recorder.record(EventType.SYSTEM.name, "SOS text to ${r.phone} failed (${r.reason}, attempt ${r.attempt}); retrying in 20 s", clock.now())
             handler.postDelayed({
                 if (started && activeSos === sos && engine.state is SafetyState.Sos && !sms.send(r.phone, sos.text, r.attempt + 1)) sos.failedFinal += r.phone
             }, SMS_RETRY_MS)
         } else {
             sos.failedFinal += r.phone
-            recorder.record(EventType.SYSTEM.name, "SOS text to ${r.phone} failed after ${r.attempt} attempts", clock.now())
+            sos.reason = r.reason
+            recorder.record(EventType.SYSTEM.name, "SOS text to ${r.phone} failed after ${r.attempt} attempts: ${r.reason}", clock.now())
         }
         refreshSosStatus(sos)
     }
@@ -464,7 +468,7 @@ class RideService : Service() {
         val texts = when {
             sos.delivered.size == total -> "SOS text sent to all $total people (emergency contacts and your group)."
             sos.delivered.size + sos.failedFinal.size == total ->
-                "SOS text reached ${sos.delivered.size} of $total people. Call emergency services now."
+                "SOS text reached ${sos.delivered.size} of $total people" + (sos.reason?.let { " ($it)" } ?: "") + ". Call emergency services now."
             else -> "SOS text sent to ${sos.delivered.size} of $total people; still trying…"
         }
         ArmorRuntime.sosStatus.value = if (callLine.isEmpty()) texts else "$texts\n$callLine"
