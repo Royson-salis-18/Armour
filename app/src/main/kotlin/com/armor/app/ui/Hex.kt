@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -93,42 +94,52 @@ fun HexTile(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    // Matte charcoal hexagon lit from the top left, sitting on a large soft shadow. Active tiles keep the dark face and
-    // light up from inside with the accent colour instead of turning into a solid block.
+    // A recessed hexagon: the tile is a well sunk into the surface. Light falls from the top left, so the upper-left
+    // inside edge is in deep shadow and a thin lip of light catches the lower-right edge outside. An active tile glows
+    // from inside the well.
     val w = hexWidth(height)
     Box(
         modifier.size(w, height)
-            .shadow(if (active) 22.dp else 16.dp, HexShape, ambientColor = Color.Black, spotColor = if (active) accent else Color.Black)
+            .drawBehind {
+                // The lip: a light hexagon peeking out below and to the right of the well.
+                val lip = hexPath(size)
+                translate(1.6.dp.toPx(), 2.2.dp.toPx()) { drawPath(lip, Color.White.copy(alpha = 0.13f)) }
+                translate(-1.dp.toPx(), -1.4.dp.toPx()) { drawPath(lip, Color.Black.copy(alpha = 0.55f)) }
+            }
             .clip(HexShape)
-            .background(Brush.linearGradient(listOf(Color(0xFF2D2E33), Color(0xFF212226), Color(0xFF17181B)), start = Offset.Zero, end = Offset.Infinite))
+            .background(Brush.linearGradient(listOf(Color(0xFF0B0B0C), Color(0xFF151618), Color(0xFF1E1F22)), start = Offset.Zero, end = Offset.Infinite))
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = contentDescription) { onClick() } else Modifier)
             .drawWithCache {
                 val mid = Offset(size.width / 2f, size.height / 2f)
                 val face = hexPath(size)
-                val rim = hexPath(size, inset = 0.8.dp.toPx())
-                val glow = Brush.radialGradient(listOf(accent.copy(alpha = 0.42f), accent.copy(alpha = 0.12f), Color.Transparent), center = mid, radius = size.minDimension * 0.62f)
-                val vignette = Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.28f)), center = Offset(size.width * 0.38f, size.height * 0.3f), radius = size.maxDimension * 0.85f)
-                val rimLight = Brush.linearGradient(
-                    0f to Color.White.copy(alpha = if (active) 0.22f else 0.10f), 0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.35f),
+                val glow = Brush.radialGradient(listOf(accent.copy(alpha = 0.50f), accent.copy(alpha = 0.14f), Color.Transparent), center = mid, radius = size.minDimension * 0.66f)
+                val floorLight = Brush.radialGradient(listOf(Color.White.copy(alpha = 0.05f), Color.Transparent), center = Offset(size.width * 0.65f, size.height * 0.72f), radius = size.maxDimension * 0.6f)
+                // Inner shadow: stacked strokes along the edge, widest and faintest first, fading toward the middle, with
+                // the shadow on the upper-left half only.
+                val shadowBrush = Brush.linearGradient(
+                    0f to Color.Black.copy(alpha = 0.95f), 0.5f to Color.Black.copy(alpha = 0.25f), 1f to Color.Transparent,
                     start = Offset.Zero, end = Offset(size.width, size.height),
                 )
-                val activeRim = Brush.verticalGradient(listOf(accent.copy(alpha = 0.9f), accent.copy(alpha = 0.15f)))
-                // Thin "circuit" lines and dots above and below the centre, like light running through the tile.
-                val lineA = Offset(mid.x, size.height * 0.08f)
-                val lineB = Offset(mid.x, size.height * 0.22f)
-                val lineC = Offset(mid.x, size.height * 0.78f)
-                val lineD = Offset(mid.x, size.height * 0.92f)
-                val wire = Color.White.copy(alpha = if (active) 0.22f else 0.08f)
+                val litEdge = Brush.linearGradient(
+                    0f to Color.Transparent, 0.55f to Color.Transparent, 1f to (if (active) accent else Color.White).copy(alpha = if (active) 0.75f else 0.20f),
+                    start = Offset.Zero, end = Offset(size.width, size.height),
+                )
+                val lineA = Offset(mid.x, size.height * 0.10f)
+                val lineB = Offset(mid.x, size.height * 0.23f)
+                val lineC = Offset(mid.x, size.height * 0.77f)
+                val lineD = Offset(mid.x, size.height * 0.90f)
+                val wire = Color.White.copy(alpha = if (active) 0.20f else 0.07f)
+                val dot = if (active) accent else Color.White.copy(alpha = 0.22f)
                 onDrawWithContent {
-                    drawPath(face, vignette)
+                    drawPath(face, floorLight)
                     if (active) drawPath(face, glow)
-                    drawLine(wire, lineA, lineB, 1.dp.toPx())
-                    drawLine(wire, lineC, lineD, 1.dp.toPx())
-                    drawCircle(if (active) accent else Color.White.copy(alpha = 0.25f), 1.6.dp.toPx(), lineB)
-                    drawCircle(if (active) accent else Color.White.copy(alpha = 0.25f), 1.6.dp.toPx(), lineC)
+                    drawLine(wire, lineA, lineB, 1.dp.toPx()); drawLine(wire, lineC, lineD, 1.dp.toPx())
+                    drawCircle(dot, 1.6.dp.toPx(), lineB); drawCircle(dot, 1.6.dp.toPx(), lineC)
                     drawContent()
-                    drawPath(rim, rimLight, style = Stroke(1.dp.toPx()))
-                    if (active) drawPath(rim, activeRim, style = Stroke(1.4.dp.toPx()))
+                    drawPath(face, shadowBrush, style = Stroke(18.dp.toPx()), alpha = 0.18f)
+                    drawPath(face, shadowBrush, style = Stroke(11.dp.toPx()), alpha = 0.35f)
+                    drawPath(face, shadowBrush, style = Stroke(5.dp.toPx()), alpha = 0.7f)
+                    drawPath(face, litEdge, style = Stroke(2.dp.toPx()))
                 }
             },
         contentAlignment = Alignment.Center,

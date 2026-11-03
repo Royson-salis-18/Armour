@@ -357,26 +357,26 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
   -webkit-mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 85%);mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 85%)}
 @media (prefers-color-scheme:dark){body::before{filter:invert(1);opacity:.07}}
 
-/* A hex tile: rounded matte-charcoal hexagon lit from the top left, on a soft shadow. The face is a masked pseudo
-   element so the drop-shadow filter on the button follows the hexagon's outline. */
+/* A recessed hex: a well sunk into the surface. A dark hexagon is the shaded wall of the well, and the floor (a slightly
+   smaller, lighter hexagon) is shifted down and right, so the upper-left inside edge is in shadow. The light lip on the
+   lower-right comes from the drop-shadow filter in a light colour. */
 :root{--hexmask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 115.47' preserveAspectRatio='none'%3E%3Cpath d='M41.34 5.00 Q50.00 0.00 58.66 5.00L91.34 23.87 Q100.00 28.87 100.00 38.87L100.00 76.60 Q100.00 86.60 91.34 91.60L58.66 110.47 Q50.00 115.47 41.34 110.47L8.66 91.60 Q0.00 86.60 0.00 76.60L0.00 38.87 Q0.00 28.87 8.66 23.87Z'/%3E%3C/svg%3E")}
-.opt{background:none;border-radius:0;position:relative;isolation:isolate;padding:24px 6px 22px;color:var(--ink);
-  filter:drop-shadow(0 10px 14px rgba(0,0,0,.22)) drop-shadow(0 2px 3px rgba(0,0,0,.18))}
-.opt::before,.opt::after{content:"";position:absolute;inset:0 4%;z-index:-1;-webkit-mask:var(--hexmask) center/100% 100% no-repeat;mask:var(--hexmask) center/100% 100% no-repeat}
-.opt::before{background:radial-gradient(90% 70% at 35% 22%,rgba(255,255,255,.9),transparent 60%),linear-gradient(135deg,#fdfdfd,#eeeef1 55%,#dcdde2)}
-/* Thin rim: light on the upper left, shade on the lower right. */
-.opt::after{inset:1px calc(4% + 1px);background:linear-gradient(135deg,rgba(255,255,255,.7),rgba(255,255,255,0) 45%,rgba(0,0,0,.08));opacity:.9}
-.opt .em{position:relative}
-.opt .em::before{content:"";position:absolute;inset:-9px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,26,.0),transparent 70%);z-index:-1}
+.opt{background:none;border-radius:0;position:relative;isolation:isolate;padding:26px 6px 24px;color:var(--ink);
+  filter:drop-shadow(2px 3px 0 rgba(255,255,255,.9)) drop-shadow(-1px -1.5px 0 rgba(0,0,0,.18))}
+.opt::before,.opt::after{content:"";position:absolute;z-index:-1;-webkit-mask:var(--hexmask) center/100% 100% no-repeat;mask:var(--hexmask) center/100% 100% no-repeat}
+.opt::before{inset:0 4%;background:linear-gradient(135deg,#b9bbc2,#d4d5da 60%,#e4e5e9)}
+.opt::after{inset:3% calc(4% + 3px) -1% calc(4% + 4px);background:radial-gradient(90% 70% at 62% 70%,rgba(255,255,255,.7),transparent 70%),linear-gradient(135deg,#dcdde1,#ececef 60%,#f6f6f8);transform:translate(2px,3px) scale(.97)}
 @media (prefers-color-scheme:dark){
-  .opt{filter:drop-shadow(0 14px 18px rgba(0,0,0,.6)) drop-shadow(0 2px 3px rgba(0,0,0,.45))}
-  .opt::before{background:radial-gradient(90% 70% at 35% 22%,rgba(255,255,255,.07),transparent 60%),linear-gradient(135deg,#2d2e33,#212226 55%,#17181b)}
-  .opt::after{background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,0) 45%,rgba(0,0,0,.35))}
+  .opt{filter:drop-shadow(2px 3px 0 rgba(255,255,255,.07)) drop-shadow(-1px -1.5px 0 rgba(0,0,0,.7))}
+  .opt::before{background:linear-gradient(135deg,#050506,#0c0c0e 60%,#141416)}
+  .opt::after{background:radial-gradient(90% 70% at 62% 70%,rgba(255,255,255,.05),transparent 70%),linear-gradient(135deg,#131416,#1a1b1e 60%,#202125)}
 }
-/* Active: the face stays dark and lights up from inside in orange. */
-.opt.on,.opt.sel,.opt[aria-pressed="true"]{color:var(--accent,#ff6b1a);filter:drop-shadow(0 0 16px rgba(255,107,26,.45)) drop-shadow(0 12px 16px rgba(0,0,0,.5))}
-.opt.on::before,.opt.sel::before,.opt[aria-pressed="true"]::before{background:radial-gradient(60% 50% at 50% 50%,rgba(255,107,26,.35),transparent 70%),linear-gradient(135deg,#2d2e33,#1c1d20)}
+/* Active: the well fills with orange light from inside. */
+.opt.on,.opt.sel,.opt[aria-pressed="true"]{color:var(--accent,#ff6b1a);filter:drop-shadow(2px 3px 0 rgba(255,107,26,.5)) drop-shadow(-1px -1.5px 0 rgba(0,0,0,.6)) drop-shadow(0 0 12px rgba(255,107,26,.4))}
+.opt.on::after,.opt.sel::after,.opt[aria-pressed="true"]::after{background:radial-gradient(60% 55% at 50% 55%,rgba(255,107,26,.5),transparent 72%),linear-gradient(135deg,#1a1210,#1d1511)}
+.opt.on::before,.opt.sel::before,.opt[aria-pressed="true"]::before{background:linear-gradient(135deg,#050506,#0c0c0e)}
 .opt.on .em,.opt.sel .em{color:#ff6b1a;filter:drop-shadow(0 0 6px rgba(255,107,26,.8))}
+.opt:active::after{transform:translate(3px,4px) scale(.96)}
 /* Honeycomb rows: the middle tile of every 3-wide grid row drops half a step so the tiles interlock. */
 .grid3{gap:4px 2px}
 .grid3 .opt:nth-child(3n+2){transform:translateY(14px)}
