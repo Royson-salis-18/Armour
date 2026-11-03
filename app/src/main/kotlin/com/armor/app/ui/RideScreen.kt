@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -82,7 +84,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Composable
-fun RideScreen(settings: Settings) {
+fun RideScreen(settings: Settings, onTab: (Int) -> Unit = {}) {
     val running by ArmorRuntime.running.collectAsState()
     val snapshot by ArmorRuntime.snapshot.collectAsState()
     val demo by ArmorRuntime.demoMode.collectAsState()
@@ -98,21 +100,21 @@ fun RideScreen(settings: Settings) {
     androidx.compose.animation.Crossfade(kind, animationSpec = androidx.compose.animation.core.tween(250), label = "ride") { k ->
         when (k) {
             2 -> summary?.let { RideSummaryScreen(it) { ArmorRuntime.lastSummary.value = null } }
-            0 -> PreRideHost(settings, starting = running)
+            0 -> PreRideHost(settings, starting = running, onTab = onTab)
             else -> s?.let { ActiveRide(it, demo, warning, settings) }
         }
     }
 }
 
 @Composable
-private fun PreRideHost(settings: Settings, starting: Boolean) {
+private fun PreRideHost(settings: Settings, starting: Boolean, onTab: (Int) -> Unit) {
     val contactsFlow = remember { ArmorApp.instance.db.contacts().all() }
     val contacts by contactsFlow.collectAsState(initial = emptyList())
-    PreRide(settings, contacts.size, starting)
+    PreRide(settings, contacts.size, starting, onTab)
 }
 
 @Composable
-internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
+internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean, onTab: (Int) -> Unit = {}) {
     val context = LocalContext.current
     var denied by remember { mutableStateOf(false) }
     var showSetup by remember { mutableStateOf(false) }
@@ -143,16 +145,22 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
     Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Wordmark()
         Txt("Advanced Rider Monitoring & Orientation Reasoning System", Type.Caption, ArmorColors.Dim, Modifier.padding(top = 6.dp))
-        LogoHero(Modifier.fillMaxWidth().height(250.dp))
+        // The home honeycomb: ARMOR in the centre, what's ready around it, and shortcuts to the other tabs.
+        Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), contentAlignment = Alignment.Center) {
+            HexFlower(96.dp, gap = 7.dp, tiles = listOf(
+                { HomeHex("Location", if (locOk) "Ready" else "Allow", locOk) { MiniGlyph(Icons.Filled.LocationOn, it) } },
+                { HomeHex("SOS text", if (smsOk) "Ready" else "Allow", smsOk) { MiniGlyph(Icons.Filled.Email, it) } },
+                { HomeHex("Group", "Ride", false, onClick = { onTab(1) }) { MiniGlyph(Icons.Filled.Person, it) } },
+                { HexTile(96.dp, active = true, contentDescription = "ARMOR") { ArmorLogo(46.dp) } },
+                { HomeHex("Contacts", if (contactCount > 0) "$contactCount saved" else "Add", contactCount > 0, onClick = { onTab(3) }) { MiniGlyph(Icons.Filled.AccountCircle, it) } },
+                { HomeHex("Log", "History", false, onClick = { onTab(2) }) { MiniGlyph(Icons.AutoMirrored.Filled.List, it) } },
+                { HomeHex("Settings", "Safety", false, onClick = { onTab(3) }) { MiniGlyph(Icons.Filled.Settings, it) } },
+            ))
+        }
         Txt("RIDE TOGETHER.", Type.Hero)
         Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)
         Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 20.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ReadyChip("Location", locOk, Modifier.weight(1f))
-            ReadyChip("SOS text", smsOk, Modifier.weight(1f))
-            ReadyChip(if (contactCount > 0) "$contactCount contacts" else "Contacts", contactCount > 0, Modifier.weight(1f))
-        }
         // Setup is done once here, not mid-ride. This card disappears when everything is ready.
         val (ready, total) = protectionReady(context)
         if (ready < total) { Gap(12.dp); SetupCard(ready, total) { showSetup = true } }
@@ -164,6 +172,23 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         SlideToStart(if (starting) "STARTING\u2026" else "SLIDE TO RIDE") { if (!starting) launcher.launch(needed) }
     }
 }
+
+/** One cell of the home honeycomb: a glowing icon, a name and a short state ("Ready", "Allow", "3 saved"). */
+@Composable
+private fun HomeHex(name: String, state: String, lit: Boolean, onClick: (() -> Unit)? = null, icon: @Composable (Color) -> Unit) {
+    HexTile(96.dp, active = lit, contentDescription = "$name: $state", onClick = onClick) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val tint = if (lit) ArmorColors.Orange else Color(0xFFD7D8DC)
+            GlowIcon(tint, lit) { icon(tint) }
+            Txt(name, Type.Label.copy(fontSize = 11.sp), Color.White, Modifier.padding(top = 5.dp), maxLines = 1)
+            Txt(state, Type.Caption.copy(fontSize = 10.sp), if (lit) ArmorColors.Orange else ArmorColors.Dim, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun MiniGlyph(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) =
+    androidx.compose.material3.Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
 
 /** A compact readiness indicator: a lit orange tick when the requirement is met, an amber ring when it isn't. */
 @Composable

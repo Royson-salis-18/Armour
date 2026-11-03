@@ -357,26 +357,33 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
   -webkit-mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 85%);mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 85%)}
 @media (prefers-color-scheme:dark){body::before{filter:invert(1);opacity:.07}}
 
-/* A hex tile: the shadow comes from the drop-shadow filter on the element, which follows the clipped hex face. */
-.opt{background:none;border-radius:0;position:relative;isolation:isolate;padding:22px 6px 20px;
-  filter:drop-shadow(0 6px 8px rgba(0,0,0,.22)) drop-shadow(0 1px 1px rgba(0,0,0,.2))}
-@media (prefers-color-scheme:dark){.opt{filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)) drop-shadow(0 1px 1px rgba(0,0,0,.4))}}
-.opt::before{content:"";position:absolute;inset:0 6%;z-index:-1;clip-path:var(--hex);
-  background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.95),transparent 55%),linear-gradient(180deg,#ffffff,#f1f1f3 55%,#dcdde1)}
-/* Bevel: a thin bright rim on the hex (inset shape), darker underneath. */
-.opt::after{content:"";position:absolute;inset:1px calc(6% + 1px);z-index:-1;clip-path:var(--hex);
-  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 40%,rgba(0,0,0,.35));
-  -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);-webkit-mask-composite:xor;mask-composite:exclude;padding:1.5px}
-.opt.on,.opt.sel,.opt[aria-pressed="true"]{color:var(--on-grad);filter:drop-shadow(0 0 14px rgba(255,107,26,.55)) drop-shadow(0 6px 8px rgba(0,0,0,.45))}
-.opt.on::before,.opt.sel::before,.opt[aria-pressed="true"]::before{background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.35),transparent 55%),linear-gradient(180deg,#ff9a55,#ff6b1a 55%,#d4550f)}
-@media (prefers-color-scheme:dark){.opt::before{background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.16),transparent 55%),linear-gradient(180deg,#34363c,#232428 55%,#17181b)}}
+/* A hex tile: rounded matte-charcoal hexagon lit from the top left, on a soft shadow. The face is a masked pseudo
+   element so the drop-shadow filter on the button follows the hexagon's outline. */
+:root{--hexmask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 115.47' preserveAspectRatio='none'%3E%3Cpath d='M41.34 5.00 Q50.00 0.00 58.66 5.00L91.34 23.87 Q100.00 28.87 100.00 38.87L100.00 76.60 Q100.00 86.60 91.34 91.60L58.66 110.47 Q50.00 115.47 41.34 110.47L8.66 91.60 Q0.00 86.60 0.00 76.60L0.00 38.87 Q0.00 28.87 8.66 23.87Z'/%3E%3C/svg%3E")}
+.opt{background:none;border-radius:0;position:relative;isolation:isolate;padding:24px 6px 22px;color:var(--ink);
+  filter:drop-shadow(0 10px 14px rgba(0,0,0,.22)) drop-shadow(0 2px 3px rgba(0,0,0,.18))}
+.opt::before,.opt::after{content:"";position:absolute;inset:0 4%;z-index:-1;-webkit-mask:var(--hexmask) center/100% 100% no-repeat;mask:var(--hexmask) center/100% 100% no-repeat}
+.opt::before{background:radial-gradient(90% 70% at 35% 22%,rgba(255,255,255,.9),transparent 60%),linear-gradient(135deg,#fdfdfd,#eeeef1 55%,#dcdde2)}
+/* Thin rim: light on the upper left, shade on the lower right. */
+.opt::after{inset:1px calc(4% + 1px);background:linear-gradient(135deg,rgba(255,255,255,.7),rgba(255,255,255,0) 45%,rgba(0,0,0,.08));opacity:.9}
+.opt .em{position:relative}
+.opt .em::before{content:"";position:absolute;inset:-9px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,26,.0),transparent 70%);z-index:-1}
+@media (prefers-color-scheme:dark){
+  .opt{filter:drop-shadow(0 14px 18px rgba(0,0,0,.6)) drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+  .opt::before{background:radial-gradient(90% 70% at 35% 22%,rgba(255,255,255,.07),transparent 60%),linear-gradient(135deg,#2d2e33,#212226 55%,#17181b)}
+  .opt::after{background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,0) 45%,rgba(0,0,0,.35))}
+}
+/* Active: the face stays dark and lights up from inside in orange. */
+.opt.on,.opt.sel,.opt[aria-pressed="true"]{color:var(--accent,#ff6b1a);filter:drop-shadow(0 0 16px rgba(255,107,26,.45)) drop-shadow(0 12px 16px rgba(0,0,0,.5))}
+.opt.on::before,.opt.sel::before,.opt[aria-pressed="true"]::before{background:radial-gradient(60% 50% at 50% 50%,rgba(255,107,26,.35),transparent 70%),linear-gradient(135deg,#2d2e33,#1c1d20)}
+.opt.on .em,.opt.sel .em{color:#ff6b1a;filter:drop-shadow(0 0 6px rgba(255,107,26,.8))}
 /* Honeycomb rows: the middle tile of every 3-wide grid row drops half a step so the tiles interlock. */
 .grid3{gap:4px 2px}
 .grid3 .opt:nth-child(3n+2){transform:translateY(14px)}
 .grid3 .opt:nth-child(3n+2):active{transform:translateY(14px) scale(.96)}
 .grid3{padding-bottom:14px}
 
-/* The Armor mic in the bottom bar is a glowing hex. */
-.nav.mic .ni{border-radius:0;border:none;clip-path:var(--hex);width:62px;height:70px;margin-top:-30px;box-shadow:none;
-  background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.4),transparent 55%),var(--grad)}
-.nav.mic{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(255,107,26,.45))}
+/* The Armor mic in the bottom bar is a glowing rounded hex. */
+.nav.mic .ni{border-radius:0;border:none;clip-path:none;-webkit-mask:var(--hexmask) center/100% 100% no-repeat;mask:var(--hexmask) center/100% 100% no-repeat;
+  width:62px;height:72px;margin-top:-30px;box-shadow:none;background:radial-gradient(70% 55% at 40% 25%,rgba(255,255,255,.45),transparent 60%),var(--grad)}
+.nav.mic{filter:drop-shadow(0 8px 12px rgba(0,0,0,.45)) drop-shadow(0 0 14px rgba(255,107,26,.45))}

@@ -318,7 +318,7 @@ fun FloatingNav(labels: List<String>, icons: List<androidx.compose.ui.graphics.v
             ) {
                 // The selected tab sits on a glowing hex; the others are just icons.
                 if (on) HexTile(54.dp, active = true) {
-                    androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = Color(0xFF1A0B00), modifier = Modifier.size(24.dp))
+                    GlowIcon(ArmorColors.Orange, true) { androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = ArmorColors.Orange, modifier = Modifier.size(24.dp)) }
                 } else androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = ArmorColors.Muted, modifier = Modifier.size(24.dp))
             }
         }

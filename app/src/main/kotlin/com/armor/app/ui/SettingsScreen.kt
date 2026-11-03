@@ -255,7 +255,7 @@ private fun ContactRow(name: String, phone: String, onCall: () -> Unit, onMessag
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            HexTile(46.dp, active = true) { Text(name.firstOrNull()?.uppercase() ?: "?", color = androidx.compose.ui.graphics.Color(0xFF1A0B00), fontWeight = FontWeight.Bold, fontSize = 17.sp) }
+            HexTile(48.dp, active = true) { Text(name.firstOrNull()?.uppercase() ?: "?", color = ArmorColors.Orange, fontWeight = FontWeight.Bold, fontSize = 17.sp) }
             Column(Modifier.weight(1f)) {
                 Text(name, color = ArmorColors.OnBg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
                 Text(phone, color = ArmorColors.Muted, fontSize = 14.sp, maxLines = 1)
