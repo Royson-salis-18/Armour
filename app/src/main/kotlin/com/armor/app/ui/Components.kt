@@ -105,9 +105,8 @@ fun Pill(
 
 @Composable
 fun Card2(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(28.dp)
     Column(
-        modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape).padding(16.dp),
+        modifier.fillMaxWidth().hexPanel().padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) { content() }
 }
@@ -275,8 +274,7 @@ fun ListRow(title: String, detail: String? = null, icon: androidx.compose.ui.gra
 /** Container for [ListRow]s with hairline separators. */
 @Composable
 fun ListCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(28.dp)
-    Column(modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape)) { content() }
+    Column(modifier.fillMaxWidth().hexPanel()) { content() }
 }
 
 @Composable

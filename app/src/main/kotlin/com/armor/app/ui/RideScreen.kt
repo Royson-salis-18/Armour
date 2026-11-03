@@ -469,7 +469,7 @@ private fun StatusRow(s: RideSnapshot, look: LinkLook) {
 private fun StatsStrip(s: RideSnapshot) {
     val st = s.stats
     val shape = RoundedCornerShape(20.dp)
-    Row(Modifier.fillMaxWidth().clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape).padding(vertical = 12.dp)) {
+    Row(Modifier.fillMaxWidth().hexPanel(cut = 14.dp, strength = 0.8f).padding(vertical = 14.dp)) {
         listOf(
             Triple("DISTANCE", fmtDistance(st.distanceM), ""),
             Triple("TIME", fmtHms(st.elapsedMs), ""),
@@ -574,7 +574,7 @@ internal fun RideSummaryScreen(sum: RideSummary, onDone: () -> Unit) {
 @Composable
 private fun SummaryTile(label: String, value: String, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(24.dp)
-    Column(modifier.clip(shape).background(CARD_FILL).border(1.dp, CARD_EDGE, shape).padding(16.dp)) {
+    Column(modifier.hexPanel(cut = 14.dp, strength = 0.9f).padding(16.dp)) {
         Txt(label, Type.Eyebrow.copy(fontSize = 12.sp), ArmorColors.Dim)
         Txt(value, Type.Headline.copy(fontSize = 30.sp))
     }

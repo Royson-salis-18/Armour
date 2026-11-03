@@ -264,7 +264,7 @@ fun SlideToStart(label: String, onComplete: () -> Unit) {
 }
 
 /** A soft pool of coloured light falling from the top of the screen: the ambient glow behind every ARMOR screen. */
-fun Modifier.warmGlow(color: Color = ArmorColors.Orange, strength: Float = 0.30f): Modifier = this.hexBackdrop(lerpWhite(color), strength * 0.22f).warmLight(color, strength)
+fun Modifier.warmGlow(color: Color = ArmorColors.Orange, strength: Float = 0.30f): Modifier = this.hexScatter(color).hexBackdrop(lerpWhite(color), strength * 0.14f).warmLight(color, strength)
 
 private fun lerpWhite(c: Color) = Color((c.red + 1f) / 2f, (c.green + 1f) / 2f, (c.blue + 1f) / 2f)
 
