@@ -168,12 +168,12 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
 /** A compact readiness indicator: a lit orange tick when the requirement is met, an amber ring when it isn't. */
 @Composable
 private fun ReadyChip(label: String, ok: Boolean, modifier: Modifier = Modifier) {
-    Row(
-        modifier.clip(RoundedCornerShape(12.dp)).background(ArmorColors.S1).border(1.dp, ArmorColors.Line, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        StatusDot(if (ok) ArmorColors.Green else ArmorColors.Amber, 8.dp)
-        Txt(label, Type.Label.copy(fontSize = 12.sp), if (ok) ArmorColors.OnBg else ArmorColors.Muted, maxLines = 1)
+    // A lit hex per requirement: glowing orange with a tick when ready, dark with a "!" when not.
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        HexTile(58.dp, active = ok, contentDescription = label + if (ok) " ready" else " not ready") {
+            Txt(if (ok) "\u2713" else "!", Type.Title.copy(fontSize = 22.sp), if (ok) Color(0xFF1A0B00) else ArmorColors.Amber)
+        }
+        Txt(label, Type.Label.copy(fontSize = 12.sp), if (ok) ArmorColors.OnBg else ArmorColors.Muted, Modifier.padding(top = 6.dp), maxLines = 1)
     }
 }
 
@@ -228,6 +228,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // Street map tiles (cached for offline); rider positions never wait on them.
                 RiderMap(s, Modifier.fillMaxSize(), trail.toList(), view = mapView, camera = camera)
+                // A faint HUD honeycomb over the map, lit from the top.
+                Box(Modifier.matchParentSize().hexBackdrop(if (mapView == MapView.MAP || mapView == MapView.TERRAIN) Color.Black else Color.White, 0.07f, 44.dp))
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Row(Modifier.glass(RoundedCornerShape(50)).padding(start = 10.dp, end = 14.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -264,15 +266,12 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     caption?.let {
                         Txt(it, Type.Label, Color.White, Modifier.widthIn(max = 260.dp).glass(RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp), maxLines = 3)
                     }
-                    // While listening, a ring around the mic grows with your voice, so you can see it hears you.
-                    val ring = if (listening) (6 + (micLevel.coerceIn(0f, 10f) * 1.6f)).dp else 0.dp
-                    Box(
-                        Modifier.size(58.dp + ring * 2).clip(CircleShape).background(if (listening) ArmorColors.Red.copy(alpha = 0.22f) else Color.Transparent).padding(ring)
-                            .shadow(10.dp, CircleShape).clip(CircleShape)
-                            .background(if (listening) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF5A52), ArmorColors.Red)) else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)))
-                            .clickable { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) }
-                            .semantics { contentDescription = "Talk to Armor" },
-                        contentAlignment = Alignment.Center,
+                    // A glowing hex mic; while listening it turns red and grows with your voice, so you can see it hears you.
+                    val grow = if (listening) (micLevel.coerceIn(0f, 10f) * 0.8f).dp else 0.dp
+                    HexTile(
+                        64.dp + grow, active = true, accent = if (listening) ArmorColors.Red else ArmorColors.Orange,
+                        modifier = Modifier.semantics { contentDescription = "Talk to Armor" },
+                        onClick = { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) },
                     ) { MicGlyph(Color.White) }
                 }
                 // Zoom buttons for gloved hands; pinch and drag work too.
@@ -467,16 +466,8 @@ private fun QuickStatusRow(current: QuickStatus?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         QuickStatus.entries.forEach { st ->
             val on = st == current
-            Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { ArmorRuntime.send(ArmorRuntime.Command.SetStatus(if (on) null else st)) },
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    Modifier.size(52.dp).clip(CircleShape).background(if (on) ArmorColors.Orange.copy(alpha = 0.2f) else ArmorColors.S2)
-                        .border(1.dp, if (on) ArmorColors.Orange else ArmorColors.Line, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) { StatusIcon(st, if (on) ArmorColors.Orange else ArmorColors.Muted) }
-                Txt(st.shortLabel(), Type.Caption, if (on) ArmorColors.Orange else ArmorColors.Muted, Modifier.padding(top = 6.dp))
+            HexAction(st.shortLabel(), height = 54.dp, active = on, onClick = { ArmorRuntime.send(ArmorRuntime.Command.SetStatus(if (on) null else st)) }) { tint ->
+                StatusIcon(st, tint)
             }
         }
     }

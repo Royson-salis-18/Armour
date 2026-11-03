@@ -264,7 +264,11 @@ fun SlideToStart(label: String, onComplete: () -> Unit) {
 }
 
 /** A soft pool of coloured light falling from the top of the screen: the ambient glow behind every ARMOR screen. */
-fun Modifier.warmGlow(color: Color = ArmorColors.Orange, strength: Float = 0.30f): Modifier = drawBehind {
+fun Modifier.warmGlow(color: Color = ArmorColors.Orange, strength: Float = 0.30f): Modifier = this.hexBackdrop(lerpWhite(color), strength * 0.22f).warmLight(color, strength)
+
+private fun lerpWhite(c: Color) = Color((c.red + 1f) / 2f, (c.green + 1f) / 2f, (c.blue + 1f) / 2f)
+
+private fun Modifier.warmLight(color: Color, strength: Float): Modifier = drawBehind {
     drawRect(
         Brush.radialGradient(
             listOf(color.copy(alpha = strength), color.copy(alpha = strength * 0.35f), Color.Transparent),
@@ -309,12 +313,13 @@ fun FloatingNav(labels: List<String>, icons: List<androidx.compose.ui.graphics.v
         labels.forEachIndexed { i, label ->
             val on = i == selected
             Box(
-                Modifier.size(52.dp).clip(CircleShape)
-                    .background(if (on) Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)))
-                    .clickableNoRipple { onSelect(i) },
+                Modifier.size(56.dp).clickableNoRipple { onSelect(i) },
                 contentAlignment = Alignment.Center,
             ) {
-                androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = if (on) Color(0xFF1A0B00) else ArmorColors.Muted, modifier = Modifier.size(24.dp))
+                // The selected tab sits on a glowing hex; the others are just icons.
+                if (on) HexTile(54.dp, active = true) {
+                    androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = Color(0xFF1A0B00), modifier = Modifier.size(24.dp))
+                } else androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = ArmorColors.Muted, modifier = Modifier.size(24.dp))
             }
         }
     }

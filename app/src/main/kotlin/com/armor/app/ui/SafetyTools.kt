@@ -1,5 +1,10 @@
 package com.armor.app.ui
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Warning
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -80,18 +85,32 @@ fun SafetyTools(s: RideSnapshot, settings: Settings) {
                 action = if (h.position != null) "SHOW" else null) { h.position?.let { openNavigation(context, it) } }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ToolChip("Report hazard", Modifier.weight(1f), hazardPicker) { hazardPicker = !hazardPicker }
-            ToolChip(if (s.crashDetectionPaused) "Back on bike" else "Off the bike", Modifier.weight(1f), s.crashDetectionPaused) {
-                ArmorRuntime.send(ArmorRuntime.Command.PauseCrashDetection(!s.crashDetectionPaused))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            HexAction("Report hazard", active = hazardPicker, onClick = { hazardPicker = !hazardPicker }) { tint ->
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Warning, null, tint = tint)
             }
-            if (s.isLead) ToolChip("Regroup here", Modifier.weight(1f)) { ArmorRuntime.send(ArmorRuntime.Command.SetRegroup("Regroup point")) }
-            else if (settings.roadsideNumber.isNotBlank()) ToolChip("Roadside help", Modifier.weight(1f)) { dial(context, settings.roadsideNumber) }
+            HexAction(if (s.crashDetectionPaused) "Back on bike" else "Off the bike", active = s.crashDetectionPaused, onClick = {
+                ArmorRuntime.send(ArmorRuntime.Command.PauseCrashDetection(!s.crashDetectionPaused))
+            }) { tint -> androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Person, null, tint = tint) }
+            if (s.isLead) HexAction("Regroup here", onClick = { ArmorRuntime.send(ArmorRuntime.Command.SetRegroup("Regroup point")) }) { tint ->
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Place, null, tint = tint)
+            }
+            else if (settings.roadsideNumber.isNotBlank()) HexAction("Roadside help", onClick = { dial(context, settings.roadsideNumber) }) { tint ->
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Build, null, tint = tint)
+            }
         }
         if (hazardPicker) {
-            HazardType.entries.chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { t -> ToolChip(t.label, Modifier.weight(1f)) { ArmorRuntime.send(ArmorRuntime.Command.ReportHazard(t)); hazardPicker = false } }
+            // The hazards as a honeycomb: two interlocking rows of three.
+            HazardType.entries.chunked(3).forEachIndexed { i, row ->
+                Row(
+                    Modifier.fillMaxWidth().padding(start = if (i == 1) 34.dp else 0.dp, end = if (i == 0) 34.dp else 0.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    row.forEach { t ->
+                        HexAction(t.label, height = 56.dp, accent = ArmorColors.Amber, onClick = { ArmorRuntime.send(ArmorRuntime.Command.ReportHazard(t)); hazardPicker = false }) { tint ->
+                            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Warning, null, tint = ArmorColors.Amber, modifier = Modifier.size(22.dp))
+                        }
+                    }
                 }
             }
         }

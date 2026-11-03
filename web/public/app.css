@@ -348,3 +348,35 @@ html{touch-action:manipulation}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,.msg,.code-big,.fullform,.help-list{-webkit-user-select:text;user-select:text}
 img,svg{-webkit-user-drag:none}
+
+/* ---- Hexagon design language: lit, bevelled hex tiles with shadows, on a faint honeycomb ---------------------------- */
+:root{--hex:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+/* Honeycomb backdrop, brighter near the top like light falling on it. */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.07;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='72.75' viewBox='0 0 42 72.75'%3E%3Cpath d='M21 0 L42 12.12 L42 36.37 L21 48.5 L0 36.37 L0 12.12 Z M21 48.5 L21 72.75 M0 36.37 L-21 48.5 M42 36.37 L63 48.5' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
+  -webkit-mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 85%);mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 85%)}
+@media (prefers-color-scheme:dark){body::before{filter:invert(1);opacity:.07}}
+
+/* A hex tile: the shadow comes from the drop-shadow filter on the element, which follows the clipped hex face. */
+.opt{background:none;border-radius:0;position:relative;isolation:isolate;padding:22px 6px 20px;
+  filter:drop-shadow(0 6px 8px rgba(0,0,0,.22)) drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+@media (prefers-color-scheme:dark){.opt{filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)) drop-shadow(0 1px 1px rgba(0,0,0,.4))}}
+.opt::before{content:"";position:absolute;inset:0 6%;z-index:-1;clip-path:var(--hex);
+  background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.95),transparent 55%),linear-gradient(180deg,#ffffff,#f1f1f3 55%,#dcdde1)}
+/* Bevel: a thin bright rim on the hex (inset shape), darker underneath. */
+.opt::after{content:"";position:absolute;inset:1px calc(6% + 1px);z-index:-1;clip-path:var(--hex);
+  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 40%,rgba(0,0,0,.35));
+  -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);-webkit-mask-composite:xor;mask-composite:exclude;padding:1.5px}
+.opt.on,.opt.sel,.opt[aria-pressed="true"]{color:var(--on-grad);filter:drop-shadow(0 0 14px rgba(255,107,26,.55)) drop-shadow(0 6px 8px rgba(0,0,0,.45))}
+.opt.on::before,.opt.sel::before,.opt[aria-pressed="true"]::before{background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.35),transparent 55%),linear-gradient(180deg,#ff9a55,#ff6b1a 55%,#d4550f)}
+@media (prefers-color-scheme:dark){.opt::before{background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.16),transparent 55%),linear-gradient(180deg,#34363c,#232428 55%,#17181b)}}
+/* Honeycomb rows: the middle tile of every 3-wide grid row drops half a step so the tiles interlock. */
+.grid3{gap:4px 2px}
+.grid3 .opt:nth-child(3n+2){transform:translateY(14px)}
+.grid3 .opt:nth-child(3n+2):active{transform:translateY(14px) scale(.96)}
+.grid3{padding-bottom:14px}
+
+/* The Armor mic in the bottom bar is a glowing hex. */
+.nav.mic .ni{border-radius:0;border:none;clip-path:var(--hex);width:62px;height:70px;margin-top:-30px;box-shadow:none;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.4),transparent 55%),var(--grad)}
+.nav.mic{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(255,107,26,.45))}
