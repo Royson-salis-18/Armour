@@ -158,7 +158,7 @@ J=$(curl -s -m 90 -X POST "$SERVER/api/rides/$CODE/join" -H 'Content-Type: appli
 KID=$(echo "$J" | python3 -c "import json,sys;print(json.load(sys.stdin)['riderId'])" 2>/dev/null)
 KTOK=$(echo "$J" | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])" 2>/dev/null)
 kabir() { [ -n "$KID" ] && curl -s -m 15 -X POST "$SERVER/api/rides/$CODE/$1" -H 'Content-Type: application/json' -d "{\"riderId\":\"$KID\",\"token\":\"$KTOK\"${2:+,$2}}"; }
-ride_json() { curl -s -m 15 "$SERVER/api/rides/$CODE"; }
+ride_json() { curl -s -m 15 -H "X-Rider-Id: $KID" -H "X-Rider-Token: $KTOK" "$SERVER/api/rides/$CODE"; }
 # Kabir's phone keeps reporting every few seconds, like a real rider, from wherever /tmp/kabir_pos says he is.
 echo "12.9718 77.5944 5" > /tmp/kabir_pos
 ( while [ ! -f /tmp/kabir_stop ]; do read la lo sp < /tmp/kabir_pos; kabir location "\"lat\":$la,\"lon\":$lo,\"acc\":8,\"speed\":$sp" >/dev/null; sleep 3; done ) &

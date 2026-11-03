@@ -177,3 +177,31 @@ test('voice chat: membership, ICE config and signalling between two riders', asy
   s = (await r.lead('end')).data;
   assert.deepEqual(s.voice, []);
 });
+
+test('a ride can only be read by its riders', async () => {
+  const r = await ride();
+  const anon = await fetch(`${base}/api/rides/${r.code}`);
+  assert.equal(anon.status, 403, 'no positions or phone numbers without joining');
+  const wrong = await fetch(`${base}/api/rides/${r.code}`, { headers: { 'X-Rider-Id': r.ids.bob, 'X-Rider-Token': 'guess' } });
+  assert.equal(wrong.status, 403);
+  const ok = await fetch(`${base}/api/rides/${r.code}`, { headers: { 'X-Rider-Id': r.ids.bob, 'X-Rider-Token': r.creds.bob.token } });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).riders.length, 3);
+});
+
+test('security headers block framing and foreign scripts', async () => {
+  const res = await fetch(base + '/');
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+  assert.match(res.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+  assert.match(res.headers.get('content-security-policy'), /script-src 'self'/);
+});
+
+test('guessing ride codes gets an IP blocked', async () => {
+  const headers = { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.9' };
+  let last;
+  for (let i = 0; i < 40; i++) last = await fetch(`${base}/api/rides/ZZZZ${String(i).padStart(2, '2').replace(/[01]/g, '2')}/join`, { method: 'POST', headers, body: '{"riderName":"x"}' });
+  assert.equal(last.status, 429);
+  // Other people are unaffected.
+  const fine = await fetch(`${base}/api/rides`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.10' }, body: '{"riderName":"y"}' });
+  assert.equal(fine.status, 201);
+});

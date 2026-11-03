@@ -118,7 +118,9 @@ const S = {
 // ---- api -----------------------------------------------------------------
 
 async function api(path, body) {
-  const opts = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  // Reading a ride needs this rider's credentials (riders' positions and numbers are not public).
+  const who = session ? { 'X-Rider-Id': session.riderId, 'X-Rider-Token': session.token } : {};
+  const opts = body === undefined ? { headers: who } : { method: 'POST', headers: { 'Content-Type': 'application/json', ...who }, body: JSON.stringify(body) };
   const res = await fetch('/api' + path, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(data.error || 'Network error'), { status: res.status });

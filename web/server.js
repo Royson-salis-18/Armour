@@ -167,9 +167,15 @@ function findRide(code) {
   return ride;
 }
 
+function sameSecret(a, b) {
+  const x = Buffer.from(String(a || ''));
+  const y = Buffer.from(String(b || ''));
+  return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
+}
+
 function auth(ride, body) {
   const rider = ride.riders.get(String(body.riderId || ''));
-  if (!rider || rider.token !== body.token) throw fail(403, 'Not a member of this ride');
+  if (!rider || !sameSecret(rider.token, body.token)) throw fail(403, 'Not a member of this ride');
   rider.seenAt = now();
   return rider;
 }
@@ -177,6 +183,32 @@ function auth(ride, body) {
 function requireLead(ride, rider) {
   if (ride.leadId !== rider.id) throw fail(403, 'Only the lead can do that');
 }
+
+// ---- abuse limits -----------------------------------------------------------
+// Per-IP limits keep anyone from guessing ride codes, flooding the server with rides or hammering the API.
+const MAX_RIDES = 5000;
+const hits = new Map(); // `${ip}|${bucket}` -> { n, until }
+
+function clientIp(req) {
+  // Render puts the real client first in X-Forwarded-For.
+  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+}
+
+function limit(ip, bucket, max, windowMs) {
+  const key = `${ip}|${bucket}`;
+  const t = now();
+  let h = hits.get(key);
+  if (!h || h.until < t) { h = { n: 0, until: t + windowMs }; hits.set(key, h); }
+  h.n += 1;
+  if (h.n > max) throw fail(429, 'Too many requests. Try again in a few minutes.');
+}
+
+function blocked(ip) {
+  const h = hits.get(`${ip}|fail`);
+  return h && h.until >= now() && h.n > 30;
+}
+
+setInterval(() => { const t = now(); for (const [k, h] of hits) if (h.until < t) hits.delete(k); }, 60 * 1000).unref();
 
 // ---- actions --------------------------------------------------------------
 
@@ -449,11 +481,26 @@ function openEvents(req, res, ride, rider) {
 }
 
 async function api(req, res, url) {
+  const ip = clientIp(req);
+  // Too many wrong codes or tokens: this looks like guessing, so stop answering for a while.
+  if (blocked(ip)) throw fail(429, 'Too many failed attempts. Try again in a few minutes.');
+  limit(ip, 'api', 600, 60 * 1000);
+  try {
+    return await route(req, res, url, ip);
+  } catch (err) {
+    if (err.status === 403 || err.status === 404 || err.status === 410) limit(ip, 'fail', Infinity, 10 * 60 * 1000);
+    throw err;
+  }
+}
+
+async function route(req, res, url, ip) {
   const parts = url.pathname.split('/').filter(Boolean); // ['api','rides',code?,action?]
   if (parts[1] === 'ice' && parts.length === 2) return send(res, 200, { iceServers: iceServers() });
   if (parts[1] !== 'rides') throw fail(404, 'Not found');
 
   if (parts.length === 2 && req.method === 'POST') {
+    limit(ip, 'create', 15, 60 * 60 * 1000);
+    if (rides.size >= MAX_RIDES) throw fail(503, 'ARMOR is busy right now. Try again soon.');
     const b = await readBody(req);
     const code = newCode();
     const ride = {
@@ -475,7 +522,12 @@ async function api(req, res, url) {
 
   const ride = findRide(parts[2]);
 
+  // Reading a ride (who is where, their numbers, the chat) is for its riders only.
   if (parts.length === 3 && req.method === 'GET') {
+    auth(ride, {
+      riderId: req.headers['x-rider-id'] || url.searchParams.get('riderId'),
+      token: req.headers['x-rider-token'] || url.searchParams.get('token'),
+    });
     const since = Number(url.searchParams.get('since')) || 0;
     return send(res, 200, snapshot(ride, since));
   }
@@ -496,6 +548,7 @@ async function api(req, res, url) {
   }
 
   if (parts.length === 4 && parts[3] === 'join' && req.method === 'POST') {
+    limit(ip, 'join', 30, 10 * 60 * 1000);
     const b = await readBody(req);
     // Rejoining with saved credentials keeps the same rider.
     const existing = ride.riders.get(String(b.riderId || ''));
@@ -553,6 +606,25 @@ function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  // No framing (clickjacking), HTTPS only, and the page may only run its own scripts.
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https:",
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; '));
   // OpenStreetMap's tile servers want a Referer, so send the origin only.
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(self), accelerometer=(self)');

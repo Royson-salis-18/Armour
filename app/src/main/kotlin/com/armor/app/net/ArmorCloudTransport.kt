@@ -182,7 +182,9 @@ class ArmorCloudTransport(
 
     private suspend fun post(action: String, body: JSONObject) = http("POST", "$base/$action", body.toString())
 
-    private suspend fun http(method: String, url: String, body: String?): String? = request(method, url, body, timeoutMs)
+    // Reads carry this rider's credentials: a ride's positions, numbers and chat are only for its riders.
+    private suspend fun http(method: String, url: String, body: String?): String? =
+        request(method, url, body, timeoutMs, mapOf("X-Rider-Id" to riderId, "X-Rider-Token" to token))
 
     companion object {
         /** Where ARMOR rides live. The web app is served from the same address, so invite links open there too. */
@@ -213,11 +215,12 @@ class ArmorCloudTransport(
             }
         }
 
-        private suspend fun request(method: String, url: String, body: String?, timeoutMs: Int): String? = withContext(Dispatchers.IO) {
+        private suspend fun request(method: String, url: String, body: String?, timeoutMs: Int, headers: Map<String, String> = emptyMap()): String? = withContext(Dispatchers.IO) {
             var conn: HttpURLConnection? = null
             try {
                 conn = URL(url).openConnection() as HttpURLConnection
                 conn.requestMethod = method
+                headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
                 conn.connectTimeout = timeoutMs
                 conn.readTimeout = timeoutMs
                 if (body != null) {

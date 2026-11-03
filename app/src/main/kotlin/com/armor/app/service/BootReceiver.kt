@@ -13,6 +13,8 @@ import com.armor.app.ArmorApp
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Exported for the system broadcasts only; anything else sent here is ignored.
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         val prefs = ArmorApp.instance.prefs
         val located = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (prefs.current.alwaysOn && located) RideService.start(context, demo = false)
