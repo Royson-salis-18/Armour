@@ -313,13 +313,12 @@ fun FloatingNav(labels: List<String>, icons: List<androidx.compose.ui.graphics.v
         labels.forEachIndexed { i, label ->
             val on = i == selected
             Box(
-                Modifier.size(56.dp).clickableNoRipple { onSelect(i) },
+                Modifier.size(52.dp).clip(CircleShape)
+                    .background(if (on) Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)))
+                    .clickableNoRipple { onSelect(i) },
                 contentAlignment = Alignment.Center,
             ) {
-                // The selected tab sits on a glowing hex; the others are just icons.
-                if (on) HexTile(54.dp, active = true) {
-                    GlowIcon(ArmorColors.Orange, true) { androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = ArmorColors.Orange, modifier = Modifier.size(24.dp)) }
-                } else androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = ArmorColors.Muted, modifier = Modifier.size(24.dp))
+                androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = if (on) Color(0xFF1A0B00) else ArmorColors.Muted, modifier = Modifier.size(24.dp))
             }
         }
     }

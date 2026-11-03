@@ -84,7 +84,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Composable
-fun RideScreen(settings: Settings, onTab: (Int) -> Unit = {}) {
+fun RideScreen(settings: Settings) {
     val running by ArmorRuntime.running.collectAsState()
     val snapshot by ArmorRuntime.snapshot.collectAsState()
     val demo by ArmorRuntime.demoMode.collectAsState()
@@ -100,21 +100,21 @@ fun RideScreen(settings: Settings, onTab: (Int) -> Unit = {}) {
     androidx.compose.animation.Crossfade(kind, animationSpec = androidx.compose.animation.core.tween(250), label = "ride") { k ->
         when (k) {
             2 -> summary?.let { RideSummaryScreen(it) { ArmorRuntime.lastSummary.value = null } }
-            0 -> PreRideHost(settings, starting = running, onTab = onTab)
+            0 -> PreRideHost(settings, starting = running)
             else -> s?.let { ActiveRide(it, demo, warning, settings) }
         }
     }
 }
 
 @Composable
-private fun PreRideHost(settings: Settings, starting: Boolean, onTab: (Int) -> Unit) {
+private fun PreRideHost(settings: Settings, starting: Boolean) {
     val contactsFlow = remember { ArmorApp.instance.db.contacts().all() }
     val contacts by contactsFlow.collectAsState(initial = emptyList())
-    PreRide(settings, contacts.size, starting, onTab)
+    PreRide(settings, contacts.size, starting)
 }
 
 @Composable
-internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean, onTab: (Int) -> Unit = {}) {
+internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
     val context = LocalContext.current
     var denied by remember { mutableStateOf(false) }
     var showSetup by remember { mutableStateOf(false) }
@@ -145,21 +145,16 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean, o
     Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Wordmark()
         Txt("Advanced Rider Monitoring & Orientation Reasoning System", Type.Caption, ArmorColors.Dim, Modifier.padding(top = 6.dp))
-        // The home honeycomb: ARMOR in the centre, what's ready around it, and shortcuts to the other tabs.
-        Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), contentAlignment = Alignment.Center) {
-            HexFlower(96.dp, gap = 7.dp, tiles = listOf(
-                { HomeHex("Location", if (locOk) "Ready" else "Allow", locOk) { MiniGlyph(Icons.Filled.LocationOn, it) } },
-                { HomeHex("SOS text", if (smsOk) "Ready" else "Allow", smsOk) { MiniGlyph(Icons.Filled.Email, it) } },
-                { HomeHex("Group", "Ride", false, onClick = { onTab(1) }) { MiniGlyph(Icons.Filled.Person, it) } },
-                { HexTile(96.dp, active = true, contentDescription = "ARMOR") { ArmorLogo(46.dp) } },
-                { HomeHex("Contacts", if (contactCount > 0) "$contactCount saved" else "Add", contactCount > 0, onClick = { onTab(3) }) { MiniGlyph(Icons.Filled.AccountCircle, it) } },
-                { HomeHex("Log", "History", false, onClick = { onTab(2) }) { MiniGlyph(Icons.AutoMirrored.Filled.List, it) } },
-                { HomeHex("Settings", "Safety", false, onClick = { onTab(3) }) { MiniGlyph(Icons.Filled.Settings, it) } },
-            ))
-        }
+        LogoHero(Modifier.fillMaxWidth().height(250.dp))
         Txt("RIDE TOGETHER.", Type.Hero)
         Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)
         Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 20.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ReadyChip("Location", locOk, Modifier.weight(1f))
+            ReadyChip("SOS text", smsOk, Modifier.weight(1f))
+            ReadyChip(if (contactCount > 0) "$contactCount contacts" else "Contacts", contactCount > 0, Modifier.weight(1f))
+        }
 
         // Setup is done once here, not mid-ride. This card disappears when everything is ready.
         val (ready, total) = protectionReady(context)
@@ -173,32 +168,15 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean, o
     }
 }
 
-/** One cell of the home honeycomb: a glowing icon, a name and a short state ("Ready", "Allow", "3 saved"). */
-@Composable
-private fun HomeHex(name: String, state: String, lit: Boolean, onClick: (() -> Unit)? = null, icon: @Composable (Color) -> Unit) {
-    HexTile(96.dp, active = lit, contentDescription = "$name: $state", onClick = onClick) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val tint = if (lit) ArmorColors.Orange else Color(0xFFD7D8DC)
-            GlowIcon(tint, lit) { icon(tint) }
-            Txt(name, Type.Label.copy(fontSize = 11.sp), Color.White, Modifier.padding(top = 5.dp), maxLines = 1)
-            Txt(state, Type.Caption.copy(fontSize = 10.sp), if (lit) ArmorColors.Orange else ArmorColors.Dim, maxLines = 1)
-        }
-    }
-}
-
-@Composable
-private fun MiniGlyph(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) =
-    androidx.compose.material3.Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-
 /** A compact readiness indicator: a lit orange tick when the requirement is met, an amber ring when it isn't. */
 @Composable
 private fun ReadyChip(label: String, ok: Boolean, modifier: Modifier = Modifier) {
-    // A lit hex per requirement: glowing orange with a tick when ready, dark with a "!" when not.
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        HexTile(58.dp, active = ok, contentDescription = label + if (ok) " ready" else " not ready") {
-            Txt(if (ok) "\u2713" else "!", Type.Title.copy(fontSize = 22.sp), if (ok) Color(0xFF1A0B00) else ArmorColors.Amber)
-        }
-        Txt(label, Type.Label.copy(fontSize = 12.sp), if (ok) ArmorColors.OnBg else ArmorColors.Muted, Modifier.padding(top = 6.dp), maxLines = 1)
+    Row(
+        modifier.clip(RoundedCornerShape(12.dp)).background(ArmorColors.S1).border(1.dp, ArmorColors.Line, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        StatusDot(if (ok) ArmorColors.Green else ArmorColors.Amber, 8.dp)
+        Txt(label, Type.Label.copy(fontSize = 12.sp), if (ok) ArmorColors.OnBg else ArmorColors.Muted, maxLines = 1)
     }
 }
 
@@ -291,12 +269,15 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     caption?.let {
                         Txt(it, Type.Label, Color.White, Modifier.widthIn(max = 260.dp).glass(RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp), maxLines = 3)
                     }
-                    // A glowing hex mic; while listening it turns red and grows with your voice, so you can see it hears you.
-                    val grow = if (listening) (micLevel.coerceIn(0f, 10f) * 0.8f).dp else 0.dp
-                    HexTile(
-                        64.dp + grow, active = true, accent = if (listening) ArmorColors.Red else ArmorColors.Orange,
-                        modifier = Modifier.semantics { contentDescription = "Talk to Armor" },
-                        onClick = { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) },
+                    // While listening, a ring around the mic grows with your voice, so you can see it hears you.
+                    val ring = if (listening) (6 + (micLevel.coerceIn(0f, 10f) * 1.6f)).dp else 0.dp
+                    Box(
+                        Modifier.size(58.dp + ring * 2).clip(CircleShape).background(if (listening) ArmorColors.Red.copy(alpha = 0.22f) else Color.Transparent).padding(ring)
+                            .shadow(10.dp, CircleShape).clip(CircleShape)
+                            .background(if (listening) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF5A52), ArmorColors.Red)) else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)))
+                            .clickable { if (micGranted) assistant.listenForCommand() else micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+                            .semantics { contentDescription = "Talk to Armor" },
+                        contentAlignment = Alignment.Center,
                     ) { MicGlyph(Color.White) }
                 }
                 // Zoom buttons for gloved hands; pinch and drag work too.
@@ -491,8 +472,16 @@ private fun QuickStatusRow(current: QuickStatus?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         QuickStatus.entries.forEach { st ->
             val on = st == current
-            HexAction(st.shortLabel(), height = 54.dp, active = on, onClick = { ArmorRuntime.send(ArmorRuntime.Command.SetStatus(if (on) null else st)) }) { tint ->
-                StatusIcon(st, tint)
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { ArmorRuntime.send(ArmorRuntime.Command.SetStatus(if (on) null else st)) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    Modifier.size(52.dp).clip(CircleShape).background(if (on) ArmorColors.Orange.copy(alpha = 0.2f) else ArmorColors.S2)
+                        .border(1.dp, if (on) ArmorColors.Orange else ArmorColors.Line, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { StatusIcon(st, if (on) ArmorColors.Orange else ArmorColors.Muted) }
+                Txt(st.shortLabel(), Type.Caption, if (on) ArmorColors.Orange else ArmorColors.Muted, Modifier.padding(top = 6.dp))
             }
         }
     }

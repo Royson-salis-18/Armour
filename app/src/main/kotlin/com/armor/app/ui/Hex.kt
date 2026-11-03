@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
@@ -322,9 +323,18 @@ fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWith
             val cx = c.x * w; val cy = c.y * h; val r = c.r * unit * 1.3f
             when (c.kind) {
                 0 -> {
-                    // Soft shadow below and to the right, then a face lit from the top left.
-                    drawPath(hex(cx + r * 0.10f, cy + r * 0.16f, r), Color.Black.copy(alpha = 0.35f))
-                    drawPath(path, Brush.linearGradient(listOf(Color(0xFF26231F), Color(0xFF141311)), start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r)))
+                    // A recessed well: a light lip on the lower right, a dark floor, and an inner shadow along the upper left.
+                    drawPath(hex(cx + r * 0.05f, cy + r * 0.08f, r), Color.White.copy(alpha = 0.10f))
+                    drawPath(path, Brush.linearGradient(listOf(Color(0xFF0A0908), Color(0xFF151311), Color(0xFF1C1A18)), start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r)))
+                    clipPath(path) {
+                        val shade = Brush.linearGradient(
+                            0f to Color.Black.copy(alpha = 0.95f), 0.5f to Color.Black.copy(alpha = 0.2f), 1f to Color.Transparent,
+                            start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r),
+                        )
+                        drawPath(path, shade, style = Stroke(r * 0.5f), alpha = 0.22f)
+                        drawPath(path, shade, style = Stroke(r * 0.3f), alpha = 0.4f)
+                        drawPath(path, shade, style = Stroke(r * 0.12f), alpha = 0.8f)
+                    }
                 }
                 1 -> drawPath(path, Brush.linearGradient(listOf(accent.copy(alpha = 0.8f), accent.copy(alpha = 0.15f)), start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r)), style = Stroke(1.4f * 2))
                 else -> {
