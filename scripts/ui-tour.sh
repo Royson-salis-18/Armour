@@ -39,7 +39,9 @@ geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity
 sleep 6
 shot 00-walkthrough
-for i in 1 2 3 4 5; do tap_text "Next" >/dev/null || tap_text "Got it" >/dev/null; sleep 1.2; [ "$i" = 2 ] && shot 00b-walkthrough-page; [ "$i" = 4 ] && { sleep 6; shot 00c-walkthrough-demo; }; done
+tap_text "Show me" >/dev/null; sleep 1
+# Eight situations: capture each one mid-story (risk, then what ARMOR does).
+for i in 1 2 3 4 5 6 7 8; do sleep 5; shot "00-s$i-a"; sleep 5; shot "00-s$i-b"; tap_text "Next" >/dev/null; sleep 1.2; done
 shot 00d-walkthrough-last
 tap_text "Start using ARMOR"; sleep 2
 shot 01-home
