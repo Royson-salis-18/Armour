@@ -89,6 +89,8 @@ fun SettingsScreen(settings: Settings) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenTitle("Settings")
 
+        UpdateCard()
+
         Card2 {
             SectionTitle("Always-on safety")
             var setup by remember { mutableStateOf(false) }

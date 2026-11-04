@@ -15,6 +15,8 @@ class MainActivity : ComponentActivity() {
         // "Keep protecting me in the background": opening the app also (re)starts protection if it is not running.
         val located = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (ArmorApp.instance.prefs.current.alwaysOn && located) RideService.start(this, demo = false)
+        // A quiet check for a newer build; a banner appears on the home screen if there is one.
+        com.armor.app.net.Updater.check(this, quiet = true)
         setContent { ArmorTheme { ArmorRoot() } }
     }
 }

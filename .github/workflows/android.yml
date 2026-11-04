@@ -53,7 +53,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk ARMOR.apk
+          # version.json is what installed apps read to find out a newer build exists.
+          python3 - <<PY
+          import hashlib, json, os, subprocess
+          apk = open("ARMOR.apk", "rb").read()
+          notes = subprocess.check_output(["git", "log", "-1", "--format=%s"]).decode().strip()
+          json.dump({
+              "versionCode": int(os.environ["GITHUB_RUN_NUMBER"]), "versionName": "1.0." + os.environ["GITHUB_RUN_NUMBER"],
+              "apk": "https://github.com/" + os.environ["GITHUB_REPOSITORY"] + "/releases/download/latest-apk/ARMOR.apk",
+              "sha256": hashlib.sha256(apk).hexdigest(), "size": len(apk), "notes": notes[:140],
+          }, open("version.json", "w"))
+          PY
+          cat version.json
           gh release delete latest-apk --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true
-          gh release create latest-apk ARMOR.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+          gh release create latest-apk ARMOR.apk version.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "ARMOR (latest Android build)" \
             --notes "Open this page on your phone, tap ARMOR.apk, then Install. Allow 'Install unknown apps' for your browser if asked."

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ARMOR live emulator</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:#0a0a0b;color:#f4f4f5;font:14px system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:10px;gap:10px}
+  #bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+  button{background:#1d1e21;color:#f4f4f5;border:1px solid #2b2c30;border-radius:12px;padding:10px 14px;font:inherit}
+  button:active{background:#ff6b1a;color:#1a0b00}
+  #screen{position:relative;touch-action:none;border-radius:22px;overflow:hidden;border:1px solid #2b2c30;box-shadow:0 10px 40px #000;max-height:78vh}
+  #screen img{display:block;max-height:78vh;width:auto;max-width:100%;user-select:none;-webkit-user-drag:none}
+  #dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#ff6b1a66;border:2px solid #ff6b1a;pointer-events:none;display:none}
+  #hint{opacity:.65;text-align:center;max-width:520px}
+  #pad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,40px);gap:4px}
+  #pad button{padding:0}
+  input{background:#151618;color:#f4f4f5;border:1px solid #2b2c30;border-radius:12px;padding:10px 12px;font:inherit;width:190px}
+  #left{opacity:.6}
+</style></head><body>
+<div id="bar">
+  <button data-k="back">◀ Back</button><button data-k="home">● Home</button><button data-k="recents">▢ Recents</button><button data-k="backspace">⌫</button>
+  <span id="left"></span>
+</div>
+<div id="screen"><img id="img" alt="emulator screen"><div id="dot"></div></div>
+<div id="bar">
+  <input id="t" placeholder="Type into the focused field" maxlength="80" autocomplete="off"><button id="send">Send</button>
+  <div id="pad"><span></span><button data-m="n">▲</button><span></span><button data-m="w">◀</button><button data-m="s">▼</button><button data-m="e">▶</button></div>
+</div>
+<div id="hint">Tap and drag on the screen like a phone. Press and hold for 1.5 s to hold a button (SOS). The arrows move the emulator's GPS about 15 m, so you can ride. Closes by itself.</div>
+<script>
+const base = location.pathname.replace(/\/?$/, '/');
+const img = document.getElementById('img'), scr = document.getElementById('screen'), dot = document.getElementById('dot');
+const post = (p, q) => fetch(base + p + '?' + new URLSearchParams(q), { method: 'POST' }).catch(() => {});
+let busy = false;
+function next() { if (busy) return; busy = true; const i = new Image(); i.onload = () => { img.src = i.src; busy = false; setTimeout(next, 60); }; i.onerror = () => { busy = false; setTimeout(next, 800); }; i.src = base + 'frame.jpg?' + Date.now(); }
+next();
+const rel = (e) => { const r = img.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
+let down = null;
+scr.addEventListener('pointerdown', (e) => { scr.setPointerCapture(e.pointerId); down = { p: rel(e), t: Date.now(), x: e.clientX, y: e.clientY }; const r = scr.getBoundingClientRect(); dot.style.display = 'block'; dot.style.left = e.clientX - r.left + 'px'; dot.style.top = e.clientY - r.top + 'px'; });
+scr.addEventListener('pointermove', (e) => { if (!down) return; const r = scr.getBoundingClientRect(); dot.style.left = e.clientX - r.left + 'px'; dot.style.top = e.clientY - r.top + 'px'; });
+scr.addEventListener('pointerup', (e) => {
+  if (!down) return; dot.style.display = 'none';
+  const [x2, y2] = rel(e), [x1, y1] = down.p, ms = Date.now() - down.t, moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+  if (moved < 10 && ms < 450) post('tap', { x: x1, y: y1 });
+  else if (moved < 10) post('swipe', { x1, y1, x2: x1, y2: y1, ms: Math.max(ms, 600) });   // a long press is a swipe that stays put
+  else post('swipe', { x1, y1, x2, y2, ms: Math.max(120, Math.min(900, ms)) });
+  down = null;
+});
+scr.addEventListener('pointercancel', () => { down = null; dot.style.display = 'none'; });
+document.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => post('key', { name: b.dataset.k }));
+document.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => post('move', { dir: b.dataset.m }));
+document.getElementById('send').onclick = () => { const t = document.getElementById('t'); if (t.value) post('text', { t: t.value }); t.value = ''; };
+document.getElementById('t').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('send').click(); });
+setInterval(async () => { try { const s = await (await fetch(base + 'status')).json(); document.getElementById('left').textContent = Math.floor(s.left / 60) + ' min left'; } catch { document.getElementById('left').textContent = 'session ended'; } }, 5000);
+</script></body></html>

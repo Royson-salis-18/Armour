@@ -31,6 +31,8 @@
         <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- In-app updates: install the newer ARMOR.apk the app downloaded -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
@@ -59,6 +61,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />
+        </provider>
 
         <service
             android:name=".service.RideService"
