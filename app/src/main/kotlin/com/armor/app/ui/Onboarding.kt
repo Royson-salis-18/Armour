@@ -494,7 +494,7 @@ private fun BoxScope.familyCards(t: Float) {
             Sms("ARMOR medical, Rohan: Blood O+. Allergies: penicillin.")
         }
         AnimatedVisibility(t >= 0.66f, enter = fadeIn(tween(240)) + expandVertically()) {
-            InfoCard("Rohan is calling…", "ARMOR keeps ringing until someone answers", green)
+            InfoCard("Rohan is calling…", "Rings until someone answers", green)
         }
     }
 }
@@ -713,15 +713,15 @@ fun Onboarding(onFinish: () -> Unit, onSetup: () -> Unit) {
         HorizontalPager(state, Modifier.fillMaxSize()) { page ->
             when (page) {
                 0 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 60.dp, bottom = 140.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ArmorLogo(84.dp)
-                    Txt("ARMOR", Type.Hero, ArmorColors.OnBg, Modifier.padding(top = 14.dp), TextAlign.Center)
+                    ArmorLogo(60.dp)
+                    Txt("ARMOR", Type.Hero, ArmorColors.OnBg, Modifier.padding(top = 8.dp), TextAlign.Center)
                     Txt("Advanced Rider Monitoring & Orientation Reasoning System", Type.Caption, ArmorColors.Dim, Modifier.padding(top = 4.dp), TextAlign.Center)
                     Txt("Ride together. Come home together.", Type.BodyStrong.copy(fontSize = 18.sp), orange, Modifier.padding(top = 14.dp), TextAlign.Center)
                     Txt("Most rides are fine. These are the ones that aren't, and what ARMOR does when they happen.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 8.dp), TextAlign.Center)
-                    Column(Modifier.padding(top = 20.dp).fillMaxWidth().panel(radius = 18.dp, neon = false).padding(vertical = 6.dp)) {
+                    Column(Modifier.padding(top = 16.dp).fillMaxWidth().panel(radius = 18.dp, neon = false).padding(vertical = 4.dp)) {
                         scenes.forEachIndexed { i, s ->
                             Row(
-                                Modifier.fillMaxWidth().clickable { scope.launch { state.animateScrollToPage(i + 1) } }.padding(horizontal = 14.dp, vertical = 9.dp),
+                                Modifier.fillMaxWidth().clickable { scope.launch { state.animateScrollToPage(i + 1) } }.padding(horizontal = 14.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Box(Modifier.size(24.dp).clip(CircleShape).background(orange.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) { Txt("${i + 1}", Type.Label.copy(fontSize = 12.sp), orange) }

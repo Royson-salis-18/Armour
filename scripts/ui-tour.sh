@@ -39,9 +39,12 @@ geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity
 sleep 6
 shot 00-walkthrough
+# The walkthrough is animated: let it play at normal speed for these shots (CI turns animations off).
+for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k 1; done
 tap_text "Show me" >/dev/null; sleep 1
 # Eight situations: capture each one mid-story (risk, then what ARMOR does).
-for i in 1 2 3 4 5 6 7 8; do sleep 5; shot "00-s$i-a"; sleep 5; shot "00-s$i-b"; tap_text "Next" >/dev/null; sleep 1.2; done
+for i in 1 2 3 4 5 6 7 8; do sleep 4; shot "00-s$i-a"; sleep 5; shot "00-s$i-b"; tap_text "Next" >/dev/null; sleep 1.2; done
+for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k 0; done
 shot 00d-walkthrough-last
 tap_text "Start using ARMOR"; sleep 2
 shot 01-home
