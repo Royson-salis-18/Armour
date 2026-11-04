@@ -73,6 +73,8 @@ class RideEngine(
     private val machine = SafetyStateMachine(selfId, config.safety)
 
     private var selfFix: LocationFix? = null
+    private var firstFixMs: Long? = null
+    private var hasMoved = false
     private val stats = RideStats()
     private val speedHistory = ArrayDeque<Pair<Long, Double>>()
     private val peers = LinkedHashMap<String, RiderReport>()
@@ -111,6 +113,8 @@ class RideEngine(
 
     fun onLocation(fix: LocationFix) {
         selfFix = fix
+        if (firstFixMs == null) firstFixMs = fix.timeMs
+        if (fix.speedMps >= config.armMovingMps) hasMoved = true
         stats.onFix(fix)
         if (fatigue.onFix(fix)) effects += EngineEffect.Reminder("You've ridden ${fatigue.riddenSinceBreakMs / 3_600_000} h without a break. Plan a stop soon.", fix.timeMs)
         // Crash detection paused while off the bike resumes by itself once riding again.
@@ -120,7 +124,14 @@ class RideEngine(
         while (speedHistory.isNotEmpty() && fix.timeMs - speedHistory.first().first > SPEED_HISTORY_MS) speedHistory.removeFirst()
     }
 
+    /** Sensors are trusted only after a GPS fix and a short settle time. */
+    private fun sensorsArmed(nowMs: Long) = firstFixMs?.let { nowMs - it >= config.armWarmupMs } == true
+
+    /** Fully armed: crash and stationary alarms may fire. Needs sensors armed and the rider to have moved off. */
+    val armed: Boolean get() = last?.let { sensorsArmed(it.nowMs) && hasMoved } == true
+
     fun onAccel(tMs: Long, x: Double, y: Double, z: Double) {
+        if (!sensorsArmed(tMs)) return
         crashDetector.onAccel(tMs, x, y, z)?.let(::onCandidate)
     }
 
@@ -309,7 +320,7 @@ class RideEngine(
     // ---- clock ------------------------------------------------------------------------------
 
     fun tick(nowMs: Long): RideSnapshot {
-        crashDetector.poll(nowMs)?.let(::onCandidate)
+        if (sensorsArmed(nowMs)) crashDetector.poll(nowMs)?.let(::onCandidate)
         when (arrival.check(selfFix?.position, nowMs)) {
             ArrivalWatch.Event.ARRIVED -> arrival.plan?.let { effects += EngineEffect.ArrivalUpdate(true, it.label, selfFix?.position) }
             ArrivalWatch.Event.LATE -> arrival.plan?.let {
@@ -329,7 +340,7 @@ class RideEngine(
         val assessment = cluster.assess(selfId)
         val obs = Observation(
             assessment = assessment,
-            stationaryForMs = stationary.stationaryForMs(nowMs),
+            stationaryForMs = if (sensorsArmed(nowMs) && hasMoved) stationary.stationaryForMs(nowMs) else 0L,
             moving = stationary.isMoving(nowMs),
             intentionalStop = quickStatus?.intentionalStop == true,
         )

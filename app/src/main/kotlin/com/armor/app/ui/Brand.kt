@@ -230,11 +230,11 @@ fun ConvoyStrip(s: RideSnapshot, modifier: Modifier = Modifier) {
  * start one) by a stray tap. Releasing early snaps back.
  */
 @Composable
-fun SlideToStart(label: String, onComplete: () -> Unit) {
+fun SlideToStart(label: String, enabled: Boolean = true, onComplete: () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val x = remember { Animatable(0f) }
-    BoxWithConstraints(Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(32.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)))) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(64.dp).alpha(if (enabled) 1f else 0.4f).clip(RoundedCornerShape(32.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)))) {
         val thumb = 52.dp
         val inset = 6.dp
         val travel = with(androidx.compose.ui.platform.LocalDensity.current) { (maxWidth - thumb - inset * 2).toPx() }
@@ -250,7 +250,7 @@ fun SlideToStart(label: String, onComplete: () -> Unit) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
                             scope.launch {
-                                if (x.value > travel * 0.85f) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onComplete() }
+                                if (enabled && x.value > travel * 0.85f) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onComplete() }
                                 x.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = 400f))
                             }
                         },

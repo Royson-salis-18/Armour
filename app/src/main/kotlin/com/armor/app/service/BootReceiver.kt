@@ -8,8 +8,8 @@ import android.content.pm.PackageManager
 import com.armor.app.ArmorApp
 
 /**
- * Starts ARMOR's protection by itself after the phone boots or the app is updated, when the rider has turned on
- * "Keep protecting me in the background". Nothing is asked and nothing is shown beyond the ongoing notification.
+ * Picks a ride back up after the phone restarts or the app is updated, but only if a ride was on when it happened.
+ * With no ride on, nothing runs: no detection, no alerts.
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -17,6 +17,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         val prefs = ArmorApp.instance.prefs
         val located = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (prefs.current.alwaysOn && located) RideService.start(context, demo = false)
+        // Only a ride that was genuinely under way is carried on; nothing is armed just because the phone started.
+        if (prefs.rideActive && located) RideService.start(context, demo = false)
     }
 }

@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -119,25 +120,21 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
     var denied by remember { mutableStateOf(false) }
     var showSetup by remember { mutableStateOf(false) }
 
-    val needed = remember {
-        buildList {
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
-            add(Manifest.permission.ACCESS_COARSE_LOCATION)
-            add(Manifest.permission.SEND_SMS)
-            add(Manifest.permission.CALL_PHONE)
-            add(Manifest.permission.READ_PHONE_STATE)
-            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
-        }.toTypedArray()
+    var refresh by remember { mutableIntStateOf(0) }
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) refresh++ }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
     }
     fun granted(p: String) = context.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+    val gate = remember(refresh, settings, contactCount) { RideGate.items(context, settings, contactCount) }
+    val blocked = gate.any { !it.ok }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        if (granted(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            denied = false
-            RideService.start(context, demo = false)
-        } else {
-            denied = true
-        }
+        refresh++
+        denied = !granted(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (!RideGate.missing(context, settings, contactCount).any()) RideService.start(context, demo = false)
     }
 
     val locOk = granted(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -167,7 +164,35 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         if (settings.syncConfigured) Txt("Group ${settings.groupCode}", Type.Label, ArmorColors.Muted, Modifier.padding(top = 12.dp))
 
         Gap(22.dp)
-        SlideToStart(if (starting) "STARTING\u2026" else "SLIDE TO RIDE") { if (!starting) launcher.launch(needed) }
+        if (blocked) GateCard(gate, Modifier.padding(bottom = 14.dp))
+        SlideToStart(if (starting) "STARTING\u2026" else if (blocked) "FINISH SETUP TO RIDE" else "SLIDE TO RIDE", enabled = !starting) {
+            if (starting) return@SlideToStart
+            val ask = RideGate.requestable(context)
+            if (blocked && ask.isNotEmpty()) launcher.launch(ask)
+            else if (!blocked) RideService.start(context, demo = false)
+            else refresh++
+        }
+    }
+}
+
+/** What still stands between the rider and a protected ride, each with the one thing to do about it. */
+@Composable
+private fun GateCard(items: List<GateItem>, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxWidth().panel(18.dp, ArmorColors.Orange).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Txt("Before you ride", Type.Title)
+        Txt("ARMOR only switches on when it can actually protect you.", Type.Caption, ArmorColors.Muted)
+        items.forEach {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatusDot(if (it.ok) ArmorColors.Green else ArmorColors.Amber, 8.dp, Modifier.padding(top = 5.dp))
+                Column {
+                    Txt(it.title, Type.Label, if (it.ok) ArmorColors.Muted else ArmorColors.OnBg)
+                    if (!it.ok) Txt(it.fix, Type.Caption, ArmorColors.Muted)
+                }
+            }
+        }
     }
 }
 

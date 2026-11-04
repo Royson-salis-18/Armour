@@ -27,7 +27,7 @@ fun report(id: String, t: Long, pos: LatLon, speed: Double = 0.0, status: QuickS
  * Replays a ride on a straight road heading north, one second per step. Riders are described by how far
  * along the road they are and how fast they move; "me" is the engine under test.
  */
-class RideSim(config: ArmorConfig = ArmorConfig()) {
+class RideSim(config: ArmorConfig = ArmorConfig(armWarmupMs = 0, armMovingMps = 0.0)) {
     class Rider(val id: String, var north: Double, var speed: Double, var status: QuickStatus? = null)
 
     val engine = RideEngine("me", "Me", config)

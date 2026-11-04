@@ -104,9 +104,9 @@ fun SettingsScreen(settings: Settings) {
             Text(if (ready == total) "Everything ARMOR needs is allowed." else "$ready of $total permissions ready.", color = if (ready == total) ArmorColors.Green else ArmorColors.Amber, fontSize = 13.sp)
             SecondaryButton(if (ready == total) "Review permissions" else "Set up permissions") { setup = true }
             if (setup) ProtectionSetupDialog { setup = false }
-            ToggleRow("Keep protecting me in the background", "Starts by itself after a restart and keeps running with the screen off.", settings.alwaysOn) { v ->
+            ToggleRow("Keep my ride protected in the background", "Keeps a ride running with the screen off and picks it up again after a restart. Nothing runs when no ride is on.", settings.alwaysOn) { v ->
                 app.prefs.update { it.copy(alwaysOn = v) }
-                if (v) { RideService.start(context, demo = false); if (ready < total) setup = true }
+                if (v && ready < total) setup = true
             }
             ToggleRow("Call after an SOS", "Texts everyone, then rings the nearest rider and your emergency contacts one by one until someone answers.", settings.autoCall) { v -> app.prefs.update { it.copy(autoCall = v) } }
             ToggleRow("Keep calling after someone answers", "Ring everyone on the list, not just until the first answer.", settings.callAll) { v -> app.prefs.update { it.copy(callAll = v) } }

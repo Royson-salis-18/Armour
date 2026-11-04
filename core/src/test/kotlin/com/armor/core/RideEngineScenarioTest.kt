@@ -17,6 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 
 /** Whole rides replayed second by second through the real engine — no mocks. */
 class RideEngineScenarioTest {
@@ -296,5 +297,36 @@ class RideEngineScenarioTest {
     @Test fun `demo timers compress the whole ladder under a minute`() {
         val sim = RideSim(ArmorConfig().forDemo()).apply { addPeer("arjun", 30.0, 20.0); addPeer("meera", 0.0, 20.0) }
         assertTrue(sim.runUntil(60) { sim.engine.state is SafetyState.Sos })
+    }
+}
+
+class ArmingTest {
+    private val armed = ArmorConfig().copy(safety = ArmorConfig().safety.copy(soloStationaryMs = 5_000))
+
+    @Test
+    fun `a ride switched on and left sitting never raises an alarm`() {
+        val sim = RideSim(armed)
+        sim.run(120)
+        assertTrue(sim.engine.state is com.armor.core.safety.SafetyState.Normal)
+        assertFalse(sim.engine.armed)
+    }
+
+    @Test
+    fun `an impact before the ride is armed is ignored`() {
+        val sim = RideSim(armed)
+        sim.run(5)
+        sim.engine.onAccel(sim.now, 0.0, 0.0, 60.0 * 9.81)
+        sim.run(30)
+        assertTrue(sim.engine.state is com.armor.core.safety.SafetyState.Normal)
+    }
+
+    @Test
+    fun `after moving off the ride is armed and a stop is noticed`() {
+        val sim = RideSim(armed)
+        sim.me.speed = 10.0
+        sim.run(40)
+        assertTrue(sim.engine.armed)
+        sim.me.speed = 0.0
+        assertTrue(sim.runUntil(60) { sim.engine.state !is com.armor.core.safety.SafetyState.Normal })
     }
 }

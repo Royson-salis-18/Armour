@@ -20,6 +20,14 @@ data class ArmorConfig(
     val peerStaleAfterMs: Long = 60_000,
     /** After an impact, wait this long to see whether the bike actually stopped before judging it. */
     val crashAssessDelayMs: Long = 4_000,
+    /**
+     * No crash or "are you OK?" alarm can fire until the ride is armed: a GPS fix has been seen, this long has passed
+     * since the first fix (sensors and GPS settle), and the rider has actually moved off. Prevents false alarms from a
+     * ride that was just switched on, a phone on a table, or a bike that has not left the driveway.
+     */
+    val armWarmupMs: Long = 20_000,
+    /** Ground speed that counts as having moved off. */
+    val armMovingMps: Double = 2.5,
     /** Group alerts older than this are not shown to other riders. */
     val alertMaxAgeMs: Long = 1_800_000,
 ) {
@@ -35,6 +43,8 @@ data class ArmorConfig(
             resumeMovingMs = 4_000,
         ),
         crashAssessDelayMs = 2_500,
+        armWarmupMs = 0,
+        armMovingMps = 0.0,
     )
 
     fun withImpactThreshold(g: Double) = copy(crash = crash.copy(impactG = g))

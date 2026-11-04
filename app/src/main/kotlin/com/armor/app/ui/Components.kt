@@ -70,7 +70,7 @@ fun Avatar(label: String, color: Color, size: Dp = 44.dp, textColor: Color = Col
 }
 
 @Composable
-fun StatusDot(color: Color, size: Dp = 8.dp) = Box(Modifier.size(size).background(color, CircleShape))
+fun StatusDot(color: Color, size: Dp = 8.dp, modifier: Modifier = Modifier) = Box(modifier.size(size).background(color, CircleShape))
 
 /** Small rounded status chip floating over the map. */
 @Composable

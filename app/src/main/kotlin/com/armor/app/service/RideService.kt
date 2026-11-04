@@ -45,6 +45,7 @@ import com.armor.core.sos.SosMessages
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
@@ -116,7 +117,7 @@ class RideService : Service() {
             ACTION_START -> if (!started) begin(demoRequested = intent.getBooleanExtra(EXTRA_DEMO, false), resumed = false)
             // Android restarted us after killing the process: carry on if a real ride was in progress.
             null -> if (!started) {
-                if ((app.prefs.rideActive || app.prefs.current.alwaysOn) && hasLocationPermission()) begin(demoRequested = false, resumed = true) else stopSelf()
+                if (app.prefs.rideActive && hasLocationPermission()) begin(demoRequested = false, resumed = true) else stopSelf()
             }
         }
         return START_STICKY
@@ -130,6 +131,8 @@ class RideService : Service() {
     // ---- lifecycle --------------------------------------------------------------------------
 
     private fun begin(demoRequested: Boolean, resumed: Boolean) {
+        // A ride only switches on when its safety preconditions are met (the start screen enforces the same list).
+        if (!demoRequested && !resumed && !gateOk()) { app.prefs.rideActive = false; stopSelf(); return }
         started = true
         try {
             val first = Notifications.ride(this, "Starting…")
@@ -555,6 +558,11 @@ class RideService : Service() {
     }
 
     private fun secondsLeft(deadlineMs: Long, nowMs: Long) = ((deadlineMs - nowMs + 999) / 1000).coerceAtLeast(0)
+
+    private fun gateOk(): Boolean {
+        val contacts = runCatching { kotlinx.coroutines.runBlocking { app.db.contacts().all().first().size } }.getOrDefault(0)
+        return com.armor.app.ui.RideGate.missing(this, app.prefs.current, contacts).isEmpty()
+    }
 
     private fun hasLocationPermission() = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
