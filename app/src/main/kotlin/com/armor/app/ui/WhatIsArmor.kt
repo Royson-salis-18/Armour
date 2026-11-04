@@ -87,7 +87,7 @@ fun WhatIsArmor(modifier: Modifier = Modifier) {
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(pitches) { p ->
-                Column(Modifier.width(224.dp).panel(radius = 20.dp).padding(10.dp)) {
+                Column(Modifier.width(224.dp).panel(radius = 20.dp, neon = false).padding(10.dp)) {
                     Canvas(Modifier.fillMaxWidth().height(92.dp).clip(RoundedCornerShape(14.dp)).background(wellColor)) { p.art(this) }
                     Txt(p.title, Type.BodyStrong.copy(fontSize = 14.sp), ArmorColors.OnBg, Modifier.padding(start = 4.dp, end = 4.dp, top = 10.dp))
                     Txt(p.body, Type.Caption, ArmorColors.Muted, Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 4.dp), maxLines = 3)

@@ -220,7 +220,7 @@ fun Onboarding(onFinish: () -> Unit, onSetup: () -> Unit) {
                                 "Add an emergency contact" to "Pick someone from your contacts. They get your location if you go down.",
                                 "Create or join a ride" to "Make a ride and share the 6-letter code, or enter a friend's code.",
                             ).forEachIndexed { i, (a, b) ->
-                                Row(Modifier.fillMaxWidth().panel(radius = 18.dp).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().panel(radius = 18.dp, neon = false).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(Modifier.size(34.dp).clip(CircleShape).background(ArmorColors.Orange), contentAlignment = Alignment.Center) { Txt("${i + 1}", Type.BodyStrong, Color(0xFF1A0B00)) }
                                     Column { Txt(a, Type.BodyStrong); Txt(b, Type.Caption, ArmorColors.Muted) }
                                 }

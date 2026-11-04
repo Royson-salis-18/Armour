@@ -5,6 +5,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.text.TextStyle
 
 /**
  * Design tokens. Neutral, tone-based dark surfaces (each step a little lighter, no glows or gradients), a single
@@ -67,12 +69,15 @@ private val scheme = darkColorScheme(
     outline = ArmorColors.Line,
 )
 
+// Line height is relative (1.4 x the font size), so text that sets its own size (12sp, 13sp) doesn't keep Material's
+// fixed 24sp line and end up double-spaced.
+private fun TextStyle.inter() = copy(fontFamily = InterFamily, lineHeight = 1.4.em)
+
 private val typography = Typography().run {
     copy(
-        bodyLarge = bodyLarge.copy(fontFamily = InterFamily), bodyMedium = bodyMedium.copy(fontFamily = InterFamily),
-        bodySmall = bodySmall.copy(fontFamily = InterFamily), labelLarge = labelLarge.copy(fontFamily = InterFamily),
-        labelMedium = labelMedium.copy(fontFamily = InterFamily), labelSmall = labelSmall.copy(fontFamily = InterFamily),
-        titleMedium = titleMedium.copy(fontFamily = InterFamily), titleSmall = titleSmall.copy(fontFamily = InterFamily),
+        bodyLarge = bodyLarge.inter(), bodyMedium = bodyMedium.inter(), bodySmall = bodySmall.inter(),
+        labelLarge = labelLarge.inter(), labelMedium = labelMedium.inter(), labelSmall = labelSmall.inter(),
+        titleMedium = titleMedium.inter(), titleSmall = titleSmall.inter(),
     )
 }
 

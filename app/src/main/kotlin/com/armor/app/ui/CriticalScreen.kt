@@ -1,5 +1,6 @@
 package com.armor.app.ui
 
+import androidx.compose.foundation.layout.width
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -200,7 +201,8 @@ private fun Takeover(
                 CountdownRing(ring.fraction, accent) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Txt(ring.time, Type.Display)
-                        Txt(ring.caption, Type.Body, ArmorColors.Muted, Modifier.padding(top = 2.dp))
+                        // Kept inside the ring: a narrow, two-line caption instead of one line that runs through it.
+                        Txt(ring.caption, Type.Caption.copy(fontSize = 13.sp, lineHeight = 17.sp), ArmorColors.Muted, Modifier.padding(top = 4.dp).width(120.dp), TextAlign.Center)
                     }
                 }
             }

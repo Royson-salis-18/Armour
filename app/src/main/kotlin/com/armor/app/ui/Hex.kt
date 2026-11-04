@@ -260,29 +260,31 @@ fun HexFlower(tileHeight: Dp, gap: Dp = 8.dp, tiles: List<@Composable () -> Unit
  * along its top edge, and a soft shadow. Restrained on purpose: no glow, so the content is what stands out.
  * [accent] (optional) draws the hairline in a colour, for a card that is in a state (a team stop, an alert).
  */
-fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null): Modifier = composed {
+fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null, neon: Boolean = true): Modifier = composed {
     val shape = RoundedCornerShape(radius)
-    val neon = accent ?: ArmorColors.Orange
+    val lit = accent ?: ArmorColors.Orange
+    val glow = neon || accent != null
     this
-        // The shadow is tinted with the accent, which reads as a faint halo of light around the card.
-        .shadow(16.dp, shape, ambientColor = Color.Black, spotColor = neon.copy(alpha = 0.9f))
+        // Main cards get a halo in the accent colour; secondary ones (stats, tiles) stay neutral so the main cards stand out.
+        .shadow(if (glow) 16.dp else 10.dp, shape, ambientColor = Color.Black, spotColor = if (glow) lit.copy(alpha = 0.9f) else Color.Black)
         .clip(shape)
         .background(Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))))
         .drawBehind {
+            if (!glow) return@drawBehind
             // A bright neon line along the top edge. The bloom is the same line drawn wider and fainter, so it has no hard edges.
             val inset = size.width * 0.16f
             val y = 0.75.dp.toPx()
-            val fade = Brush.horizontalGradient(listOf(Color.Transparent, neon, Color.Transparent), startX = inset, endX = size.width - inset)
+            val fade = Brush.horizontalGradient(listOf(Color.Transparent, lit, Color.Transparent), startX = inset, endX = size.width - inset)
             drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 9.dp.toPx(), alpha = 0.06f)
             drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 4.5.dp.toPx(), alpha = 0.14f)
             drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 1.6.dp.toPx())
         }
         .border(
             1.dp,
-            Brush.linearGradient(
-                0f to neon.copy(alpha = 0.8f), 0.38f to Color.White.copy(alpha = 0.06f), 0.62f to Color.White.copy(alpha = 0.05f), 1f to neon.copy(alpha = 0.5f),
+            if (glow) Brush.linearGradient(
+                0f to lit.copy(alpha = 0.8f), 0.38f to Color.White.copy(alpha = 0.06f), 0.62f to Color.White.copy(alpha = 0.05f), 1f to lit.copy(alpha = 0.5f),
                 start = Offset.Zero, end = Offset.Infinite,
-            ),
+            ) else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.05f))),
             shape,
         )
 }
@@ -316,8 +318,7 @@ fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWith
     data class Cell(val x: Float, val y: Float, val r: Float, val kind: Int) // 0 recessed, 1 outline
     // Everything sits on the far edges, partly off screen, so decoration never crosses text, logos or buttons.
     val cells = listOf(
-        Cell(1.02f, 0.10f, 0.16f, 0), Cell(1.01f, 0.40f, 0.07f, 1), Cell(-0.03f, 0.66f, 0.17f, 0),
-        Cell(1.03f, 0.78f, 0.12f, 0), Cell(0.99f, 0.93f, 0.05f, 1), Cell(-0.02f, 0.30f, 0.06f, 1),
+        Cell(1.02f, 0.10f, 0.16f, 0), Cell(1.01f, 0.40f, 0.07f, 1), Cell(-0.03f, 0.62f, 0.15f, 0), Cell(-0.02f, 0.30f, 0.06f, 1),
     )
     val unit = minOf(size.width, size.height)
     val built = cells.map { c -> Triple(c, Offset(c.x * size.width, c.y * size.height), c.r * unit * 1.5f) }
