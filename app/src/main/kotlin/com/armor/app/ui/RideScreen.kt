@@ -146,10 +146,12 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         Wordmark()
         Txt("Advanced Rider Monitoring & Orientation Reasoning System", Type.Caption, ArmorColors.Dim, Modifier.padding(top = 6.dp))
         UpdateBanner(Modifier.padding(top = 12.dp))
-        LogoHero(Modifier.fillMaxWidth().height(250.dp))
+        LogoHero(Modifier.fillMaxWidth().height(210.dp))
         Txt("RIDE TOGETHER.", Type.Hero)
         Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)
-        Txt("ARMOR watches over your group and calls for help if you can't.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 12.dp, bottom = 20.dp))
+        Gap(18.dp)
+        WhatIsArmor()
+        Gap(22.dp)
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ReadyChip("Location", locOk, Modifier.weight(1f))

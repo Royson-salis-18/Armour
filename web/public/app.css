@@ -405,3 +405,50 @@ body::before{display:none}
 /* The Armor mic and SOS keep their glow. */
 .nav.mic .ni{box-shadow:0 0 0 1px rgba(255,160,90,.4) inset,0 0 26px 2px rgba(255,107,26,.7)}
 .bottomnav{border-top-color:rgba(255,107,26,.35);box-shadow:0 -1px 14px -6px rgba(255,107,26,.5)}
+
+
+/* ---- "What is ARMOR?" on the home screen --------------------------------------------------------------------------- */
+.what{padding:0 2px 6px}
+.what h2{margin:0 0 4px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--or)}
+.what-lead{margin:0 0 12px;color:var(--ink);font-size:16px;line-height:1.4;font-weight:500}
+.what-row{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 14px;margin:0 -2px;scrollbar-width:none}
+.what-row::-webkit-scrollbar{display:none}
+.what-card{flex:0 0 74%;max-width:250px;scroll-snap-align:start;border-radius:20px;padding:10px 10px 14px;
+  background:linear-gradient(180deg,#ffffff,#f7f7f8);border:1px solid rgba(0,0,0,.06);box-shadow:0 10px 26px -14px rgba(20,20,30,.25),0 0 22px -12px rgba(255,107,26,.5)}
+.what-card h3{margin:10px 6px 2px;font-size:15px}
+.what-card p{margin:0 6px;color:var(--mid);font-size:13px;line-height:1.4}
+.what-card svg{display:block;width:100%;height:auto}
+.w-bg{fill:#eceef2;stroke:rgba(0,0,0,.06)}
+.w-road{fill:none;stroke:#c9ccd4;stroke-width:5;stroke-linecap:round}.w-road.dim{stroke:#dcdfe5;stroke-width:3}
+.w-dot{fill:#7d808a}.w-you{fill:#ff6b1a}.w-ring{fill:none;stroke:#ff6b1a;stroke-width:1.4;opacity:.55}.w-ring.faint{opacity:.22}
+.w-chip{fill:#dde0e6}.w-chip.me{fill:#ff6b1a}.w-bg2{fill:#fff}.w-stop{fill:#ff6b1a}
+.w-tri{fill:#ff6b1a}
+.w-phone{fill:#fff;stroke:#c9ccd4;stroke-width:2}.w-wave{fill:none;stroke:#ff6b1a;stroke-width:2.4;stroke-linecap:round}.w-line{fill:none;stroke:#b3b6bf;stroke-width:2.4;stroke-linecap:round}
+@media (prefers-color-scheme:dark){
+  .what-lead{color:#f1f1f3}
+  .what-card{background:linear-gradient(180deg,#18191c,#111214);border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 30px -14px rgba(0,0,0,.8),0 0 24px -10px rgba(255,107,26,.5)}
+  .w-bg{fill:#0c0c0e;stroke:rgba(255,255,255,.06)}
+  .w-road{stroke:#2b2d33}.w-road.dim{stroke:#202228}
+  .w-dot{fill:#8b8e97}.w-chip{fill:#26282d}
+  .w-phone{fill:#141517;stroke:#34363c}.w-line{stroke:#3b3d44}
+}
+/* The neon hairline on the active card, same look as the other cards. */
+.what-card{filter:drop-shadow(0 0 0 rgba(255,107,26,0))}
+@media (min-width:700px){.what-row{flex-wrap:wrap;overflow:visible}.what-card{flex:1 1 220px;max-width:none}}
+
+/* Illustrations: shapes are plain fills; only the road, rings, waves and lines are strokes. */
+.what-card svg *{stroke:none}
+.what-card svg .w-road{stroke:#c9ccd4;stroke-width:5}.what-card svg .w-road.dim{stroke:#dcdfe5;stroke-width:3}
+.what-card svg .w-ring{stroke:#ff6b1a;stroke-width:1.4}
+.what-card svg .w-wave{stroke:#ff6b1a;stroke-width:2.4}
+.what-card svg .w-line{stroke:#b3b6bf;stroke-width:2.4}
+.what-card svg .w-phone{stroke:#c9ccd4;stroke-width:2}
+.what-card svg .w-bg{stroke:rgba(0,0,0,.06);stroke-width:1}
+@media (prefers-color-scheme:dark){
+  .what-card svg .w-road{stroke:#2b2d33}.what-card svg .w-road.dim{stroke:#202228}
+  .what-card svg .w-line{stroke:#3b3d44}.what-card svg .w-phone{stroke:#34363c}
+  .what-card svg .w-bg{stroke:rgba(255,255,255,.06)}
+}
+.what-card{flex-basis:64%;max-width:230px;padding:8px 8px 12px}
+.what-card svg{max-height:96px}
+.what-card h3{margin:8px 6px 2px;font-size:14px}.what-card p{font-size:12.5px}

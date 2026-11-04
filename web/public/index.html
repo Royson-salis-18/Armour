@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/app.css?v=24">
+<link rel="stylesheet" href="/app.css?v=26">
 </head>
 <body>
 
@@ -33,6 +33,28 @@
     <h1 class="display">Ride together.<br><span class="or">Get home together.</span></h1>
     <p class="mid">Live group rides. Stops, chat and SOS in one place.</p>
   </div>
+  <section class="what" aria-labelledby="whatTitle">
+    <h2 id="whatTitle">What is ARMOR?</h2>
+    <p class="what-lead">A safety net for group rides. Everyone sees each other live, and if a rider goes down, help is called automatically.</p>
+    <div class="what-row">
+      <article class="what-card">
+        <svg viewBox="0 0 120 76" aria-hidden="true"><rect x="1" y="1" width="118" height="74" rx="14" class="w-bg"/><path d="M-4 58 C 30 30, 60 66, 124 22" class="w-road"/><path d="M14 66 C 42 40, 70 70, 112 34" class="w-road dim"/><circle cx="34" cy="48" r="5" class="w-dot"/><circle cx="62" cy="46" r="5" class="w-dot"/><circle cx="88" cy="32" r="5" class="w-dot"/><circle cx="48" cy="44" r="7" class="w-you"/><circle cx="48" cy="44" r="13" class="w-ring"/></svg>
+        <h3>See everyone live</h3><p>One shared map. Spot who is ahead, behind or stopped.</p>
+      </article>
+      <article class="what-card">
+        <svg viewBox="0 0 120 76" aria-hidden="true"><rect x="1" y="1" width="118" height="74" rx="14" class="w-bg"/><rect x="14" y="14" width="64" height="18" rx="9" class="w-chip"/><rect x="42" y="38" width="64" height="18" rx="9" class="w-chip me"/><circle cx="26" cy="23" r="3" class="w-dot"/><circle cx="62" cy="47" r="3" class="w-bg2"/><path d="M92 14 l8 -4 v16 l-8 -4z" class="w-stop"/></svg>
+        <h3>Stop, chat, talk</h3><p>Lead calls a team stop. Message the group or just say "Armor".</p>
+      </article>
+      <article class="what-card">
+        <svg viewBox="0 0 120 76" aria-hidden="true"><rect x="1" y="1" width="118" height="74" rx="14" class="w-bg"/><path d="M60 14 L84 56 H36 Z" class="w-tri"/><rect x="58" y="30" width="4" height="14" rx="2" class="w-bg2"/><circle cx="60" cy="49" r="2.6" class="w-bg2"/><circle cx="60" cy="38" r="28" class="w-ring"/><circle cx="60" cy="38" r="38" class="w-ring faint"/></svg>
+        <h3>Crash? It calls for help</h3><p>No reply after a crash or a long stop, and ARMOR sends your SOS for you.</p>
+      </article>
+      <article class="what-card">
+        <svg viewBox="0 0 120 76" aria-hidden="true"><rect x="1" y="1" width="118" height="74" rx="14" class="w-bg"/><rect x="40" y="10" width="40" height="56" rx="8" class="w-phone"/><path d="M52 24 q8 -8 16 0 M47 19 q13 -13 26 0" class="w-wave"/><path d="M48 44 h24 M48 52 h16" class="w-line"/><path d="M94 22 l12 -6 M94 38 h14 M94 54 l12 6" class="w-line"/></svg>
+        <h3>Texts and calls, no data needed</h3><p>Your contacts and the riders near you get your location by SMS, then a call.</p>
+      </article>
+    </div>
+  </section>
   <div class="card wel-card">
     <label class="lbl" for="nameIn">Your name</label>
     <input id="nameIn" class="in" maxlength="24" autocomplete="nickname" placeholder="e.g. Royson">
