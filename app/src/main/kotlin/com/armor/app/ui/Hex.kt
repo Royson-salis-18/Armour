@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -255,92 +256,75 @@ fun HexFlower(tileHeight: Dp, gap: Dp = 8.dp, tiles: List<@Composable () -> Unit
 }
 
 /**
- * The shape of ARMOR's panels: a rectangle with its corners cut at an angle, so a stack of cards reads as elongated
- * hexagons. [cut] is how far each corner is chamfered.
+ * ARMOR's container: a plain rounded rectangle in a layered dark surface, a hairline border that catches a little light
+ * along its top edge, and a soft shadow. Restrained on purpose: no glow, so the content is what stands out.
+ * [accent] (optional) draws the hairline in a colour, for a card that is in a state (a team stop, an alert).
  */
-class HexPanelShape(private val cut: Dp = 18.dp) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val c = minOf(with(density) { cut.toPx() }, size.height / 2f, size.width / 4f)
-        return Outline.Generic(Path().apply {
-            moveTo(c, 0f); lineTo(size.width - c, 0f); lineTo(size.width, c)
-            lineTo(size.width, size.height - c); lineTo(size.width - c, size.height); lineTo(c, size.height)
-            lineTo(0f, size.height - c); lineTo(0f, c); close()
-        })
-    }
-}
-
-/**
- * A dark glass panel with cut corners, a thin warm-gradient border and a soft glow rising from the bottom edge, for
- * every card and text container. [glow] is the accent that rises from the bottom (orange by default).
- */
-fun Modifier.hexPanel(glow: Color = ArmorColors.Orange, cut: Dp = 18.dp, strength: Float = 1f): Modifier = composed {
-    val shape = HexPanelShape(cut)
+fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null): Modifier = composed {
+    val shape = RoundedCornerShape(radius)
     this
-        .shadow(10.dp, shape, ambientColor = Color.Black, spotColor = glow.copy(alpha = 0.6f))
+        .shadow(14.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
         .clip(shape)
-        .background(Brush.verticalGradient(listOf(Color(0xFF17130F), Color(0xFF0C0B0B))))
-        .drawBehind {
-            // Warm light coming up from the bottom, strongest in the middle of the bottom edge.
-            drawRect(
-                Brush.radialGradient(
-                    listOf(glow.copy(alpha = 0.34f * strength), glow.copy(alpha = 0.10f * strength), Color.Transparent),
-                    center = Offset(size.width * 0.5f, size.height * 1.05f), radius = size.width * 0.75f,
-                ),
-            )
-            // A faint highlight along the top.
-            drawRect(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.05f), 0.35f to Color.Transparent))
-        }
+        .background(Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))))
         .border(
             1.dp,
-            Brush.linearGradient(listOf(glow.copy(alpha = 0.85f * strength), glow.copy(alpha = 0.18f), glow.copy(alpha = 0.55f * strength)), start = Offset.Zero, end = Offset.Infinite),
+            if (accent != null) Brush.verticalGradient(listOf(accent.copy(alpha = 0.7f), accent.copy(alpha = 0.18f)))
+            else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.05f))),
             shape,
         )
 }
 
-/** A faint scatter of dark hexagons of different sizes, soft shadows, a few thin glowing outlines and solid glowing ones. */
-fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWithCache {
-    data class Cell(val x: Float, val y: Float, val r: Float, val kind: Int) // kind 0 dark, 1 outline, 2 solid glow
-    val cells = listOf(
-        Cell(0.88f, 0.06f, 0.20f, 0), Cell(0.10f, 0.14f, 0.09f, 0), Cell(0.62f, 0.02f, 0.07f, 1), Cell(0.96f, 0.32f, 0.12f, 1),
-        Cell(0.04f, 0.46f, 0.15f, 0), Cell(0.93f, 0.62f, 0.07f, 2), Cell(0.84f, 0.80f, 0.22f, 0), Cell(0.12f, 0.78f, 0.08f, 2),
-        Cell(0.30f, 0.94f, 0.12f, 1), Cell(0.58f, 0.99f, 0.09f, 0),
-    )
-    val w = size.width
-    val h = size.height
-    val unit = minOf(w, h)
-    fun hex(cx: Float, cy: Float, r: Float): Path = Path().apply {
+/** A regular, pointy-top hexagon centred at ([cx], [cy]) with circumradius [r] and smoothly rounded corners. */
+fun roundedHexagon(cx: Float, cy: Float, r: Float, corner: Float = 0.22f): Path {
+    val pts = (0 until 6).map { i ->
+        val a = Math.toRadians(60.0 * i - 90.0)
+        Offset(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat())
+    }
+    val side = (pts[1] - pts[0]).getDistance()
+    val k = side * corner
+    fun toward(from: Offset, to: Offset): Offset { val d = to - from; return from + d * (k / d.getDistance()) }
+    return Path().apply {
         for (i in 0 until 6) {
-            val a = Math.toRadians(60.0 * i - 90.0)
-            val x = cx + r * cos(a).toFloat()
-            val y = cy + r * sin(a).toFloat()
-            if (i == 0) moveTo(x, y) else lineTo(x, y)
+            val v = pts[i]
+            val a = toward(v, pts[(i + 5) % 6])
+            val b = toward(v, pts[(i + 1) % 6])
+            if (i == 0) moveTo(a.x, a.y) else lineTo(a.x, a.y)
+            quadraticBezierTo(v.x, v.y, b.x, b.y)
         }
         close()
     }
-    val built = cells.map { c -> c to hex(c.x * w, c.y * h, c.r * unit * 1.3f) }
+}
+
+/**
+ * A few large regular hexagons with rounded corners floating behind the content, a couple recessed into the surface and
+ * a couple outlined in the accent colour. Quiet by design: they give the background depth and nothing more.
+ */
+fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWithCache {
+    data class Cell(val x: Float, val y: Float, val r: Float, val kind: Int) // 0 recessed, 1 outline
+    val cells = listOf(
+        Cell(0.92f, 0.07f, 0.17f, 0), Cell(0.06f, 0.30f, 0.10f, 1), Cell(0.97f, 0.52f, 0.13f, 1),
+        Cell(0.03f, 0.70f, 0.19f, 0), Cell(0.88f, 0.90f, 0.12f, 0),
+    )
+    val unit = minOf(size.width, size.height)
+    val built = cells.map { c -> Triple(c, Offset(c.x * size.width, c.y * size.height), c.r * unit * 1.5f) }
     onDrawBehind {
-        for ((c, path) in built) {
-            val cx = c.x * w; val cy = c.y * h; val r = c.r * unit * 1.3f
-            when (c.kind) {
-                0 -> {
-                    // A recessed well: a light lip on the lower right, a dark floor, and an inner shadow along the upper left.
-                    drawPath(hex(cx + r * 0.05f, cy + r * 0.08f, r), Color.White.copy(alpha = 0.10f))
-                    drawPath(path, Brush.linearGradient(listOf(Color(0xFF0A0908), Color(0xFF151311), Color(0xFF1C1A18)), start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r)))
-                    clipPath(path) {
-                        val shade = Brush.linearGradient(
-                            0f to Color.Black.copy(alpha = 0.95f), 0.5f to Color.Black.copy(alpha = 0.2f), 1f to Color.Transparent,
-                            start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r),
-                        )
-                        drawPath(path, shade, style = Stroke(r * 0.5f), alpha = 0.22f)
-                        drawPath(path, shade, style = Stroke(r * 0.3f), alpha = 0.4f)
-                        drawPath(path, shade, style = Stroke(r * 0.12f), alpha = 0.8f)
-                    }
+        for ((c, at, r) in built) {
+            val face = roundedHexagon(at.x, at.y, r)
+            if (c.kind == 0) {
+                // A recessed well: a pale lip to the lower right, a dark floor, a soft shadow on the upper-left inside.
+                drawPath(roundedHexagon(at.x + r * 0.035f, at.y + r * 0.055f, r), Color.White.copy(alpha = 0.06f))
+                drawPath(face, Brush.linearGradient(listOf(Color(0xFF070708), Color(0xFF111113), Color(0xFF151618)), start = Offset(at.x - r, at.y - r), end = Offset(at.x + r, at.y + r)))
+                clipPath(face) {
+                    val shade = Brush.linearGradient(
+                        0f to Color.Black.copy(alpha = 0.9f), 0.55f to Color.Black.copy(alpha = 0.15f), 1f to Color.Transparent,
+                        start = Offset(at.x - r, at.y - r), end = Offset(at.x + r, at.y + r),
+                    )
+                    drawPath(face, shade, style = Stroke(r * 0.55f), alpha = 0.18f)
+                    drawPath(face, shade, style = Stroke(r * 0.3f), alpha = 0.32f)
+                    drawPath(face, shade, style = Stroke(r * 0.1f), alpha = 0.6f)
                 }
-                1 -> drawPath(path, Brush.linearGradient(listOf(accent.copy(alpha = 0.8f), accent.copy(alpha = 0.15f)), start = Offset(cx - r, cy - r), end = Offset(cx + r, cy + r)), style = Stroke(1.4f * 2))
-                else -> {
-                    drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.55f), Color.Transparent), center = Offset(cx, cy), radius = r * 3f), r * 3f, Offset(cx, cy))
-                    drawPath(path, Brush.verticalGradient(listOf(Color(0xFFFF9A55), accent), startY = cy - r, endY = cy + r))
-                }
+            } else {
+                drawPath(face, Brush.linearGradient(listOf(accent.copy(alpha = 0.55f), accent.copy(alpha = 0.06f)), start = Offset(at.x - r, at.y - r), end = Offset(at.x + r, at.y + r)), style = Stroke(1.2.dp.toPx()))
             }
         }
     }

@@ -74,7 +74,7 @@ fun LeadCard(s: RideSnapshot) {
     var mode by remember { mutableStateOf<StopMode?>(null) }
     val ts = s.teamStop
     val shape = RoundedCornerShape(24.dp)
-    Column(Modifier.fillMaxWidth().hexPanel(if (s.teamStop != null) ArmorColors.Amber else ArmorColors.Orange).padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().panel(accent = if (s.teamStop != null) ArmorColors.Amber else null).padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.clip(CircleShape).background(if (s.isLead) ArmorColors.Orange else ArmorColors.S3).padding(horizontal = 10.dp, vertical = 3.dp)) {
                 Txt(if (s.isLead) "LEAD" else "RIDER", Type.Eyebrow.copy(fontSize = 12.sp), if (s.isLead) Color(0xFF1A0B00) else ArmorColors.Muted)

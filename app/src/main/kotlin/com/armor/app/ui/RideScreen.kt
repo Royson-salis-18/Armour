@@ -232,8 +232,6 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // Street map tiles (cached for offline); rider positions never wait on them.
                 RiderMap(s, Modifier.fillMaxSize(), trail.toList(), view = mapView, camera = camera)
-                // A faint HUD honeycomb over the map, lit from the top.
-                Box(Modifier.matchParentSize().hexBackdrop(if (mapView == MapView.MAP || mapView == MapView.TERRAIN) Color.Black else Color.White, 0.07f, 44.dp))
                 Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Row(Modifier.glass(RoundedCornerShape(50)).padding(start = 10.dp, end = 14.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -451,7 +449,7 @@ private fun StatusRow(s: RideSnapshot, look: LinkLook) {
 private fun StatsStrip(s: RideSnapshot) {
     val st = s.stats
     val shape = RoundedCornerShape(20.dp)
-    Row(Modifier.fillMaxWidth().hexPanel(cut = 14.dp, strength = 0.8f).padding(vertical = 14.dp)) {
+    Row(Modifier.fillMaxWidth().panel(radius = 18.dp).padding(vertical = 14.dp)) {
         listOf(
             Triple("DISTANCE", fmtDistance(st.distanceM), ""),
             Triple("TIME", fmtHms(st.elapsedMs), ""),
@@ -564,7 +562,7 @@ internal fun RideSummaryScreen(sum: RideSummary, onDone: () -> Unit) {
 @Composable
 private fun SummaryTile(label: String, value: String, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(24.dp)
-    Column(modifier.hexPanel(cut = 14.dp, strength = 0.9f).padding(16.dp)) {
+    Column(modifier.panel(radius = 20.dp).padding(16.dp)) {
         Txt(label, Type.Eyebrow.copy(fontSize = 12.sp), ArmorColors.Dim)
         Txt(value, Type.Headline.copy(fontSize = 30.sp))
     }

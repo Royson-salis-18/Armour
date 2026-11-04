@@ -29,17 +29,17 @@ fun UpdateBanner(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     ResumeInstallOnReturn()
     when (val s = state) {
-        is UpdateState.Available -> Row(modifier.fillMaxWidth().hexPanel(cut = 12.dp).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        is UpdateState.Available -> Row(modifier.fillMaxWidth().panel(radius = 18.dp).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Txt("Update available", Type.BodyStrong, ArmorColors.Orange)
                 Txt("Version ${s.info.versionName}" + if (s.info.notes.isNotBlank()) " \u00b7 ${s.info.notes.take(60)}" else "", Type.Caption, ArmorColors.Muted, maxLines = 2)
             }
             TextButton(onClick = { Updater.install(context, s.info) }) { Text("Update", color = ArmorColors.Orange, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
         }
-        is UpdateState.Downloading -> Column(modifier.fillMaxWidth().hexPanel(cut = 12.dp).padding(16.dp)) {
+        is UpdateState.Downloading -> Column(modifier.fillMaxWidth().panel(radius = 18.dp).padding(16.dp)) {
             Txt("Downloading update\u2026 ${s.percent}%", Type.BodyStrong)
         }
-        is UpdateState.Ready -> if (s.needsPermission) Column(modifier.fillMaxWidth().hexPanel(cut = 12.dp).padding(16.dp)) {
+        is UpdateState.Ready -> if (s.needsPermission) Column(modifier.fillMaxWidth().panel(radius = 18.dp).padding(16.dp)) {
             Txt("Allow installs from ARMOR, then come back", Type.BodyStrong, ArmorColors.Orange)
             Txt("Turn on \u201cAllow from this source\u201d. The update continues by itself.", Type.Caption, ArmorColors.Muted)
         }
