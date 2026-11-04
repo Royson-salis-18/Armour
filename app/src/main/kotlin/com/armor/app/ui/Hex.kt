@@ -269,16 +269,13 @@ fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null): Modifier = compos
         .clip(shape)
         .background(Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))))
         .drawBehind {
-            // A bright neon line along the top edge with a soft bloom just under it.
+            // A bright neon line along the top edge. The bloom is the same line drawn wider and fainter, so it has no hard edges.
             val inset = size.width * 0.16f
-            drawRect(
-                Brush.verticalGradient(listOf(neon.copy(alpha = 0.16f), Color.Transparent), endY = 36.dp.toPx()),
-                topLeft = Offset(inset, 0f), size = Size(size.width - inset * 2, 36.dp.toPx()),
-            )
-            drawLine(
-                Brush.horizontalGradient(listOf(Color.Transparent, neon, Color.Transparent), startX = inset, endX = size.width - inset),
-                Offset(inset, 0.75.dp.toPx()), Offset(size.width - inset, 0.75.dp.toPx()), 1.6.dp.toPx(),
-            )
+            val y = 0.75.dp.toPx()
+            val fade = Brush.horizontalGradient(listOf(Color.Transparent, neon, Color.Transparent), startX = inset, endX = size.width - inset)
+            drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 9.dp.toPx(), alpha = 0.06f)
+            drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 4.5.dp.toPx(), alpha = 0.14f)
+            drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 1.6.dp.toPx())
         }
         .border(
             1.dp,
