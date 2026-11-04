@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -146,7 +147,9 @@ fun Divider1(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().height
 @Composable
 fun PrimaryButton(text: String, modifier: Modifier = Modifier, color: Color = Color.White, contentColor: Color = ArmorColors.Bg, arrow: Boolean = false, onClick: () -> Unit) {
     Box(
-        modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(color).clickable { Haptics.click(); onClick() },
+        modifier.fillMaxWidth().height(56.dp)
+            .then(if (color == ArmorColors.Orange) Modifier.shadow(18.dp, RoundedCornerShape(28.dp), ambientColor = ArmorColors.Orange, spotColor = ArmorColors.Orange) else Modifier)
+            .clip(RoundedCornerShape(28.dp)).background(color).clickable { Haptics.click(); onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)

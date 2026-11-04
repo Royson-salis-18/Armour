@@ -262,14 +262,30 @@ fun HexFlower(tileHeight: Dp, gap: Dp = 8.dp, tiles: List<@Composable () -> Unit
  */
 fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null): Modifier = composed {
     val shape = RoundedCornerShape(radius)
+    val neon = accent ?: ArmorColors.Orange
     this
-        .shadow(14.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+        // The shadow is tinted with the accent, which reads as a faint halo of light around the card.
+        .shadow(16.dp, shape, ambientColor = Color.Black, spotColor = neon.copy(alpha = 0.9f))
         .clip(shape)
         .background(Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))))
+        .drawBehind {
+            // A bright neon line along the top edge with a soft bloom just under it.
+            val inset = size.width * 0.16f
+            drawRect(
+                Brush.verticalGradient(listOf(neon.copy(alpha = 0.16f), Color.Transparent), endY = 36.dp.toPx()),
+                topLeft = Offset(inset, 0f), size = Size(size.width - inset * 2, 36.dp.toPx()),
+            )
+            drawLine(
+                Brush.horizontalGradient(listOf(Color.Transparent, neon, Color.Transparent), startX = inset, endX = size.width - inset),
+                Offset(inset, 0.75.dp.toPx()), Offset(size.width - inset, 0.75.dp.toPx()), 1.6.dp.toPx(),
+            )
+        }
         .border(
             1.dp,
-            if (accent != null) Brush.verticalGradient(listOf(accent.copy(alpha = 0.7f), accent.copy(alpha = 0.18f)))
-            else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.05f))),
+            Brush.linearGradient(
+                0f to neon.copy(alpha = 0.8f), 0.38f to Color.White.copy(alpha = 0.06f), 0.62f to Color.White.copy(alpha = 0.05f), 1f to neon.copy(alpha = 0.5f),
+                start = Offset.Zero, end = Offset.Infinite,
+            ),
             shape,
         )
 }
@@ -303,7 +319,7 @@ fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWith
     data class Cell(val x: Float, val y: Float, val r: Float, val kind: Int) // 0 recessed, 1 outline
     val cells = listOf(
         Cell(0.92f, 0.07f, 0.17f, 0), Cell(0.06f, 0.30f, 0.10f, 1), Cell(0.97f, 0.52f, 0.13f, 1),
-        Cell(0.03f, 0.70f, 0.19f, 0), Cell(0.88f, 0.90f, 0.12f, 0),
+        Cell(0.03f, 0.70f, 0.19f, 0), Cell(0.88f, 0.90f, 0.12f, 0), Cell(0.18f, 0.07f, 0.06f, 1), Cell(0.52f, 0.985f, 0.08f, 1),
     )
     val unit = minOf(size.width, size.height)
     val built = cells.map { c -> Triple(c, Offset(c.x * size.width, c.y * size.height), c.r * unit * 1.5f) }
@@ -324,7 +340,10 @@ fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWith
                     drawPath(face, shade, style = Stroke(r * 0.1f), alpha = 0.6f)
                 }
             } else {
-                drawPath(face, Brush.linearGradient(listOf(accent.copy(alpha = 0.55f), accent.copy(alpha = 0.06f)), start = Offset(at.x - r, at.y - r), end = Offset(at.x + r, at.y + r)), style = Stroke(1.2.dp.toPx()))
+                val ring = Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.12f)), start = Offset(at.x - r, at.y - r), end = Offset(at.x + r, at.y + r))
+                drawPath(face, ring, style = Stroke(7.dp.toPx()), alpha = 0.10f)   // halo
+                drawPath(face, ring, style = Stroke(3.dp.toPx()), alpha = 0.22f)
+                drawPath(face, ring, style = Stroke(1.3.dp.toPx()))                  // crisp neon line
             }
         }
     }
