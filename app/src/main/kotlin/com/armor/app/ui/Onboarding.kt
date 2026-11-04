@@ -454,7 +454,7 @@ private fun DrawScope.calm(t: Float) {
         drawPath(tick, well, style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round))
     }
     if (t >= 0.58f) {
-        val c = Offset(0.62f * w, 0.18f * h)
+        val c = Offset(0.90f * w, 0.16f * h)
         drawCircle(faint, 14.dp.toPx(), c, style = Stroke(2.dp.toPx()))
         drawArc(green, -90f, 360f * ease(0.58f, 1f, t), false, Offset(c.x - 14.dp.toPx(), c.y - 14.dp.toPx()), Size(28.dp.toPx(), 28.dp.toPx()), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
     }
