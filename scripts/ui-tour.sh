@@ -38,6 +38,10 @@ adb logcat -c
 geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity
 sleep 6
+shot 00-walkthrough
+for i in 1 2 3 4 5; do tap_text "Next" >/dev/null || tap_text "Got it" >/dev/null; sleep 1.2; [ "$i" = 2 ] && shot 00b-walkthrough-page; [ "$i" = 4 ] && { sleep 6; shot 00c-walkthrough-demo; }; done
+shot 00d-walkthrough-last
+tap_text "Start using ARMOR"; sleep 2
 shot 01-home
 # The Group tab (second item in the bottom bar): create or join a ride, no server address to type.
 adb shell input tap $((W*40/100)) $((H*92/100)); sleep 3; shot 01b-group

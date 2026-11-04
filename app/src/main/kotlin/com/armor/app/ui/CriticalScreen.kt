@@ -180,7 +180,7 @@ private fun Takeover(
     buttons: @Composable () -> Unit,
 ) {
     Column(
-        Modifier.fillMaxSize().background(ArmorColors.Bg).warmGlow(accent, 0.34f).safeDrawingPadding().padding(horizontal = 24.dp, vertical = 20.dp),
+        Modifier.fillMaxSize().background(ArmorColors.Bg).warmGlow(accent, 0.34f, scatter = false).safeDrawingPadding().padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {

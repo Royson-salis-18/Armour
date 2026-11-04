@@ -71,6 +71,11 @@ class Prefs(context: Context) {
 
     val current: Settings get() = _settings.value
 
+    /** Set once the first-run walkthrough has been seen or skipped. */
+    var onboarded: Boolean
+        get() = sp.getBoolean("onboarded", false)
+        set(value) { sp.edit().putBoolean("onboarded", value).apply() }
+
     /** Whether a ride was in progress; lets the service resume itself if Android restarts it. */
     var rideActive: Boolean
         get() = sp.getBoolean("rideActive", false)

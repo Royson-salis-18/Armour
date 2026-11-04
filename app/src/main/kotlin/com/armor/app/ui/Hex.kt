@@ -317,9 +317,10 @@ fun roundedHexagon(cx: Float, cy: Float, r: Float, corner: Float = 0.22f): Path 
  */
 fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWithCache {
     data class Cell(val x: Float, val y: Float, val r: Float, val kind: Int) // 0 recessed, 1 outline
+    // Everything sits on the far edges, partly off screen, so decoration never crosses text, logos or buttons.
     val cells = listOf(
-        Cell(0.92f, 0.07f, 0.17f, 0), Cell(0.06f, 0.30f, 0.10f, 1), Cell(0.97f, 0.52f, 0.13f, 1),
-        Cell(0.03f, 0.70f, 0.19f, 0), Cell(0.88f, 0.90f, 0.12f, 0), Cell(0.18f, 0.07f, 0.06f, 1), Cell(0.52f, 0.985f, 0.08f, 1),
+        Cell(1.02f, 0.10f, 0.16f, 0), Cell(1.01f, 0.40f, 0.07f, 1), Cell(-0.03f, 0.66f, 0.17f, 0),
+        Cell(1.03f, 0.78f, 0.12f, 0), Cell(0.99f, 0.93f, 0.05f, 1), Cell(-0.02f, 0.30f, 0.06f, 1),
     )
     val unit = minOf(size.width, size.height)
     val built = cells.map { c -> Triple(c, Offset(c.x * size.width, c.y * size.height), c.r * unit * 1.5f) }
@@ -341,9 +342,9 @@ fun Modifier.hexScatter(accent: Color = ArmorColors.Orange): Modifier = drawWith
                 }
             } else {
                 val ring = Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.12f)), start = Offset(at.x - r, at.y - r), end = Offset(at.x + r, at.y + r))
-                drawPath(face, ring, style = Stroke(7.dp.toPx()), alpha = 0.10f)   // halo
-                drawPath(face, ring, style = Stroke(3.dp.toPx()), alpha = 0.22f)
-                drawPath(face, ring, style = Stroke(1.3.dp.toPx()))                  // crisp neon line
+                drawPath(face, ring, style = Stroke(6.dp.toPx()), alpha = 0.07f)   // halo
+                drawPath(face, ring, style = Stroke(2.5.dp.toPx()), alpha = 0.14f)
+                drawPath(face, ring, style = Stroke(1.2.dp.toPx()), alpha = 0.7f)   // crisp neon line
             }
         }
     }

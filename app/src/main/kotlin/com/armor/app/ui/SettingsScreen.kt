@@ -92,6 +92,12 @@ fun SettingsScreen(settings: Settings) {
         UpdateCard()
 
         Card2 {
+            SectionTitle("How ARMOR works")
+            Text("A one-minute walkthrough with an animated demo, handy for showing a friend.", color = ArmorColors.Muted, fontSize = 13.sp)
+            SecondaryButton("Replay the walkthrough") { Tour.show.value = true }
+        }
+
+        Card2 {
             SectionTitle("Always-on safety")
             var setup by remember { mutableStateOf(false) }
             val (ready, total) = protectionReady(context)

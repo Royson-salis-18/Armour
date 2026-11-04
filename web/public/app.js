@@ -1979,3 +1979,22 @@ window.addEventListener('online', () => { haptic('success'); toast('Back online'
   }
   show('welcome');
 })();
+
+
+// ---- First-run walkthrough ---------------------------------------------------------------------------------------
+(() => {
+  const tour = $('#tour'), track = $('#tourTrack'), dots = $('#tourDots'), next = $('#tourNext');
+  if (!tour) return;
+  const slides = track.children.length;
+  $('#tourBrand').innerHTML = LOGO(96);
+  dots.innerHTML = Array.from({ length: slides }, () => '<i></i>').join('');
+  const at = () => Math.round(track.scrollLeft / track.clientWidth);
+  const sync = () => { const i = at(); [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i)); next.textContent = i === slides - 1 ? 'Start using ARMOR' : i === slides - 2 ? 'Got it' : 'Next'; $('#tourSkip').style.visibility = i === slides - 1 ? 'hidden' : 'visible'; };
+  const open = () => { tour.classList.remove('hidden'); track.scrollLeft = 0; sync(); };
+  const close = () => { tour.classList.add('hidden'); store.set('toured', true); };
+  track.addEventListener('scroll', () => requestAnimationFrame(sync), { passive: true });
+  next.onclick = () => { const i = at(); if (i >= slides - 1) close(); else track.scrollTo({ left: (i + 1) * track.clientWidth, behavior: 'smooth' }); };
+  $('#tourSkip').onclick = close;
+  const replay = $('#replayTour'); if (replay) replay.onclick = open;
+  if (!store.get('toured', false) && !session) open();
+})();

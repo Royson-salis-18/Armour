@@ -48,6 +48,10 @@ fun ArmorRoot() {
     val running by ArmorRuntime.running.collectAsState()
     val settings by ArmorApp.instance.prefs.settings.collectAsState()
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    // First launch: the walkthrough. Settings > How ARMOR works opens it again.
+    val showTour by Tour.show.collectAsState()
+    var setupFromTour by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(Unit) { if (!ArmorApp.instance.prefs.onboarded) Tour.show.value = true }
 
     val critical = snapshot?.takeIf { it.needsAttention }
     ScreenBehaviour(showOverLockScreen = critical != null, keepOn = running && settings.keepScreenOn)
@@ -71,6 +75,11 @@ fun ArmorRoot() {
                 }
             }
         }
+        if (showTour) Onboarding(
+            onFinish = { ArmorApp.instance.prefs.onboarded = true; Tour.show.value = false },
+            onSetup = { ArmorApp.instance.prefs.onboarded = true; Tour.show.value = false; setupFromTour = true },
+        )
+        if (setupFromTour) ProtectionSetupDialog { setupFromTour = false }
         if (critical != null) CriticalScreen(critical, settings.emergencyNumber, settings.medical)
     }
 }

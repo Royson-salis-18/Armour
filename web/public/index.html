@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/app.css?v=26">
+<link rel="stylesheet" href="/app.css?v=27">
 </head>
 <body>
 
@@ -71,7 +71,55 @@
     <p id="welErr" class="err"></p>
   </div>
   <button class="link-btn" id="openSettings1">Emergency contact &amp; Medical ID</button>
+  <button class="link-btn" id="replayTour">How ARMOR works</button>
   <button class="link-btn hidden" id="installBtn">Install ARMOR on your phone</button>
+</section>
+
+<!-- First-run walkthrough -->
+<section id="tour" class="tour hidden" role="dialog" aria-modal="true" aria-label="How ARMOR works">
+  <button class="tour-skip" id="tourSkip">Skip</button>
+  <div class="tour-track" id="tourTrack">
+    <div class="tour-slide">
+      <div class="tour-art logo-art"><div class="brand" id="tourBrand"></div></div>
+      <h2>ARMOR</h2><p class="tour-sub">Advanced Rider Monitoring &amp; Orientation Reasoning System</p>
+      <p class="tour-hook">Ride together. Come home together.</p>
+      <p>A safety net for group rides. Here is how it works, in under a minute.</p>
+    </div>
+    <div class="tour-slide">
+      <svg class="tour-art" viewBox="0 0 240 140" aria-hidden="true"><path id="r1" d="M10 100 C 70 30, 130 160, 230 50" class="t-road"/><circle r="6" class="t-dot"><animateMotion dur="6s" repeatCount="indefinite" path="M10 100 C 70 30, 130 160, 230 50" keyPoints="0.55;1;0.55" keyTimes="0;0.5;1" calcMode="linear"/></circle><circle r="6" class="t-dot"><animateMotion dur="6s" repeatCount="indefinite" path="M10 100 C 70 30, 130 160, 230 50" keyPoints="0.3;0.9;0.3" keyTimes="0;0.5;1" calcMode="linear"/></circle><circle r="13" class="t-ring"><animateMotion dur="6s" repeatCount="indefinite" path="M10 100 C 70 30, 130 160, 230 50" keyPoints="0.42;0.97;0.42" keyTimes="0;0.5;1" calcMode="linear"/></circle><circle r="8" class="t-you"><animateMotion dur="6s" repeatCount="indefinite" path="M10 100 C 70 30, 130 160, 230 50" keyPoints="0.42;0.97;0.42" keyTimes="0;0.5;1" calcMode="linear"/></circle></svg>
+      <h2>See everyone live</h2><p>One shared map shows where every rider is, who is ahead, who is behind and who has stopped.</p>
+    </div>
+    <div class="tour-slide">
+      <svg class="tour-art" viewBox="0 0 240 140" aria-hidden="true"><rect x="24" y="18" width="128" height="30" rx="15" class="t-chip"/><circle cx="42" cy="33" r="4" class="t-dot"/><rect x="82" y="58" width="130" height="30" rx="15" class="t-me"/><circle cx="198" cy="73" r="4" class="t-w"/><path d="M180 14 l30 -10 v40 l-30 -10z" class="t-flag"/><circle cx="52" cy="112" r="9" class="t-you"/><circle cx="52" cy="112" r="9" class="t-ring pulse"/></svg>
+      <h2>Stop, chat, talk</h2><p>The lead calls a team stop. Chat with the group, or just talk to ARMOR and it does the tapping for you.</p>
+    </div>
+    <div class="tour-slide">
+      <svg class="tour-art" viewBox="0 0 240 140" aria-hidden="true"><circle cx="120" cy="72" r="40" class="t-sos ring pulse"/><circle cx="120" cy="72" r="40" class="t-sos ring pulse d2"/><path d="M120 26 L162 100 H78 Z" class="t-sosf"/><rect x="117" y="52" width="6" height="26" rx="3" class="t-w2"/><circle cx="120" cy="88" r="3.6" class="t-w2"/></svg>
+      <h2>Help comes by itself</h2><p>After a crash, or a long stop with no answer, ARMOR texts your location and rings your contacts and the nearest rider.</p>
+    </div>
+    <div class="tour-slide">
+      <div class="tour-eyebrow">Watch it work</div>
+      <svg class="tour-art demo" viewBox="0 0 240 150" aria-hidden="true">
+        <path d="M12 108 C 70 34, 130 170, 228 56" class="t-road"/>
+        <circle r="6" class="t-dot"><animateMotion dur="15s" repeatCount="indefinite" path="M12 108 C 70 34, 130 170, 228 56" keyPoints="0.2;1;1" keyTimes="0;0.9;1"/></circle>
+        <circle r="6" class="t-dot"><animateMotion dur="15s" repeatCount="indefinite" path="M12 108 C 70 34, 130 170, 228 56" keyPoints="0.06;0.86;0.86" keyTimes="0;0.9;1"/></circle>
+        <circle r="6" class="t-dot t-help"><animateMotion dur="15s" repeatCount="indefinite" path="M12 108 C 70 34, 130 170, 228 56" keyPoints="0.04;0.12;0.12;0.5;0.5" keyTimes="0;0.66;0.84;0.97;1"/></circle>
+        <g class="t-a"><animateMotion dur="15s" repeatCount="indefinite" path="M12 108 C 70 34, 130 170, 228 56" keyPoints="0.1;0.5;0.5;0.5;0.5" keyTimes="0;0.3;0.5;0.84;1"/><circle r="9" class="t-ring phase-stop"/><circle r="9" class="t-ring phase-sos"/><circle r="22" class="t-ask"/><circle r="8" class="t-a-dot"/></g>
+        <g class="t-contacts"><circle cx="222" cy="22" r="7"/><circle cx="222" cy="52" r="7"/><circle cx="222" cy="82" r="7"/></g>
+        <g class="t-env e1"><rect x="-6" y="-4" width="12" height="8" rx="2"/></g><g class="t-env e2"><rect x="-6" y="-4" width="12" height="8" rx="2"/></g><g class="t-env e3"><rect x="-6" y="-4" width="12" height="8" rx="2"/></g>
+      </svg>
+      <div class="demo-caps"><p class="c1">Everyone rides together. ARMOR watches the group.</p><p class="c2">One rider stops, away from the others.</p><p class="c3">ARMOR asks: are you okay?</p><p class="c4">No answer. SOS texts, with the location, go to contacts and nearby riders.</p><p class="c5">The nearest rider is called and heads over. Help is on the way.</p></div>
+    </div>
+    <div class="tour-slide">
+      <h2>Get ready in three steps</h2>
+      <ol class="tour-steps">
+        <li><b>Allow location and notifications</b><span>When asked, so your group sees you and you see them.</span></li>
+        <li><b>Add an emergency contact</b><span>On the Android app, they get your location by SMS if you go down.</span></li>
+        <li><b>Create or join a ride</b><span>Make a ride and share the 6-letter code, or enter a friend's code.</span></li>
+      </ol>
+    </div>
+  </div>
+  <div class="tour-bar"><div class="tour-dots" id="tourDots"></div><button class="btn primary big" id="tourNext">Next</button></div>
 </section>
 
 <!-- Lobby -->
@@ -218,6 +266,6 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/vendor/maplibre/maplibre-gl.js"></script>
 <script src="/vendor/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="/app.js?v=13"></script>
+<script src="/app.js?v=14"></script>
 </body>
 </html>

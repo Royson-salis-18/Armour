@@ -118,6 +118,8 @@ geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity >/dev/null
 sleep 6
 clear_dialogs
+# First launch shows the walkthrough: skip it here (it is filmed in its own scene below).
+tap_text "Skip" || true; sleep 2
 
 # ---- 1 intro ---------------------------------------------------------------------------------
 scene_start 01-intro
