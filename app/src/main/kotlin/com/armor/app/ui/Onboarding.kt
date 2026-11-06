@@ -734,17 +734,18 @@ fun Onboarding(onFinish: () -> Unit, onSetup: () -> Unit) {
                 pages - 1 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 60.dp, bottom = 160.dp)) {
                     Txt("READY IN FOUR STEPS", Type.Eyebrow.copy(letterSpacing = 1.5.sp, fontSize = 11.sp), orange)
                     Txt("Set it up once. It looks after every ride.", Type.Title.copy(fontSize = 24.sp), ArmorColors.OnBg, Modifier.padding(top = 6.dp))
-                    Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        listOf(
-                            "Allow protection" to "Location, SMS, calls and alerts, so ARMOR can help with the screen off.",
-                            "Add who to tell" to "Pick emergency contacts from your phone, and add your medical info.",
-                            "Create or join a ride" to "Make a ride and share the 6-letter code, or enter a friend's code. Solo works too.",
-                            "Slide to ride" to "ARMOR checks location, GPS, SMS and contacts first. If something is missing it tells you what.",
-                        ).forEachIndexed { i, (a, b) ->
-                            Row(Modifier.fillMaxWidth().panel(radius = 18.dp, neon = false).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(34.dp).clip(CircleShape).background(orange), contentAlignment = Alignment.Center) { Txt("${i + 1}", Type.BodyStrong, Color(0xFF1A0B00)) }
-                                Column { Txt(a, Type.BodyStrong); Txt(b, Type.Caption, ArmorColors.Muted) }
-                            }
+                    val steps = listOf(
+                        "Allow protection" to "Location, SMS, calls and alerts, so ARMOR can help with the screen off.",
+                        "Add who to tell" to "Pick emergency contacts from your phone, and add your medical info.",
+                        "Create or join a ride" to "Make a ride and share the 6-letter code, or enter a friend's code. Solo works too.",
+                        "Slide to ride" to "ARMOR checks location, GPS, SMS and contacts first. If something is missing it tells you what.",
+                    )
+                    Rail(steps.indices.map { if (it == 0) RailState.ACTIVE else RailState.TODO }, Modifier.padding(top = 22.dp), nodeTop = 22.dp, gap = 12.dp) { i ->
+                        val (a, b) = steps[i]
+                        Column(Modifier.fillMaxWidth().panel(radius = 18.dp, neon = i == 0).padding(14.dp)) {
+                            Txt("STEP ${i + 1}", Type.Eyebrow, orange)
+                            Txt(a, Type.BodyStrong.copy(fontSize = 16.sp), ArmorColors.OnBg, Modifier.padding(top = 4.dp))
+                            Txt(b, Type.Caption, ArmorColors.Muted, Modifier.padding(top = 2.dp))
                         }
                     }
                 }

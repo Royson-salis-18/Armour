@@ -137,34 +137,26 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         if (!RideGate.missing(context, settings, contactCount).any()) RideService.start(context, demo = false)
     }
 
-    val locOk = granted(Manifest.permission.ACCESS_FINE_LOCATION)
-    val smsOk = granted(Manifest.permission.SEND_SMS)
     Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Wordmark()
-        Txt("Advanced Rider Monitoring & Orientation Reasoning System", Type.Caption, ArmorColors.Dim, Modifier.padding(top = 6.dp))
-        UpdateBanner(Modifier.padding(top = 12.dp))
-        LogoHero(Modifier.fillMaxWidth().height(210.dp))
-        Txt("RIDE TOGETHER.", Type.Hero)
-        Txt("COME HOME TOGETHER.", Type.Hero, ArmorColors.Orange)
-        Gap(18.dp)
-        WhatIsArmor()
-        Gap(22.dp)
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ReadyChip("Location", locOk, Modifier.weight(1f))
-            ReadyChip("SOS text", smsOk, Modifier.weight(1f))
-            ReadyChip(if (contactCount > 0) "$contactCount contacts" else "Contacts", contactCount > 0, Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Wordmark()
+            Box(Modifier.weight(1f))
+            Txt(if (blocked) "NOT READY" else "READY", Type.Meta, if (blocked) ArmorColors.Muted else ArmorColors.Orange)
         }
-
-        // Setup is done once here, not mid-ride. This card disappears when everything is ready.
-        val (ready, total) = protectionReady(context)
-        if (ready < total) { Gap(12.dp); SetupCard(ready, total) { showSetup = true } }
-        if (showSetup) ProtectionSetupDialog { showSetup = false }
-        if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red, Modifier.padding(top = 12.dp))
-        if (settings.syncConfigured) Txt("Group ${settings.groupCode}", Type.Label, ArmorColors.Muted, Modifier.padding(top = 12.dp))
-
-        Gap(22.dp)
-        if (blocked) GateCard(gate, Modifier.padding(bottom = 14.dp))
+        UpdateBanner(Modifier.padding(top = 12.dp))
+        val okCount = gate.count { it.ok }
+        HomeHero(
+            ridersLabel = if (settings.syncConfigured) "Ride ${settings.rideCode.ifBlank { settings.groupCode }}" else "Solo or join a ride",
+            contactsLabel = if (contactCount > 0) "$contactCount contacts" else "No contacts yet",
+            ready = okCount, total = gate.size, modifier = Modifier.padding(top = 8.dp),
+        )
+        Gap(14.dp)
+        Txt("Ride together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp))
+        Txt("Come home together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp), ArmorColors.Orange)
+        Txt("A safety net for group rides. Everyone sees each other live, and if a rider goes down, help is called automatically.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 10.dp))
+        Gap(24.dp)
+        GateCard(gate)
+        Gap(16.dp)
         SlideToStart(if (starting) "STARTING\u2026" else if (blocked) "FINISH SETUP TO RIDE" else "SLIDE TO RIDE", enabled = !starting) {
             if (starting) return@SlideToStart
             val ask = RideGate.requestable(context)
@@ -172,25 +164,34 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
             else if (!blocked) RideService.start(context, demo = false)
             else refresh++
         }
+        if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red, Modifier.padding(top = 12.dp))
+        Gap(16.dp)
+
+        // Setup is done once here, not mid-ride. This card disappears when everything is ready.
+        val (ready, total) = protectionReady(context)
+        if (ready < total) { SetupCard(ready, total) { showSetup = true } }
+        if (showSetup) ProtectionSetupDialog { showSetup = false }
+        Gap(24.dp)
+        WhatIsArmor()
+        Gap(24.dp)
     }
 }
 
-/** What still stands between the rider and a protected ride, each with the one thing to do about it. */
+/** The pre-ride checklist as a route: each safety check is a stop on the rail, lit orange once it passes. */
 @Composable
 private fun GateCard(items: List<GateItem>, modifier: Modifier = Modifier) {
-    Column(
-        modifier.fillMaxWidth().panel(18.dp, ArmorColors.Orange).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Txt("Before you ride", Type.Title)
-        Txt("ARMOR only switches on when it can actually protect you.", Type.Caption, ArmorColors.Muted)
-        items.forEach {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatusDot(if (it.ok) ArmorColors.Green else ArmorColors.Amber, 8.dp, Modifier.padding(top = 5.dp))
-                Column {
-                    Txt(it.title, Type.Label, if (it.ok) ArmorColors.Muted else ArmorColors.OnBg)
-                    if (!it.ok) Txt(it.fix, Type.Caption, ArmorColors.Muted)
-                }
+    val firstOpen = items.indexOfFirst { !it.ok }
+    Column(modifier.fillMaxWidth().panel(22.dp, neon = firstOpen < 0).padding(18.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Txt("BEFORE YOU RIDE", Type.Eyebrow, ArmorColors.Orange, Modifier.weight(1f))
+            Txt("${items.count { it.ok }}/${items.size}", Type.Meta, ArmorColors.Muted)
+        }
+        Txt(if (firstOpen < 0) "All safety checks passed." else "The ride unlocks when every check passes.", Type.Title.copy(fontSize = 18.sp, lineHeight = 23.sp), ArmorColors.OnBg, Modifier.padding(top = 6.dp, bottom = 16.dp))
+        Rail(items.mapIndexed { i, it -> when { it.ok -> RailState.DONE; i == firstOpen -> RailState.ACTIVE; else -> RailState.TODO } }, nodeTop = 10.dp, gap = 12.dp) { i ->
+            val it = items[i]
+            Column {
+                Txt(it.title, Type.BodyStrong.copy(fontSize = 15.sp), if (it.ok) ArmorColors.OnBg else if (i == firstOpen) ArmorColors.OnBg else ArmorColors.Muted)
+                if (!it.ok) Txt(it.fix, Type.Caption, ArmorColors.Muted, Modifier.padding(top = 2.dp))
             }
         }
     }
@@ -333,7 +334,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
 
             Column(
                 Modifier.fillMaxWidth().heightIn(max = maxSheet)
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(ArmorColors.S1)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF1E1E21), Color(0xFF141416))))
+                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color.Transparent), endY = 120f), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
             ) {
                 // The whole header (handle and status) is the grip: drag it down or tap it to minimise the panel and give
@@ -463,7 +465,7 @@ private fun StatusRow(s: RideSnapshot, look: LinkLook) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusDot(look.color, 10.dp)
-                Txt(look.title.uppercase(), Type.Title, maxLines = 1)
+                Txt(look.title, Type.Title, maxLines = 1)
             }
             Txt(look.sub, Type.Body.copy(fontSize = 14.sp), ArmorColors.Muted, Modifier.padding(top = 2.dp), maxLines = 2)
         }
@@ -483,9 +485,9 @@ private fun StatsStrip(s: RideSnapshot) {
             Triple("TOP SPEED", (st.maxSpeedMps * 3.6).roundToInt().toString(), " km/h"),
         ).forEach { (label, value, unit) ->
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Txt(label, Type.Eyebrow.copy(fontSize = 11.sp, letterSpacing = 1.5.sp), ArmorColors.Dim)
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Txt(value, Type.Title.copy(fontSize = 24.sp))
+                Txt(label, Type.Eyebrow.copy(fontSize = 10.sp), ArmorColors.Dim)
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.Bottom) {
+                    Txt(value, Type.Numeric)
                     if (unit.isNotEmpty()) Txt(unit, Type.Caption, ArmorColors.Muted, Modifier.padding(start = 2.dp, bottom = 3.dp))
                 }
             }

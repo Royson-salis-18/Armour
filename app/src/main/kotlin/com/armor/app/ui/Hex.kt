@@ -256,35 +256,29 @@ fun HexFlower(tileHeight: Dp, gap: Dp = 8.dp, tiles: List<@Composable () -> Unit
 }
 
 /**
- * ARMOR's container: a plain rounded rectangle in a layered dark surface, a hairline border that catches a little light
- * along its top edge, and a soft shadow. Restrained on purpose: no glow, so the content is what stands out.
- * [accent] (optional) draws the hairline in a colour, for a card that is in a state (a team stop, an alert).
+ * ARMOR's container: a graphite glass card. A layered dark surface lit slightly from the top, a hairline edge that
+ * catches light along the top and fades out lower down, and a soft shadow.
+ *
+ * Orange is used sparingly, the way a dashboard uses one warning light: [neon] marks the card that is selected or
+ * featured with an orange hairline and a soft orange bloom; [accent] does the same in a state colour (red for an alert).
  */
-fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null, neon: Boolean = true): Modifier = composed {
+fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null, neon: Boolean = false): Modifier = composed {
     val shape = RoundedCornerShape(radius)
     val lit = accent ?: ArmorColors.Orange
     val glow = neon || accent != null
     this
-        // Main cards get a halo in the accent colour; secondary ones (stats, tiles) stay neutral so the main cards stand out.
-        .shadow(if (glow) 16.dp else 10.dp, shape, ambientColor = Color.Black, spotColor = if (glow) lit.copy(alpha = 0.9f) else Color.Black)
+        .shadow(if (glow) 18.dp else 12.dp, shape, ambientColor = Color.Black, spotColor = if (glow) lit.copy(alpha = 0.75f) else Color.Black)
         .clip(shape)
-        .background(Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))))
+        .background(Brush.verticalGradient(listOf(Color(0xFF1C1C1F), Color(0xFF141416), Color(0xFF111113))))
         .drawBehind {
-            if (!glow) return@drawBehind
-            // A bright neon line along the top edge. The bloom is the same line drawn wider and fainter, so it has no hard edges.
-            val inset = size.width * 0.16f
-            val y = 0.75.dp.toPx()
-            val fade = Brush.horizontalGradient(listOf(Color.Transparent, lit, Color.Transparent), startX = inset, endX = size.width - inset)
-            drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 9.dp.toPx(), alpha = 0.06f)
-            drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 4.5.dp.toPx(), alpha = 0.14f)
-            drawLine(fade, Offset(inset, y), Offset(size.width - inset, y), 1.6.dp.toPx())
+            // A faint sheen across the top third, like light on smoked glass.
+            drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.035f), Color.Transparent), endY = size.height * 0.4f))
+            if (glow) drawRect(Brush.radialGradient(listOf(lit.copy(alpha = 0.10f), Color.Transparent), center = Offset(size.width * 0.15f, 0f), radius = size.width * 0.9f))
         }
         .border(
             1.dp,
-            if (glow) Brush.linearGradient(
-                0f to lit.copy(alpha = 0.8f), 0.38f to Color.White.copy(alpha = 0.06f), 0.62f to Color.White.copy(alpha = 0.05f), 1f to lit.copy(alpha = 0.5f),
-                start = Offset.Zero, end = Offset.Infinite,
-            ) else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.05f))),
+            if (glow) Brush.verticalGradient(listOf(lit.copy(alpha = 0.85f), lit.copy(alpha = 0.35f)))
+            else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.04f))),
             shape,
         )
 }

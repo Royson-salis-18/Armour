@@ -266,7 +266,7 @@ fun SlideToStart(label: String, enabled: Boolean = true, onComplete: () -> Unit)
 /** A soft pool of coloured light falling from the top of the screen: the ambient glow behind every ARMOR screen. */
 /** The page glow. [scatter] adds the quiet edge hexagons; alert screens turn it off so nothing sits behind their text. */
 fun Modifier.warmGlow(color: Color = ArmorColors.Orange, strength: Float = 0.30f, scatter: Boolean = true): Modifier =
-    (if (scatter) this.hexScatter(color) else this).warmLight(color, strength * 0.8f)
+    (if (scatter) this.dotGrid() else this).warmLight(color, strength * 0.55f)
 
 private fun lerpWhite(c: Color) = Color((c.red + 1f) / 2f, (c.green + 1f) / 2f, (c.blue + 1f) / 2f)
 

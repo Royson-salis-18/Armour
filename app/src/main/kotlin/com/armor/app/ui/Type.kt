@@ -26,14 +26,24 @@ val InterFamily = FontFamily(
     Font(R.font.inter_bold, FontWeight.Bold),
 )
 
+/** Instrument-panel labels and readouts: small meta text, eyebrows and numbers. */
+val MonoFamily = FontFamily(
+    Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
+    Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
+)
+
 /** Type scale. Headlines are condensed and set in capitals by the caller; numbers use tabular figures. */
 object Type {
     val Hero = TextStyle(fontFamily = CondensedFamily, fontSize = 50.sp, lineHeight = 46.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp)
     val Display = TextStyle(fontFamily = CondensedFamily, fontSize = 92.sp, lineHeight = 88.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp, fontFeatureSettings = "tnum")
     val Speed = TextStyle(fontFamily = CondensedFamily, fontSize = 46.sp, fontWeight = FontWeight.ExtraBold, fontFeatureSettings = "tnum")
-    val Headline = TextStyle(fontFamily = CondensedFamily, fontSize = 36.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
-    val Title = TextStyle(fontFamily = CondensedFamily, fontSize = 27.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp)
-    val Eyebrow = TextStyle(fontFamily = CondensedFamily, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
+    val Headline = TextStyle(fontFamily = InterFamily, fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.6).sp)
+    val Title = TextStyle(fontFamily = InterFamily, fontSize = 21.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.3).sp)
+    val Eyebrow = TextStyle(fontFamily = MonoFamily, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
+    /** Numbers on cards: distance, time, counts. */
+    val Numeric = TextStyle(fontFamily = MonoFamily, fontSize = 22.sp, fontWeight = FontWeight.Medium, letterSpacing = (-0.5).sp, fontFeatureSettings = "tnum")
+    /** Small monospaced meta text: "3 riders", "v12", "GPS 4 m". */
+    val Meta = TextStyle(fontFamily = MonoFamily, fontSize = 11.sp, fontWeight = FontWeight.Normal, letterSpacing = 0.4.sp)
     val Body = TextStyle(fontFamily = InterFamily, fontSize = 15.sp, fontWeight = FontWeight.Normal)
     val BodyStrong = TextStyle(fontFamily = InterFamily, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     val Label = TextStyle(fontFamily = InterFamily, fontSize = 13.sp, fontWeight = FontWeight.Medium)

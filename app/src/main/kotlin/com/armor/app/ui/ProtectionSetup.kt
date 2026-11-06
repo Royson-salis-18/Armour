@@ -76,8 +76,7 @@ internal fun protectionReady(context: Context): Pair<Int, Int> = protectionCheck
 @Composable
 internal fun SetupCard(ready: Int, total: Int, onOpen: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ArmorColors.S1).border(1.dp, ArmorColors.Orange.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
-            .clickable(onClick = onOpen).padding(16.dp),
+        Modifier.fillMaxWidth().panel(18.dp, neon = true).clickable(onClick = onOpen).padding(16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
