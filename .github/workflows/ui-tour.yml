@@ -40,6 +40,8 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          ram-size: 3072M
+          heap-size: 512M
           disable-animations: true
           script: bash scripts/ui-tour.sh
       - name: Push screenshots to ci-screens
