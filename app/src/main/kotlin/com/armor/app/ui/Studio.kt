@@ -200,11 +200,11 @@ private fun FloatCard(modifier: Modifier, light: Boolean = false, content: @Comp
  */
 @Composable
 fun HomeHero(ridersLabel: String, contactsLabel: String, ready: Int, total: Int, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(330.dp)) {
+    Box(modifier.fillMaxWidth().height(290.dp)) {
         // The centre card.
         val shape = RoundedCornerShape(26.dp)
         Box(
-            Modifier.align(Alignment.Center).padding(horizontal = 44.dp).fillMaxWidth().height(250.dp)
+            Modifier.align(Alignment.Center).padding(horizontal = 44.dp).fillMaxWidth().height(224.dp)
                 .shadow(10.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)
                 .background(Brush.verticalGradient(listOf(Color(0xFF3A3A3E), Color(0xFF26262A), Color(0xFF3A1D10), Color(0xFF8A3A12))))
                 .border(1.dp, Color.White.copy(alpha = 0.10f), shape),

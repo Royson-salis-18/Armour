@@ -156,14 +156,15 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
                 Txt(if (blocked) "SETUP NEEDED" else "READY", Type.Meta, if (blocked) ArmorColors.Muted else ArmorColors.Orange)
             }
             UpdateBanner(Modifier.padding(top = 12.dp))
-            Gap(28.dp)
-            Txt("Ride together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp))
-            Txt("Come home together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp), ArmorColors.Orange)
-            Txt(
-                if (settings.syncConfigured) "Group ride ${settings.rideCode.ifBlank { settings.groupCode }}" else "Riding solo. Join or start a group ride from the Group tab.",
-                Type.Body, ArmorColors.Muted, Modifier.padding(top = 10.dp),
+            HomeHero(
+                ridersLabel = if (settings.syncConfigured) "Ride ${settings.rideCode.ifBlank { settings.groupCode }}" else "Solo ride",
+                contactsLabel = if (contactCount > 0) "$contactCount contacts" else "No contacts yet",
+                ready = gate.count { it.ok }, total = gate.size, modifier = Modifier.padding(top = 6.dp),
             )
-            Gap(24.dp)
+            Gap(10.dp)
+            Txt("Ride together.", Type.Headline.copy(fontSize = 30.sp, lineHeight = 34.sp))
+            Txt("Come home together.", Type.Headline.copy(fontSize = 30.sp, lineHeight = 34.sp), ArmorColors.Orange)
+            Gap(18.dp)
             GateCard(gate, open = gateOpen, onToggle = { gateOpen = !gateOpen })
             if (ready < total) { Gap(12.dp); SlimRow("Finish setting up", "$ready of $total permissions ready", "Set up", accent = true) { showSetup = true } }
             Gap(12.dp)
