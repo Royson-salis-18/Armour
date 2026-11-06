@@ -52,15 +52,10 @@ fun dial(context: Context, number: String) {
     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
-/**
- * The ride sheet's safety tools: what the group should know right now (regroup point, low batteries, paused crash
- * detection) and the quick actions (report a hazard, off the bike, regroup here, roadside help).
- */
+/** What the group should know right now: a regroup point, low batteries, paused crash detection, a hazard ahead. Always shown when present. */
 @Composable
-fun SafetyTools(s: RideSnapshot, settings: Settings) {
+fun RideBanners(s: RideSnapshot) {
     val context = LocalContext.current
-    var hazardPicker by remember { mutableStateOf(false) }
-
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         s.regroup?.let { r ->
             Banner("REGROUP · ${r.detail?.ifBlank { null } ?: "Meeting point"}", "Set by ${r.riderName}", ArmorColors.Orange,
@@ -70,7 +65,7 @@ fun SafetyTools(s: RideSnapshot, settings: Settings) {
             Banner("LOW BATTERY", "${s.lowBatteryRiders.joinToString(", ")}: their tracking may stop soon", ArmorColors.Amber)
         }
         if (s.crashDetectionPaused) {
-            Banner("CRASH DETECTION PAUSED", "Resumes by itself when you ride again", ArmorColors.Muted, action = "RESUME") {
+            Banner("OFF THE BIKE", "Crash detection is paused. It resumes by itself when you ride again.", ArmorColors.Muted, action = "RESUME") {
                 ArmorRuntime.send(ArmorRuntime.Command.PauseCrashDetection(false))
             }
         }
@@ -79,22 +74,33 @@ fun SafetyTools(s: RideSnapshot, settings: Settings) {
             Banner("AHEAD: ${(type?.label ?: "Hazard").uppercase()}", "Reported by ${h.riderName}", ArmorColors.Amber,
                 action = if (h.position != null) "SHOW" else null) { h.position?.let { openNavigation(context, it) } }
         }
+    }
+}
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ToolChip("Report hazard", Modifier.weight(1f), hazardPicker) { hazardPicker = !hazardPicker }
-            ToolChip(if (s.crashDetectionPaused) "Back on bike" else "Off the bike", Modifier.weight(1f), s.crashDetectionPaused) {
-                ArmorRuntime.send(ArmorRuntime.Command.PauseCrashDetection(!s.crashDetectionPaused))
+/** True when [RideBanners] has something to show, so callers can skip the spacing around it. */
+fun hasBanners(s: RideSnapshot) = s.regroup != null || s.lowBatteryRiders.isNotEmpty() || s.crashDetectionPaused || s.hazards.any { it.riderId != s.self?.id }
+
+/** Pick what to report; sends it and closes the picker. */
+@Composable
+fun HazardGrid(onDone: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Txt("What's ahead? The riders behind you are told.", Type.Caption, ArmorColors.Muted)
+        HazardType.entries.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { t -> ToolChip(t.label, Modifier.weight(1f)) { ArmorRuntime.send(ArmorRuntime.Command.ReportHazard(t)); onDone() } }
+                repeat(3 - row.size) { Box(Modifier.weight(1f)) }
             }
-            if (s.isLead) ToolChip("Regroup here", Modifier.weight(1f)) { ArmorRuntime.send(ArmorRuntime.Command.SetRegroup("Regroup point")) }
-            else if (settings.roadsideNumber.isNotBlank()) ToolChip("Roadside help", Modifier.weight(1f)) { dial(context, settings.roadsideNumber) }
         }
-        if (hazardPicker) {
-            HazardType.entries.chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { t -> ToolChip(t.label, Modifier.weight(1f)) { ArmorRuntime.send(ArmorRuntime.Command.ReportHazard(t)); hazardPicker = false } }
-                }
-            }
-        }
+    }
+}
+
+/** Lead and roadside shortcuts that sit under the rider list. */
+@Composable
+fun GroupTools(s: RideSnapshot, settings: Settings) {
+    val context = LocalContext.current
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        if (s.isLead) ToolChip("Regroup here", Modifier.weight(1f)) { ArmorRuntime.send(ArmorRuntime.Command.SetRegroup("Regroup point")) }
+        if (settings.roadsideNumber.isNotBlank()) ToolChip("Roadside help", Modifier.weight(1f)) { dial(context, settings.roadsideNumber) }
     }
 }
 

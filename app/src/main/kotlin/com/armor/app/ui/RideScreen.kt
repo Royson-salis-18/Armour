@@ -7,6 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -138,60 +143,95 @@ internal fun PreRide(settings: Settings, contactCount: Int, starting: Boolean) {
         if (!RideGate.missing(context, settings, contactCount).any()) RideService.start(context, demo = false)
     }
 
-    Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Wordmark()
-            Box(Modifier.weight(1f))
-            Txt(if (blocked) "NOT READY" else "READY", Type.Meta, if (blocked) ArmorColors.Muted else ArmorColors.Orange)
-        }
-        UpdateBanner(Modifier.padding(top = 12.dp))
-        val okCount = gate.count { it.ok }
-        HomeHero(
-            ridersLabel = if (settings.syncConfigured) "Ride ${settings.rideCode.ifBlank { settings.groupCode }}" else "Solo or join a ride",
-            contactsLabel = if (contactCount > 0) "$contactCount contacts" else "No contacts yet",
-            ready = okCount, total = gate.size, modifier = Modifier.padding(top = 8.dp),
-        )
-        Gap(14.dp)
-        Txt("Ride together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp))
-        Txt("Come home together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp), ArmorColors.Orange)
-        Txt("A safety net for group rides. Everyone sees each other live, and if a rider goes down, help is called automatically.", Type.Body, ArmorColors.Muted, Modifier.padding(top = 10.dp))
-        Gap(24.dp)
-        GateCard(gate)
-        Gap(16.dp)
-        SlideToStart(if (starting) "STARTING\u2026" else if (blocked) "FINISH SETUP TO RIDE" else "SLIDE TO RIDE", enabled = !starting) {
-            if (starting) return@SlideToStart
-            val ask = RideGate.requestable(context)
-            if (blocked && ask.isNotEmpty()) launcher.launch(ask)
-            else if (!blocked) RideService.start(context, demo = false)
-            else refresh++
-        }
-        if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red, Modifier.padding(top = 12.dp))
-        Gap(16.dp)
+    var gateOpen by remember { mutableStateOf(false) }
+    val (ready, total) = protectionReady(context)
+    if (showSetup) ProtectionSetupDialog { showSetup = false }
 
-        // Setup is done once here, not mid-ride. This card disappears when everything is ready.
-        val (ready, total) = protectionReady(context)
-        if (ready < total) { SetupCard(ready, total) { showSetup = true } }
-        if (showSetup) ProtectionSetupDialog { showSetup = false }
-        Gap(24.dp)
-        WhatIsArmor()
-        Gap(24.dp)
+    // The slider is pinned to the bottom so starting a ride never needs a scroll; everything else sits above it.
+    Box(Modifier.fillMaxSize().warmGlow().statusBarsPadding()) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 130.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Wordmark()
+                Box(Modifier.weight(1f))
+                Txt(if (blocked) "SETUP NEEDED" else "READY", Type.Meta, if (blocked) ArmorColors.Muted else ArmorColors.Orange)
+            }
+            UpdateBanner(Modifier.padding(top = 12.dp))
+            Gap(28.dp)
+            Txt("Ride together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp))
+            Txt("Come home together.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp), ArmorColors.Orange)
+            Txt(
+                if (settings.syncConfigured) "Group ride ${settings.rideCode.ifBlank { settings.groupCode }}" else "Riding solo. Join or start a group ride from the Group tab.",
+                Type.Body, ArmorColors.Muted, Modifier.padding(top = 10.dp),
+            )
+            Gap(24.dp)
+            GateCard(gate, open = gateOpen, onToggle = { gateOpen = !gateOpen })
+            if (ready < total) { Gap(12.dp); SlimRow("Finish setting up", "$ready of $total permissions ready", "Set up", accent = true) { showSetup = true } }
+            Gap(12.dp)
+            SlimRow("How ARMOR works", "Eight real situations, one minute each", "Watch") { Tour.show.value = true }
+        }
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (denied) Txt("Location permission is needed to track your ride. Allow it in system settings and try again.", Type.Label, ArmorColors.Red)
+            SlideToStart(if (starting) "STARTING\u2026" else if (blocked) "FINISH SETUP TO RIDE" else "SLIDE TO RIDE", enabled = !starting) {
+                if (starting) return@SlideToStart
+                val ask = RideGate.requestable(context)
+                if (blocked && ask.isNotEmpty()) launcher.launch(ask)
+                else if (!blocked) RideService.start(context, demo = false)
+                else refresh++
+            }
+        }
     }
 }
 
-/** The pre-ride checklist as a route: each safety check is a stop on the rail, lit orange once it passes. */
+/** A one-line card that opens something: title, a short line under it, and what tapping does. */
 @Composable
-private fun GateCard(items: List<GateItem>, modifier: Modifier = Modifier) {
-    val firstOpen = items.indexOfFirst { !it.ok }
-    Column(modifier.fillMaxWidth().panel(22.dp, neon = firstOpen < 0).padding(18.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Txt("BEFORE YOU RIDE", Type.Eyebrow, ArmorColors.Orange, Modifier.weight(1f))
-            Txt("${items.count { it.ok }}/${items.size}", Type.Meta, ArmorColors.Muted)
+private fun SlimRow(title: String, sub: String, action: String, accent: Boolean = false, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().panel(18.dp, neon = accent).clickable { Haptics.tick(); onClick() }.padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Txt(title, Type.BodyStrong)
+            Txt(sub, Type.Caption, ArmorColors.Muted)
         }
-        Txt(if (firstOpen < 0) "All safety checks passed." else "The ride unlocks when every check passes.", Type.Title.copy(fontSize = 18.sp, lineHeight = 23.sp), ArmorColors.OnBg, Modifier.padding(top = 6.dp, bottom = 16.dp))
+        Txt(action, Type.Label, ArmorColors.Orange)
+    }
+}
+
+/**
+ * The pre-ride checklist as a route: each safety check is a stop on the rail, lit orange once it passes. While anything is
+ * missing it stays open and says what to do; once everything passes it folds down to one line.
+ */
+@Composable
+private fun GateCard(items: List<GateItem>, open: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val firstOpen = items.indexOfFirst { !it.ok }
+    val allOk = firstOpen < 0
+    if (allOk && !open) {
+        Row(
+            modifier.fillMaxWidth().panel(18.dp).clickable { Haptics.tick(); onToggle() }.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(Modifier.size(10.dp).clip(CircleShape).background(ArmorColors.Orange))
+            Column(Modifier.weight(1f)) {
+                Txt("All safety checks passed", Type.BodyStrong)
+                Txt("${items.size} of ${items.size} \u00B7 location, GPS, SMS, alerts, contacts", Type.Caption, ArmorColors.Muted, maxLines = 1)
+            }
+            Txt("Details", Type.Label, ArmorColors.Muted)
+        }
+        return
+    }
+    Column(modifier.fillMaxWidth().panel(22.dp, neon = !allOk).padding(18.dp)) {
+        Row(Modifier.then(if (allOk) Modifier.clickable { onToggle() } else Modifier), verticalAlignment = Alignment.CenterVertically) {
+            Txt("BEFORE YOU RIDE", Type.Eyebrow, ArmorColors.Orange, Modifier.weight(1f))
+            Txt(if (allOk) "Hide" else "${items.count { it.ok }}/${items.size}", Type.Meta, ArmorColors.Muted)
+        }
+        Txt(if (allOk) "All safety checks passed." else "The ride unlocks when every check passes.", Type.Title.copy(fontSize = 18.sp, lineHeight = 23.sp), ArmorColors.OnBg, Modifier.padding(top = 6.dp, bottom = 16.dp))
         Rail(items.mapIndexed { i, it -> when { it.ok -> RailState.DONE; i == firstOpen -> RailState.ACTIVE; else -> RailState.TODO } }, nodeTop = 10.dp, gap = 12.dp) { i ->
             val it = items[i]
             Column {
-                Txt(it.title, Type.BodyStrong.copy(fontSize = 15.sp), if (it.ok) ArmorColors.OnBg else if (i == firstOpen) ArmorColors.OnBg else ArmorColors.Muted)
+                Txt(it.title, Type.BodyStrong.copy(fontSize = 15.sp), if (it.ok || i == firstOpen) ArmorColors.OnBg else ArmorColors.Muted)
                 if (!it.ok) Txt(it.fix, Type.Caption, ArmorColors.Muted, Modifier.padding(top = 2.dp))
             }
         }
@@ -225,13 +265,13 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     var chatOpen by remember { mutableStateOf(false) }
     var mapPicker by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
-    var details by remember { mutableStateOf(false) }
+    var tool by remember { mutableStateOf<RideTool?>(null) }
     // Opening the details scrolls them into view; otherwise they open below the fold and look like nothing happened.
     val sheetScroll = rememberScrollState()
     // Far enough to bring the lead controls (the first thing in the details) up under the status line.
     val detailsJump = with(androidx.compose.ui.platform.LocalDensity.current) { 190.dp.roundToPx() }
-    LaunchedEffect(details) {
-        if (details) { kotlinx.coroutines.delay(120); sheetScroll.animateScrollTo(minOf(sheetScroll.maxValue, sheetScroll.value + detailsJump)) }
+    LaunchedEffect(tool) {
+        if (tool != null) { kotlinx.coroutines.delay(120); sheetScroll.animateScrollTo(minOf(sheetScroll.maxValue, sheetScroll.value + detailsJump)) }
     }
     var minimized by remember { mutableStateOf(false) }
     val camera = remember { MapCamera() }
@@ -362,25 +402,25 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                     Gap(12.dp)
                     PrimaryButton("I'm okay", color = ArmorColors.Green, contentColor = Color.Black) { ArmorRuntime.send(ArmorRuntime.Command.RiderOk) }
                 }
-                Gap(12.dp)
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { Haptics.tick(); details = !details }.padding(horizontal = 4.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Txt("Riders, lead & safety tools", Type.BodyStrong.copy(fontSize = 14.sp), ArmorColors.Muted, Modifier.weight(1f))
-                    androidx.compose.material3.Icon(
-                        if (details) androidx.compose.material.icons.Icons.Filled.KeyboardArrowUp else androidx.compose.material.icons.Icons.Filled.KeyboardArrowDown,
-                        contentDescription = if (details) "Hide details" else "Show details", tint = ArmorColors.Muted,
-                    )
+                if (hasBanners(s)) { Gap(12.dp); RideBanners(s) }
+                // A team stop is time-critical, so it is never hidden behind a tool.
+                if (s.teamStop != null) { Gap(12.dp); LeadCard(s) }
+                Gap(16.dp)
+                Txt("QUICK ACTIONS", Type.Eyebrow, ArmorColors.Dim, Modifier.padding(start = 2.dp, bottom = 8.dp))
+                QuickActions(s, tool) { t ->
+                    if (t == RideTool.OFF_BIKE) ArmorRuntime.send(ArmorRuntime.Command.PauseCrashDetection(!s.crashDetectionPaused))
+                    else tool = if (tool == t) null else t
                 }
-                if (details) {
-                    Gap(10.dp)
-                    LeadCard(s)
-                    Gap(12.dp)
-                    SafetyTools(s, settings)
-                    if (s.riders.any { !it.isSelf }) { Gap(16.dp); ConvoyStrip(s) }
-                    Gap(16.dp)
-                    QuickStatusRow(s.quickStatus)
+                when (tool) {
+                    RideTool.STOP -> { Gap(12.dp); Txt("Why are you stopping? The group sees it, and no alarm is raised.", Type.Caption, ArmorColors.Muted, Modifier.padding(bottom = 8.dp)); QuickStatusRow(s.quickStatus) }
+                    RideTool.HAZARD -> { Gap(12.dp); HazardGrid { tool = null } }
+                    RideTool.GROUP -> {
+                        Gap(12.dp)
+                        if (s.teamStop == null) { LeadCard(s); Gap(12.dp) }
+                        if (s.riders.any { !it.isSelf }) { ConvoyStrip(s); Gap(12.dp) }
+                        GroupTools(s, settings)
+                    }
+                    else -> Unit
                 }
                 if (demo) {
                     Gap(14.dp)
@@ -537,6 +577,43 @@ private fun StatsStrip(s: RideSnapshot) {
                 }
             }
         }
+    }
+}
+
+private enum class RideTool { STOP, HAZARD, OFF_BIKE, GROUP }
+
+/** The four things a rider actually reaches for mid-ride, always on screen and labelled. */
+@Composable
+private fun QuickActions(s: RideSnapshot, open: RideTool?, onTap: (RideTool) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ActionTile("Stopping", s.self?.status != null || open == RideTool.STOP, Modifier.weight(1f), { onTap(RideTool.STOP) }) { tint -> StatusIcon(QuickStatus.BREAK, tint) }
+        ActionTile("Hazard", open == RideTool.HAZARD, Modifier.weight(1f), { onTap(RideTool.HAZARD) }) { tint ->
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Warning, null, tint = tint, modifier = Modifier.size(24.dp))
+        }
+        ActionTile(if (s.crashDetectionPaused) "Back on" else "Off bike", s.crashDetectionPaused, Modifier.weight(1f), { onTap(RideTool.OFF_BIKE) }) { tint ->
+            Canvas(Modifier.size(24.dp)) {
+                val u = size.width / 24f
+                drawRoundRect(tint, Offset(6f * u, 4f * u), Size(4f * u, 16f * u), CornerRadius(1.5f * u))
+                drawRoundRect(tint, Offset(14f * u, 4f * u), Size(4f * u, 16f * u), CornerRadius(1.5f * u))
+            }
+        }
+        ActionTile("Riders", open == RideTool.GROUP || s.teamStop != null, Modifier.weight(1f), { onTap(RideTool.GROUP) }) { tint ->
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Person, null, tint = tint, modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun ActionTile(label: String, on: Boolean, modifier: Modifier, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
+    val shape = RoundedCornerShape(18.dp)
+    val tint = if (on) ArmorColors.Orange else ArmorColors.Muted
+    Column(
+        modifier.height(72.dp).clip(shape).background(if (on) ArmorColors.Orange.copy(alpha = 0.14f) else ArmorColors.S2)
+            .border(1.dp, if (on) ArmorColors.Orange else ArmorColors.Line, shape).clickable { Haptics.click(); onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        icon(tint)
+        Txt(label, Type.Label.copy(fontSize = 12.sp), if (on) ArmorColors.Orange else ArmorColors.OnBg, Modifier.padding(top = 6.dp), maxLines = 1)
     }
 }
 

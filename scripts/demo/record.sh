@@ -263,7 +263,7 @@ scene_end
 
 # ---- 13 lead: team stop ------------------------------------------------------------------------
 scene_start 13-lead
-tap_text "Show details"; sleep 2
+tap_text "Riders"; sleep 2
 sheet_find "Team stop"; tap_text "Team stop"; sleep 1.5; tap_text "Fuel"; sleep 4
 SID=$(ride_json | python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get('teamStop') or {}).get('id',''))" 2>/dev/null)
 [ -n "$SID" ] && kabir confirmStop "\"stopId\":\"$SID\"" >/dev/null
@@ -274,11 +274,10 @@ scene_end
 
 # ---- 14 tools ----------------------------------------------------------------------------------
 scene_start 14-tools
-sheet_find "Report hazard"; tap_text "Report hazard"; sleep 1.5; tap_text "Pothole"; sleep 2.5
-tap_text "Off the bike"; sleep 2.5; tap_text "Back on bike"; sleep 1.5
-tap_text "Regroup here"; sleep 2.5
-sheet_find "Repair"; tap_text "Fuel"; sleep 2; tap_text "Fuel"; sleep 1.5
-sheet_find "Hide details"; tap_text "Hide details"; sleep 1.5
+tap_text "Hazard"; sleep 1.5; tap_text "Pothole"; sleep 2.5
+tap_text "Off bike"; sleep 2.5; tap_text "Back on"; sleep 1.5
+tap_text "Riders"; sleep 1.5; sheet_find "Regroup here"; tap_text "Regroup here"; sleep 2.5; tap_text "Riders"; sleep 1
+tap_text "Stopping"; sleep 1.5; tap_text "Fuel"; sleep 2; tap_text "Fuel"; sleep 1.5; tap_text "Stopping"; sleep 1
 scene_end
 
 # ---- 15 voice ----------------------------------------------------------------------------------
