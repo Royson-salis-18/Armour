@@ -81,7 +81,7 @@ fun Modifier.dotGrid(color: Color = Color.White, alpha: Float = 0.08f, step: Dp 
 /** The one loud card on a screen: solid orange, dark text, a soft orange bloom beneath it. */
 fun Modifier.accentPanel(radius: Dp = 22.dp, color: Color = ArmorColors.Orange): Modifier = composed {
     val shape = RoundedCornerShape(radius)
-    this.shadow(20.dp, shape, ambientColor = color, spotColor = color)
+    this.shadow(10.dp, shape, ambientColor = color, spotColor = color)
         .clip(shape)
         .background(Brush.linearGradient(listOf(Color(0xFFFF8A3D), color, Color(0xFFE5520A)), start = Offset.Zero, end = Offset.Infinite))
         .drawBehind { drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), Color.Transparent), endY = size.height * 0.5f)) }
@@ -147,7 +147,7 @@ fun Rail(states: List<RailState>, modifier: Modifier = Modifier, nodeTop: Dp = 1
 /** A row of bars rising to a peak, like a signal or level meter; [lit] of them (from the left) glow. */
 @Composable
 fun PeakBars(modifier: Modifier = Modifier, bars: Int = 13, lit: Float = 1f, color: Color = OnAccent, dim: Color = OnAccent.copy(alpha = 0.25f), live: Boolean = true) {
-    val t by rememberInfiniteTransition(label = "bars").animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "t")
+    val t = if (live) rememberInfiniteTransition(label = "bars").animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "t").value else 0f
     Canvas(modifier) {
         val w = size.width / bars
         for (i in 0 until bars) {
@@ -187,7 +187,7 @@ fun HighlightBars(values: List<Float>, highlight: Int, modifier: Modifier = Modi
 private fun FloatCard(modifier: Modifier, light: Boolean = false, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(18.dp)
     Box(
-        modifier.shadow(18.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)
+        modifier.shadow(8.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)
             .background(if (light) Brush.verticalGradient(listOf(Color(0xFFE9E9EC), Color(0xFFCFCFD4))) else Brush.verticalGradient(listOf(Color(0xE6303034), Color(0xE61C1C1F))))
             .border(1.dp, Color.White.copy(alpha = if (light) 0.5f else 0.12f), shape)
             .padding(12.dp),
@@ -205,7 +205,7 @@ fun HomeHero(ridersLabel: String, contactsLabel: String, ready: Int, total: Int,
         val shape = RoundedCornerShape(26.dp)
         Box(
             Modifier.align(Alignment.Center).padding(horizontal = 44.dp).fillMaxWidth().height(250.dp)
-                .shadow(24.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)
+                .shadow(10.dp, shape, ambientColor = Color.Black, spotColor = Color.Black).clip(shape)
                 .background(Brush.verticalGradient(listOf(Color(0xFF3A3A3E), Color(0xFF26262A), Color(0xFF3A1D10), Color(0xFF8A3A12))))
                 .border(1.dp, Color.White.copy(alpha = 0.10f), shape),
         ) {
@@ -225,7 +225,7 @@ fun HomeHero(ridersLabel: String, contactsLabel: String, ready: Int, total: Int,
             }
         }
         // Floating cards over the edges.
-        FloatCard(Modifier.align(Alignment.TopEnd).padding(end = 6.dp).width(132.dp).rotate(2f), light = true) {
+        FloatCard(Modifier.align(Alignment.TopEnd).padding(end = 6.dp).width(132.dp), light = true) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Txt("Group", Type.Label, Color(0xFF151517), Modifier.weight(1f))
@@ -250,7 +250,7 @@ fun HomeHero(ridersLabel: String, contactsLabel: String, ready: Int, total: Int,
                     Txt("Readiness", Type.Label, OnAccent, Modifier.weight(1f))
                     Txt("→", Type.Label, OnAccent)
                 }
-                PeakBars(Modifier.padding(vertical = 8.dp).fillMaxWidth().height(34.dp), lit = if (total == 0) 1f else ready / total.toFloat())
+                PeakBars(Modifier.padding(vertical = 8.dp).fillMaxWidth().height(34.dp), lit = if (total == 0) 1f else ready / total.toFloat(), live = false)
                 Txt("$ready of $total ready", Type.Meta, OnAccent.copy(alpha = 0.75f))
             }
         }

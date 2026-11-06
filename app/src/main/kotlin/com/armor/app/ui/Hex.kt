@@ -267,7 +267,7 @@ fun Modifier.panel(radius: Dp = 22.dp, accent: Color? = null, neon: Boolean = fa
     val lit = accent ?: ArmorColors.Orange
     val glow = neon || accent != null
     this
-        .shadow(if (glow) 18.dp else 12.dp, shape, ambientColor = Color.Black, spotColor = if (glow) lit.copy(alpha = 0.75f) else Color.Black)
+        .shadow(if (glow) 10.dp else 6.dp, shape, ambientColor = Color.Black, spotColor = if (glow) lit.copy(alpha = 0.75f) else Color.Black)
         .clip(shape)
         .background(Brush.verticalGradient(listOf(Color(0xFF1C1C1F), Color(0xFF141416), Color(0xFF111113))))
         .drawBehind {
