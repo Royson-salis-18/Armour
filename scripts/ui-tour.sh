@@ -34,6 +34,7 @@ geo() { adb emu geo fix "$1" "$2" >/dev/null; }
 # The Google Search app and friends spin the CPU at boot (the logs show thousands of lines a second) and starve the
 # emulator until it stops answering. Nothing here needs them.
 for pkg in com.google.android.googlequicksearchbox com.google.android.apps.tachyon com.google.android.apps.youtube.music com.google.android.apps.photos com.google.android.youtube com.google.android.gm; do adb shell pm disable-user --user 0 $pkg >/dev/null 2>&1 || true; done
+adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
 adb install -r -g "$APK"
 adb shell pm grant $P android.permission.ACCESS_BACKGROUND_LOCATION || true
 adb shell dumpsys deviceidle whitelist +$P >/dev/null || true
