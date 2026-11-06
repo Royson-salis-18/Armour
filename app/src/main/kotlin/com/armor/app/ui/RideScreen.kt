@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -290,6 +291,8 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                         }
                     }
                 }
+                // Full-map mode: a route card in the corner (destination, group, your speed, who is closest), like a nav widget.
+                if (minimized) RouteCard(s, look, Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 16.dp, top = 64.dp))
                 // Which map view is showing; tap to change it. Only the Google map has views, the offline map has one.
                 // The assistant: tap the mic (or say "Armor") and speak; what it heard and its answer show above it.
                 Column(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -406,6 +409,49 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
         if (mapPicker) MapViewPicker(mapView, onPick = { v -> ArmorApp.instance.prefs.update { it.copy(mapView = v.key) }; mapPicker = false }, onDismiss = { mapPicker = false })
     }
 }
+/** A navigation-style card: a rail of stops with the destination, the group, your speed, and the nearest rider. */
+@Composable
+private fun RouteCard(s: RideSnapshot, look: LinkLook, modifier: Modifier = Modifier) {
+    val kmh = max(0.0, s.self?.speedMps ?: 0.0) * 3.6
+    val plan = s.arrival
+    val others = s.riders.filter { !it.isSelf && !it.isStale }
+    val nearest = others.minByOrNull { it.distanceFromSelfM ?: Double.MAX_VALUE }
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        modifier.width(214.dp).clip(shape).background(Brush.verticalGradient(listOf(Color(0xF01B1B1E), Color(0xF0111113))))
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.04f))), shape)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+    ) {
+        val states = listOf(RailState.DONE, RailState.DONE, RailState.ACTIVE, RailState.TODO)
+        Rail(states, nodeTop = 9.dp, gap = 10.dp) { i ->
+            when (i) {
+                0 -> Column {
+                    Txt(plan?.label ?: "Ride started", Type.BodyStrong.copy(fontSize = 14.sp), maxLines = 1)
+                    Txt(if (plan != null) "Destination" else "No destination set", Type.Meta, ArmorColors.Dim)
+                }
+                1 -> Column {
+                    Txt(look.title, Type.BodyStrong.copy(fontSize = 14.sp), maxLines = 1)
+                    Txt(look.sub, Type.Meta, ArmorColors.Dim, maxLines = 2)
+                }
+                2 -> Row(verticalAlignment = Alignment.Bottom) {
+                    Txt(kmh.roundToInt().toString(), Type.Numeric.copy(fontSize = 26.sp))
+                    Txt(" km/h", Type.Meta, ArmorColors.Muted, Modifier.padding(bottom = 4.dp))
+                }
+                else -> Column {
+                    Txt(nearest?.name ?: "Riding solo", Type.BodyStrong.copy(fontSize = 14.sp), if (nearest != null) ArmorColors.OnBg else ArmorColors.Muted, maxLines = 1)
+                    Txt(nearest?.distanceFromSelfM?.let { fmtDistance(it) + " away" } ?: "No one else yet", Type.Meta, ArmorColors.Dim)
+                }
+            }
+        }
+        if (plan != null) {
+            val mins = ((plan.expectedAtMs - s.nowMs) / 60_000).coerceAtLeast(0)
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.Bottom) {
+                Txt("$mins", Type.Numeric.copy(fontSize = 20.sp)); Txt(" min", Type.Meta, ArmorColors.Muted, Modifier.padding(bottom = 3.dp))
+            }
+        }
+    }
+}
+
 private data class LinkLook(val title: String, val sub: String, val color: Color)
 
 private fun linkLook(s: RideSnapshot): LinkLook {

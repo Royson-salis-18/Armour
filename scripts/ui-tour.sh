@@ -35,6 +35,8 @@ adb install -r -g "$APK"
 adb shell pm grant $P android.permission.ACCESS_BACKGROUND_LOCATION || true
 adb shell dumpsys deviceidle whitelist +$P >/dev/null || true
 adb logcat -c
+# Keep a running copy of the log next to the screenshots, so a crash can be read even if the emulator dies.
+(adb logcat -v time '*:W' > "$OUT/logcat.txt" 2>&1 &)
 geo 77.5946 12.9716
 adb shell am start -W -n $P/.MainActivity
 sleep 6
