@@ -681,41 +681,41 @@ private fun DemoControls() {
     }
 }
 
-/** Shown after a ride ends: the totals, big, and one button to leave. */
+/** Shown after a ride ends: one notched card with the headline numbers, how the speed went, and one button to leave. */
 @Composable
 internal fun RideSummaryScreen(sum: RideSummary, onDone: () -> Unit) {
+    val stoppedMs = (sum.elapsedMs - sum.movingMs).coerceAtLeast(0)
+    val topKmh = (sum.maxSpeedMps * 3.6).roundToInt()
+    val avgKmh = (sum.avgMovingSpeedMps * 3.6).roundToInt()
     Column(Modifier.fillMaxSize().warmGlow().statusBarsPadding().padding(horizontal = 20.dp, vertical = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ArmorLogo(20.dp)
             Txt("RIDE COMPLETE", Type.Eyebrow, ArmorColors.Orange)
         }
-        Gap(8.dp)
-        Txt("YOU MADE", Type.Hero)
-        Txt("IT HOME.", Type.Hero, ArmorColors.Orange)
-        Gap(28.dp)
-        Txt(fmtDistance(sum.distanceM), Type.Display)
-        Txt("DISTANCE", Type.Eyebrow, ArmorColors.Dim)
+        Gap(10.dp)
+        Txt("You made it home.", Type.Headline.copy(fontSize = 34.sp, lineHeight = 38.sp))
         Gap(22.dp)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SummaryTile("TIME", fmtHms(sum.elapsedMs), Modifier.weight(1f))
-            SummaryTile("MOVING", fmtHms(sum.movingMs), Modifier.weight(1f))
+        NotchCard(tab = fmtHms(sum.elapsedMs)) {
+            Txt("DISTANCE", Type.Eyebrow, ArmorColors.Dim)
+            Txt(fmtDistance(sum.distanceM), Type.Numeric.copy(fontSize = 54.sp), ArmorColors.OnBg, Modifier.padding(top = 4.dp, bottom = 4.dp))
+            Txt("Moving ${fmtHms(sum.movingMs)}  \u00B7  Stopped ${fmtHms(stoppedMs)}", Type.Meta, ArmorColors.Muted)
         }
         Gap(12.dp)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SummaryTile("TOP SPEED", "${(sum.maxSpeedMps * 3.6).roundToInt()} km/h", Modifier.weight(1f))
-            SummaryTile("AVG MOVING", "${(sum.avgMovingSpeedMps * 3.6).roundToInt()} km/h", Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().panel(22.dp).padding(18.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(Modifier.weight(1f)) {
+                Txt("SPEED", Type.Eyebrow, ArmorColors.Dim)
+                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom) {
+                    Txt("$topKmh", Type.Numeric.copy(fontSize = 36.sp)); Txt(" km/h top", Type.Meta, ArmorColors.Muted, Modifier.padding(bottom = 6.dp))
+                }
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Txt("$avgKmh", Type.Numeric.copy(fontSize = 22.sp), ArmorColors.Muted); Txt(" km/h while moving", Type.Meta, ArmorColors.Dim, Modifier.padding(bottom = 3.dp))
+                }
+            }
+            // Top speed is the one lit bar; average and the red-line sit beside it in graphite.
+            HighlightBars(listOf(avgKmh.coerceAtLeast(1).toFloat(), topKmh.coerceAtLeast(1).toFloat()), highlight = 1, modifier = Modifier.size(width = 96.dp, height = 84.dp))
         }
         Box(Modifier.weight(1f))
         PrimaryButton("Done", color = ArmorColors.Orange, contentColor = Color(0xFF1A0B00), onClick = onDone)
-        Gap(90.dp)
-    }
-}
-
-@Composable
-private fun SummaryTile(label: String, value: String, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(24.dp)
-    Column(modifier.panel(radius = 20.dp, neon = false).padding(16.dp)) {
-        Txt(label, Type.Eyebrow.copy(fontSize = 12.sp), ArmorColors.Dim)
-        Txt(value, Type.Headline.copy(fontSize = 30.sp))
+        Gap(20.dp)
     }
 }

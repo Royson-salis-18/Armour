@@ -256,3 +256,20 @@ fun HomeHero(ridersLabel: String, contactsLabel: String, ready: Int, total: Int,
         }
     }
 }
+
+/**
+ * A graphite card with an orange tab cut into its top-right corner, like a now-playing widget: the tab carries the one
+ * number that matters (the ride time), the card carries everything else.
+ */
+@Composable
+fun NotchCard(tab: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(26.dp)
+    Box(modifier.fillMaxWidth().panel(26.dp)) {
+        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp)) { content() }
+        Box(
+            Modifier.align(Alignment.TopEnd).clip(RoundedCornerShape(topEnd = 26.dp, bottomStart = 22.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange, Color(0xFFE5520A))))
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+        ) { Txt(tab, Type.Numeric.copy(fontSize = 16.sp), OnAccent) }
+    }
+}
