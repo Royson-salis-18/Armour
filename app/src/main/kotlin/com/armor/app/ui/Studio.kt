@@ -219,9 +219,9 @@ fun HomeHero(ridersLabel: String, contactsLabel: String, ready: Int, total: Int,
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx())))
                 drawLine(Color.White.copy(alpha = 0.10f), Offset(0f, h * 0.48f), Offset(w, h * 0.48f), 1.dp.toPx())
             }
-            Column(Modifier.align(Alignment.TopCenter).padding(top = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                ArmorLogo(64.dp)
-                Txt("PROTECTED RIDES", Type.Eyebrow, Color.White.copy(alpha = 0.55f), Modifier.padding(top = 10.dp))
+            Column(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Txt("PROTECTED RIDES", Type.Eyebrow, Color.White.copy(alpha = 0.55f))
+                Box(Modifier.padding(top = 14.dp)) { ArmorLogo(64.dp) }
             }
         }
         // Floating cards over the edges.
