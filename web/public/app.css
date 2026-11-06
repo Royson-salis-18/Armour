@@ -523,3 +523,50 @@ body::before{display:none}
 }
 .what-card{box-shadow:0 10px 26px -14px rgba(20,20,30,.25)}
 @media (prefers-color-scheme:dark){.what-card{box-shadow:0 14px 30px -14px rgba(0,0,0,.8)}}
+
+
+/* ==== Studio redesign: graphite glass on a dotted drafting grid; orange used like one warning light ================== */
+:root{
+  --bg:#0B0B0C; --surface:#17171A; --surface2:#1E1E22; --line:rgba(255,255,255,.08);
+  --ink:#F4F4F5; --on-ink:#0B0B0C; --mid:#A3A5AB; --dim:#6E7076;
+  --ctl:#1C1C1F; --on-ctl:#F4F4F5; --ctl-ic:#FF8A3D; --red:#F04438; --green:#EDEDEF;
+  --glass:rgba(20,20,22,.92); --shadow:0 10px 30px rgba(0,0,0,.6); --shadow-up:0 -12px 40px rgba(0,0,0,.7); --map-bg:#0B0B0C;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --card:linear-gradient(180deg,#1C1C1F,#141416 60%,#111113);
+  --edge:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.035));
+  --dots:radial-gradient(rgba(255,255,255,.075) 1px,transparent 1.3px) 0 0/22px 22px;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--ink)}
+.screen:not(#ride),.tour{background:var(--dots),radial-gradient(120% 55% at 50% -8%,rgba(255,107,26,.13),transparent 60%),var(--bg)!important;background-attachment:local}
+
+/* Type: clean grotesk titles, monospaced eyebrows, labels and numbers. */
+.display{font-weight:600;letter-spacing:-.035em}
+.title{font-weight:600;letter-spacing:-.02em}
+.eyebrow,.lbl,.what h2,.tour-eyebrow{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.what h2,.tour-eyebrow{color:var(--or)}
+.big:not(.btn){font-family:var(--mono);font-weight:500;letter-spacing:-.03em}
+
+/* Cards: graphite glass, hairline lit from the top, no orange unless the card is the featured one. */
+.card,.status,.stats,.what-card,.tour-steps li{
+  background:var(--card) padding-box,var(--edge) border-box!important;border:1px solid transparent!important;border-radius:22px;
+  box-shadow:0 18px 40px -20px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.35)!important}
+.card::before,.status::before,.stats::before{display:none!important}
+.card.feature{background:var(--card) padding-box,linear-gradient(180deg,rgba(255,107,26,.9),rgba(255,107,26,.3)) border-box!important;
+  box-shadow:0 0 34px -12px rgba(255,107,26,.6),0 18px 40px -20px rgba(0,0,0,.85)!important}
+.card.accent{background:linear-gradient(135deg,#FF8A3D,#FF6B1A 55%,#E5520A)!important;border:0!important;color:#1A0B00;box-shadow:0 18px 40px -16px rgba(255,107,26,.7)!important}
+.card.accent .lbl,.card.accent .mid,.card.accent .dim{color:rgba(26,11,0,.7)}
+.sheet,.panel{background:linear-gradient(180deg,#1E1E21,#141416)!important;border-top:1px solid rgba(255,255,255,.12)!important;box-shadow:var(--shadow-up)!important}
+.bottomnav{border-top-color:rgba(255,255,255,.08)!important;box-shadow:none!important}
+.wel-top .display .or,.display .or{text-shadow:none}
+.what-card svg .w-bg{fill:#0c0c0e}
+
+/* The get-ready steps as a route: a glowing orange rail joining numbered stops. */
+.tour-steps{position:relative;gap:12px;padding-left:34px}
+.tour-steps::before{content:"";position:absolute;left:12px;top:24px;bottom:24px;width:0;border-left:1.5px dashed rgba(255,255,255,.18)}
+.tour-steps li{position:relative;grid-template-columns:1fr}
+.tour-steps li::before{position:absolute;left:-32px;top:50%;transform:translateY(-50%);width:20px;height:20px;font:500 10px/20px var(--mono);
+  background:#141416;color:var(--mid);border:1.5px solid rgba(255,255,255,.3);box-shadow:none}
+.tour-steps li:first-child{background:var(--card) padding-box,linear-gradient(180deg,rgba(255,107,26,.9),rgba(255,107,26,.3)) border-box!important;box-shadow:0 0 30px -12px rgba(255,107,26,.6)!important}
+.tour-steps li:first-child::before{background:#FF6B1A;color:#1A0B00;border-color:#FF6B1A;box-shadow:0 0 0 5px rgba(255,107,26,.22),0 0 18px rgba(255,107,26,.8)}
+.tour-art{background:#0c0c0e;border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px -18px rgba(0,0,0,.8)}
