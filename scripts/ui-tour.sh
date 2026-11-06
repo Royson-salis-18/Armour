@@ -45,8 +45,13 @@ tap_text "Show me" >/dev/null; sleep 1
 # Eight situations: capture each one mid-story (risk, then what ARMOR does).
 for i in 1 2 3 4 5 6 7 8; do sleep 4; shot "00-s$i-a"; sleep 5; shot "00-s$i-b"; tap_text "Next" >/dev/null; sleep 1.2; done
 for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k 0; done
+# Taps can land while a page is still sliding: keep pressing Next until the last page is up, then leave the tour.
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  [ -n "$(find_node "Start using ARMOR")" ] && break
+  tap_text "Next" >/dev/null || tap_text "Show me" >/dev/null; sleep 2
+done
 shot 00d-walkthrough-last
-tap_text "Start using ARMOR"; sleep 2
+for i in 1 2 3; do tap_text "Start using ARMOR" >/dev/null; sleep 3; [ -z "$(find_node "Start using ARMOR")" ] && break; done
 shot 01-home
 # The Group tab (second item in the bottom bar): create or join a ride, no server address to type.
 adb shell input tap $((W*40/100)) $((H*92/100)); sleep 3; shot 01b-group
