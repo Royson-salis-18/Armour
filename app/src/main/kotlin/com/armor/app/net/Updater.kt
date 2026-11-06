@@ -105,7 +105,18 @@ object Updater {
                     conn.disconnect()
                 }
                 val actual = digest.digest().joinToString("") { "%02x".format(it) }
-                if (info.sha256.isNotEmpty() && actual != info.sha256) { apk.delete(); error("The download didn't match its checksum, so it was discarded.") }
+                if (info.sha256.isNotEmpty() && actual != info.sha256) {
+                    // A new build may have replaced the release while this one was downloading: the file is newer than the
+                    // checksum we read. Ask again; if the fresh checksum matches what we got, it is fine to install.
+                    val fresh = runCatching { JSONObject(httpText("$BASE/version.json")) }.getOrNull()
+                    if (fresh != null && fresh.optString("sha256").lowercase() == actual) {
+                        val updated = info.copy(versionCode = fresh.optLong("versionCode", info.versionCode), versionName = fresh.optString("versionName", info.versionName), sha256 = actual)
+                        openInstaller(app, updated, apk)
+                        return@launch
+                    }
+                    apk.delete()
+                    error("A newer build is still being published. Wait a minute and tap Update again.")
+                }
                 openInstaller(app, info, apk)
             } catch (e: Exception) {
                 state.value = UpdateState.Failed("Update failed: ${e.message ?: "unknown error"}")
