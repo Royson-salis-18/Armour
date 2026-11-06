@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -302,25 +303,29 @@ fun DotOrb(modifier: Modifier = Modifier, color: Color = ArmorColors.Orange) {
     }
 }
 
-/** Floating glass pill holding the main tabs, with the active one lit orange. */
+/**
+ * The main tabs as a bar docked to the bottom of the screen, in the same surface colour as the ride panel above it, so the
+ * two read as one piece with no gaps or corners between them. The active tab is lit orange.
+ */
 @Composable
 fun FloatingNav(labels: List<String>, icons: List<androidx.compose.ui.graphics.vector.ImageVector>, selected: Int, onSelect: (Int) -> Unit) {
-    val shape = RoundedCornerShape(32.dp)
-    Row(
-        Modifier.padding(horizontal = 28.dp, vertical = 14.dp).fillMaxWidth().height(64.dp).clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0xF01F2024), Color(0xF0141517))))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), shape).padding(6.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        labels.forEachIndexed { i, label ->
-            val on = i == selected
-            Box(
-                Modifier.size(52.dp).clip(CircleShape)
-                    .background(if (on) Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)))
-                    .clickableNoRipple { onSelect(i) },
-                contentAlignment = Alignment.Center,
-            ) {
-                androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = if (on) Color(0xFF1A0B00) else ArmorColors.Muted, modifier = Modifier.size(24.dp))
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().background(ArmorColors.Panel)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.07f)))
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxWidth().navigationBarsPadding().height(64.dp).padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+        ) {
+            labels.forEachIndexed { i, label ->
+                val on = i == selected
+                Box(Modifier.weight(1f).height(64.dp).clickableNoRipple { onSelect(i) }, contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.size(width = 52.dp, height = 36.dp).clip(RoundedCornerShape(18.dp))
+                            .background(if (on) Brush.verticalGradient(listOf(Color(0xFFFF8A3D), ArmorColors.Orange)) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        androidx.compose.material3.Icon(icons[i], contentDescription = label, tint = if (on) Color(0xFF1A0B00) else ArmorColors.Muted, modifier = Modifier.size(24.dp))
+                    }
+                }
             }
         }
     }

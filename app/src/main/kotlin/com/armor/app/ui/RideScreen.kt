@@ -337,8 +337,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
 
             Column(
                 Modifier.fillMaxWidth().heightIn(max = maxSheet)
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF1E1E21), Color(0xFF141416))))
-                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color.Transparent), endY = 120f), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)).background(ArmorColors.Panel)
                     .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
             ) {
                 // The whole header (handle and status) is the grip: drag it down or tap it to minimise the panel and give

@@ -21,6 +21,8 @@ object ArmorColors {
     val S2 = Color(0xFF1D1E21)
     val S3 = Color(0xFF28292D)
     val Line = Color(0xFF2B2C30)
+    /** The ride panel and the bottom tab bar share this, so they join up with no seam. */
+    val Panel = Color(0xFF141416)
 
     // Content
     val OnBg = Color(0xFFF4F4F5)

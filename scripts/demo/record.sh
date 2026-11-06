@@ -41,7 +41,7 @@ tap_at() { adb shell input tap $(( W * $1 / 100 )) $(( H * $2 / 100 )); }
 swipe() { adb shell input swipe $(( W * $1 / 100 )) $(( H * $2 / 100 )) $(( W * $3 / 100 )) $(( H * $4 / 100 )) "${5:-400}"; }
 geo() { adb emu geo fix "$1" "$2" >/dev/null; }
 type_text() { adb shell input text "$(echo "$1" | sed 's/ /%s/g')"; }
-nav() { case $1 in home) tap_at 21 92;; group) tap_at 40 92;; log) tap_at 59 92;; settings) tap_at 79 92;; esac; sleep 2; }
+nav() { case $1 in home) tap_at 14 94;; group) tap_at 38 94;; log) tap_at 62 94;; settings) tap_at 86 94;; esac; sleep 2; }
 
 dur() { awk -v id="$1" '$1==id {print $2}' "$NAR/durations.txt"; }
 now() { date +%s.%N; }

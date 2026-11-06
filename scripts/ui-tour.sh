@@ -56,8 +56,8 @@ shot 00d-walkthrough-last
 for i in 1 2 3; do tap_text "Start using ARMOR" >/dev/null; sleep 3; [ -z "$(find_node "Start using ARMOR")" ] && break; done
 shot 01-home
 # The Group tab (second item in the bottom bar): create or join a ride, no server address to type.
-adb shell input tap $((W*40/100)) $((H*92/100)); sleep 3; shot 01b-group
-adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
+adb shell input tap $((W*38/100)) $((H*94/100)); sleep 3; shot 01b-group
+adb shell input tap $((W*14/100)) $((H*94/100)); sleep 2
 
 # Slide to ride: scroll down until the slider is on screen, then drag its thumb all the way across.
 for i in 1 2 3; do b=$(find_node "SLIDE TO RIDE"); [ -n "$b" ] && break; adb shell input swipe $((W/2)) $((H*3/4)) $((W/2)) $((H/4)) 300; sleep 1; done
@@ -93,11 +93,11 @@ KID=$(echo "$R" | python3 -c "import json,sys;print(json.load(sys.stdin)['riderI
 KTOK=$(echo "$R" | python3 -c "import json,sys;print(json.load(sys.stdin)['token'])" 2>/dev/null)
 echo "ride code: ${CODE:-none}"
 if [ -n "$CODE" ]; then
-  adb shell input tap $((W*40/100)) $((H*92/100)); sleep 3
+  adb shell input tap $((W*38/100)) $((H*94/100)); sleep 3
   tap_text "6-letter ride code" && adb shell input text "$CODE"; adb shell input keyevent 4; sleep 1
   tap_text "Join ride"; sleep 12
   shot 09d-group-joined
-  adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
+  adb shell input tap $((W*14/100)) $((H*94/100)); sleep 2
   tap_text "Recentre"
   curl -s -m 20 -X POST "$SERVER/api/rides/$CODE/message" -H 'Content-Type: application/json' -d "{\"riderId\":\"$KID\",\"token\":\"$KTOK\",\"text\":\"Hi from Kabir, 200 m behind you\"}" >/dev/null
   for i in $(seq 1 8); do
@@ -111,12 +111,12 @@ if [ -n "$CODE" ]; then
 fi
 
 # The voice assistant: tap the orange mic and check it listens (the emulator has no real microphone input).
-adb shell input tap $((W*21/100)) $((H*92/100)); sleep 2
+adb shell input tap $((W*14/100)) $((H*94/100)); sleep 2
 tap_text "Talk to Armor" && sleep 1 && shot 09b-assistant-listening
 sleep 8; shot 09c-assistant-after
 
 # Settings: add an emergency contact typed the Indian way, check it is readable and saved as +91, send a real test SMS.
-adb shell input tap $((W*79/100)) $((H*92/100)); sleep 3
+adb shell input tap $((W*86/100)) $((H*94/100)); sleep 3
 for i in 1 2 3 4 5; do b=$(find_node "Add contact"); [ -n "$b" ] && break; adb shell input swipe $((W/2)) $((H*3/4)) $((W/2)) $((H/3)) 400; sleep 1; done
 adb shell input swipe $((W/2)) $((H*2/3)) $((W/2)) $((H/3)) 400; sleep 1
 tap_text "Name" && adb shell input text "Mom" && sleep 1
