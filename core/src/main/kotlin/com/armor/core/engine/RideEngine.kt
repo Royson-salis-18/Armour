@@ -43,6 +43,8 @@ sealed interface EngineEffect {
 
     data class CancelSos(val alertId: String, val position: LatLon?) : EngineEffect
     data class PublishMessage(val message: ChatMessage) : EngineEffect
+    /** A new message from someone else in the group, worth a nudge when the phone is in a pocket. Never fired for history or your own. */
+    data class IncomingMessage(val message: ChatMessage) : EngineEffect
     /** A gentle prompt for the rider (fatigue break, arrival); the host shows it as a notification. */
     data class Reminder(val text: String, val timeMs: Long) : EngineEffect
     /** Safe-arrival plan: tell the family the rider [arrived] or is running late (when [arrived] is false). */
@@ -269,11 +271,24 @@ class RideEngine(
         }
     }
 
+    private var chatSynced = false
+
     fun onMessages(list: Collection<ChatMessage>) {
         val known = messages.map { it.id }.toHashSet()
-        list.filter { it.id !in known }.forEach { messages += it }
+        val fresh = list.filter { it.id !in known }
+        fresh.forEach { messages += it }
         messages.sortBy { it.timeMs }
         while (messages.size > MAX_MESSAGES) messages.removeAt(0)
+        // The first sync is the ride's back-history: show it, don't ping for it. After that, tell the rider about what
+        // others say, and about the few system lines that are really calls for attention (not "Ben joined").
+        if (chatSynced) fresh.filter { it.riderId != selfId && worthANudge(it) }.takeLast(3).forEach { effects += EngineEffect.IncomingMessage(it) }
+        chatSynced = true
+    }
+
+    private fun worthANudge(m: ChatMessage): Boolean {
+        if (m.riderId != "system") return true
+        val t = m.text.lowercase()
+        return ATTENTION_PHRASES.any { it in t } && !t.startsWith(selfName.lowercase())
     }
 
     fun sendMessage(text: String, nowMs: Long) {
@@ -494,6 +509,7 @@ class RideEngine(
 
     private companion object {
         const val SPEED_HISTORY_MS = 20_000L
+        private val ATTENTION_PHRASES = listOf("asks the lead", "needs a hand", "low battery", "sent an sos", "may have crashed", "catching up", "team stop", "regroup", "reported", "has not moved")
         const val MAX_MESSAGES = 100
         const val RESUME_CRASH_MPS = 6.0
         const val MAX_MESSAGE_CHARS = 280

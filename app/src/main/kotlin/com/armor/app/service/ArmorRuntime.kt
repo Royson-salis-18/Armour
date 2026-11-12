@@ -50,6 +50,9 @@ object ArmorRuntime {
     /** True after a silent SOS: the alarm stays quiet. */
     val silentSos = MutableStateFlow(false)
 
+    /** The group chat is on screen, so new messages need no notification. */
+    val chatOpen = MutableStateFlow(false)
+
     /** Totals of the ride that just ended, shown on the summary screen until dismissed. */
     val lastSummary = MutableStateFlow<RideSummary?>(null)
 

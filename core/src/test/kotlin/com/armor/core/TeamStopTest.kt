@@ -119,3 +119,20 @@ class TeamStopTest {
         assertEquals(280, s.snapshot!!.messages.last().text.length)
     }
 }
+
+class IncomingMessageTest {
+    private fun incoming(e: com.armor.core.engine.RideEngine) = e.drainEffects().filterIsInstance<com.armor.core.engine.EngineEffect.IncomingMessage>().map { it.message.text }
+
+    @org.junit.jupiter.api.Test fun `history is silent, then others are announced, never yourself or routine system lines`() {
+        val e = com.armor.core.engine.RideEngine("me", "Me")
+        val m = { id: String, who: String, text: String -> com.armor.core.model.ChatMessage(id, who, who, text, id.hashCode().toLong()) }
+        e.onMessages(listOf(m("h1", "arjun", "old news")))
+        kotlin.test.assertEquals(emptyList<String>(), incoming(e), "the ride's back-history does not ping")
+        e.onMessages(listOf(m("h1", "arjun", "old news"), m("n1", "arjun", "fuel at the next pump")))
+        kotlin.test.assertEquals(listOf("fuel at the next pump"), incoming(e))
+        e.onMessages(listOf(m("m-me-1", "me", "on my way")))
+        kotlin.test.assertEquals(emptyList<String>(), incoming(e), "your own message is not an alert")
+        e.onMessages(listOf(m("s1", "system", "Ben joined"), m("s2", "system", "Ben asks the lead to stop: fuel")))
+        kotlin.test.assertEquals(listOf("Ben asks the lead to stop: fuel"), incoming(e), "only the system lines that need attention")
+    }
+}

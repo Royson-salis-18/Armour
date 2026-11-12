@@ -264,6 +264,12 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
     }
     val look = linkLook(s)
     var chatOpen by remember { mutableStateOf(false) }
+    DisposableEffect(chatOpen) { ArmorRuntime.chatOpen.value = chatOpen; onDispose { ArmorRuntime.chatOpen.value = false } }
+    // Messages from others since the chat was last open; the Chat button shows the count so nothing is missed.
+    val fromOthers = s.messages.count { it.riderId != s.self?.id && it.riderId != "system" }
+    var readCount by remember { mutableIntStateOf(fromOthers) }
+    if (chatOpen) readCount = fromOthers
+    val unread = (fromOthers - readCount).coerceAtLeast(0)
     var mapPicker by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
     var tool by remember { mutableStateOf<RideTool?>(null) }
@@ -431,7 +437,7 @@ internal fun ActiveRide(s: RideSnapshot, demo: Boolean, warning: String?, settin
                 }
                 Gap(10.dp)
                 if (!minimized) {
-                    ActionBar(s, onChat = { chatOpen = true }, onEnd = { confirmEnd = true })
+                    ActionBar(s, unread = unread, onChat = { chatOpen = true }, onEnd = { confirmEnd = true })
                     Gap(10.dp)
                 }
                 HoldToSosButton { ArmorRuntime.send(ArmorRuntime.Command.ManualSos) }
@@ -640,10 +646,10 @@ private fun QuickStatusRow(current: QuickStatus?) {
 
 /** Always-visible actions: group chat, non-emergency "I need a hand" (shows who is coming, tap again to cancel), end ride. */
 @Composable
-private fun ActionBar(s: RideSnapshot, onChat: () -> Unit, onEnd: () -> Unit) {
+private fun ActionBar(s: RideSnapshot, unread: Int, onChat: () -> Unit, onEnd: () -> Unit) {
     val help = s.help
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BarButton("Chat", Modifier.weight(1f), onClick = onChat)
+        BarButton(if (unread > 0) "Chat \u00B7 $unread" else "Chat", Modifier.weight(1f), active = unread > 0, onClick = onChat)
         BarButton(
             when {
                 help == null -> "Need a hand"

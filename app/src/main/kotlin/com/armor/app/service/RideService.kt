@@ -320,6 +320,9 @@ class RideService : Service() {
     private fun handleEffects(effects: List<EngineEffect>) {
         for (e in effects) when (e) {
             is EngineEffect.PublishAlert -> enqueue("alert:${e.alert.id}") { it.upsertAlert(e.alert) }
+            is EngineEffect.IncomingMessage -> if (!ArmorRuntime.chatOpen.value) {
+                requireService<NotificationManager>().notify(Notifications.ID_CHAT, Notifications.chat(this, e.message.riderName.takeIf { e.message.riderId != "system" } ?: "ARMOR", e.message.text))
+            }
             is EngineEffect.PublishMessage -> enqueue("msg:${e.message.id}") { it.sendMessage(e.message) }
             is EngineEffect.ResolveAlert -> enqueue("resolve:${e.alertId}") { it.resolveAlert(e.alertId) }
             is EngineEffect.AcknowledgeAlert -> enqueue("ack:${e.alertId}") { it.acknowledge(e.alertId, e.byId, e.byName) }

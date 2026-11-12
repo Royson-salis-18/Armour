@@ -18,12 +18,20 @@ object Notifications {
     const val ID_RIDE = 1
     const val ID_ALERT = 2
     const val ID_REMINDER = 3
+    const val CHANNEL_CHAT = "chat"
+    const val ID_CHAT = 4
 
     fun createChannels(context: Context) {
         val nm = context.requireService<NotificationManager>()
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_RIDE, "Ride monitoring", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Shown while ARMOR is watching over your ride."
+            },
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_CHAT, "Group messages", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "What riders in your group say, and calls for attention like a stop request."
+                enableVibration(true)
             },
         )
         nm.createNotificationChannel(
@@ -47,6 +55,18 @@ object Notifications {
             .setContentIntent(openApp(context))
             .addAction(action(context, "I'm OK", ActionReceiver.ACTION_OK, 10))
             .addAction(action(context, "End ride", ActionReceiver.ACTION_STOP, 12))
+            .build()
+
+    /** A message from the group. One notification that updates, so a chatty ride doesn't fill the shade. */
+    fun chat(context: Context, from: String, text: String): Notification =
+        Notification.Builder(context, CHANNEL_CHAT)
+            .setSmallIcon(R.drawable.ic_shield)
+            .setContentTitle(from)
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setCategory(Notification.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setContentIntent(openApp(context))
             .build()
 
     fun alert(context: Context, title: String, text: String, canAnswer: Boolean): Notification =
