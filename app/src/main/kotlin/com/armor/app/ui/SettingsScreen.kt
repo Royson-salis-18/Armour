@@ -27,6 +27,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.armor.app.alert.Phones
 import com.armor.core.sos.PhoneNumbers
 import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -191,16 +194,31 @@ fun SettingsScreen(settings: Settings) {
         }
 
         Card2 {
-            SectionTitle("Crash sensitivity")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionTitle("Fall and crash sensitivity")
+            val g = settings.impactG
+            val preset = Sensitivity.entries.firstOrNull { kotlin.math.abs(it.impactG - g) < 0.05 }
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(String.format(java.util.Locale.US, "%.1f g", g), color = ArmorColors.OnBg, style = Type.Numeric.copy(fontSize = 30.sp))
+                Text("  " + (preset?.label ?: "Custom"), color = ArmorColors.Orange, style = Type.Label, modifier = Modifier.padding(bottom = 5.dp))
+            }
+            androidx.compose.material3.Slider(
+                value = g.toFloat(),
+                onValueChange = { v -> app.prefs.update { it.copy(impactG = (Math.round(v * 2f) / 2.0)) } },
+                valueRange = RideService.MIN_IMPACT_G.toFloat()..RideService.MAX_IMPACT_G.toFloat(), steps = 11,
+                colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = ArmorColors.Orange, activeTrackColor = ArmorColors.Orange, inactiveTrackColor = ArmorColors.S3),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("More sensitive", color = ArmorColors.Dim, style = Type.Meta)
+                Text("Needs a harder hit", color = ArmorColors.Dim, style = Type.Meta)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 Sensitivity.entries.forEach { level ->
-                    Pill("${level.label} · ${level.impactG.toInt()} g", selected = level == settings.sensitivity) {
-                        app.prefs.update { it.copy(sensitivity = level) }
-                    }
+                    Pill("${level.label} · ${level.impactG.toInt()} g", selected = level == preset) { app.prefs.update { it.copy(impactG = level.impactG) } }
                 }
             }
+            ImpactMeter(g)
             Text(
-                "The impact needed to start crash detection. Higher means fewer false alarms but a harder crash is needed. Default thresholds are untuned: test them on your own bike.",
+                "The impact that starts a crash check. A fall also needs a sudden change in the phone's tilt and the bike to stop before ARMOR asks if you're okay. Lower catches gentler falls but may ask more often; higher means fewer false alarms. Takes effect from your next ride.",
                 color = ArmorColors.Muted, fontSize = 12.sp,
             )
         }
@@ -285,4 +303,45 @@ private fun RoundAction(icon: androidx.compose.ui.graphics.vector.ImageVector, l
         Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(ArmorColors.Orange.copy(alpha = 0.16f)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { androidx.compose.material3.Icon(icon, contentDescription = label, tint = ArmorColors.Orange, modifier = Modifier.size(20.dp)) }
+}
+
+
+/**
+ * A live readout for tuning: shake or tap the phone and it shows the hardest hit in the last few seconds against the
+ * threshold, so the rider can see what their setting would and would not catch. Only listens while it is on screen.
+ */
+@Composable
+private fun ImpactMeter(thresholdG: Double) {
+    val context = LocalContext.current
+    var peak by remember { mutableStateOf(0.0) }
+    DisposableEffect(Unit) {
+        val sm = context.getSystemService(android.hardware.SensorManager::class.java)
+        val accel = sm?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+        var lastPeakAt = 0L
+        val listener = object : android.hardware.SensorEventListener {
+            override fun onSensorChanged(e: android.hardware.SensorEvent) {
+                val gMag = Math.sqrt((e.values[0] * e.values[0] + e.values[1] * e.values[1] + e.values[2] * e.values[2]).toDouble()) / 9.81
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (gMag >= peak || now - lastPeakAt > 4_000) { peak = gMag; lastPeakAt = now }
+            }
+            override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) = Unit
+        }
+        if (accel != null) sm.registerListener(listener, accel, android.hardware.SensorManager.SENSOR_DELAY_GAME)
+        onDispose { sm?.unregisterListener(listener) }
+    }
+    val over = peak >= thresholdG
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("TEST: SHAKE OR TAP THE PHONE", color = ArmorColors.Dim, style = Type.Eyebrow, modifier = Modifier.weight(1f))
+            Text(String.format(java.util.Locale.US, "%.1f g", peak), color = if (over) ArmorColors.Orange else ArmorColors.OnBg, style = Type.Numeric.copy(fontSize = 16.sp))
+        }
+        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(10.dp)) {
+            val max = RideService.MAX_IMPACT_G.toFloat() + 2f
+            drawRoundRect(ArmorColors.S3, size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height))
+            drawRoundRect(if (over) ArmorColors.Orange else Color(0xFF8B8E97), size = androidx.compose.ui.geometry.Size(size.width * (peak.toFloat() / max).coerceIn(0.02f, 1f), size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height))
+            val x = size.width * (thresholdG.toFloat() / max)
+            drawLine(Color.White, androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 2.dp.toPx())
+        }
+        Text(if (over) "That hit is above your setting: a crash check would start if the phone also tilted and the bike stopped." else "Below your setting: ignored.", color = if (over) ArmorColors.Orange else ArmorColors.Muted, style = Type.Caption)
+    }
 }

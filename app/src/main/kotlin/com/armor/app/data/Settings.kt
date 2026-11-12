@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
+/** Quick presets for the impact threshold; the slider in Settings can set any value between them. */
 enum class Sensitivity(val label: String, val impactG: Double) {
     LOW("Low", 5.0),
     MEDIUM("Medium", 4.0),
@@ -56,6 +57,8 @@ data class Settings(
     val phone: String = "",
     /** Listen for "Armor" while the ride screen is open, so commands need no tap. */
     val voiceWake: Boolean = false,
+    /** The impact, in g, that starts a crash check. The rider sets it (2 g is very sensitive, 8 g needs a hard hit). */
+    val impactG: Double = 4.0,
 ) {
     val medical: com.armor.core.model.MedicalInfo get() = com.armor.core.model.MedicalInfo(bloodGroup, allergies, conditions, medications)
 
@@ -128,6 +131,7 @@ class Prefs(context: Context) {
             .putBoolean("callAll", next.callAll)
             .putString("phone", next.phone)
             .putBoolean("voiceWakeV2", next.voiceWake)
+            .putFloat("impactG", next.impactG.toFloat())
             .apply()
         _settings.value = next
     }
@@ -168,6 +172,10 @@ class Prefs(context: Context) {
             callAll = sp.getBoolean("callAll", false),
             phone = sp.getString("phone", "") ?: "",
             voiceWake = sp.getBoolean("voiceWakeV2", false),
+            impactG = sp.getFloat("impactG", -1f).let { stored ->
+                // Before this was adjustable it was one of three presets; carry that choice over.
+                if (stored > 0f) stored.toDouble() else runCatching { Sensitivity.valueOf(sp.getString("sensitivity", null) ?: "MEDIUM") }.getOrDefault(Sensitivity.MEDIUM).impactG
+            },
         )
     }
 }

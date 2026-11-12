@@ -168,7 +168,7 @@ class RideService : Service() {
         alerts = AlertController(this, handler)
 
         val name = settings.riderName.ifBlank { "Rider" }
-        val base = ArmorConfig().withImpactThreshold(settings.sensitivity.impactG)
+        val base = ArmorConfig().withImpactThreshold(settings.impactG.coerceIn(MIN_IMPACT_G, MAX_IMPACT_G))
         val configured = base.copy(safety = base.safety.copy(soloMonitoring = settings.soloMonitoring))
         engine = RideEngine(settings.riderId, name, if (demoRequested) configured.forDemo() else configured)
 
@@ -567,6 +567,8 @@ class RideService : Service() {
     private fun hasLocationPermission() = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     companion object {
+        const val MIN_IMPACT_G = 2.0
+        const val MAX_IMPACT_G = 8.0
         private const val TICK_MS = 1_000L
         private const val OUTBOX_MAX_AGE_MS = 15 * 60_000L
         private const val SMS_RETRY_MS = 20_000L
